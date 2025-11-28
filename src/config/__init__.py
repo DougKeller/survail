@@ -2,7 +2,6 @@
 
 from .config import (
     AZURE_OPENAI_API_KEY,
-    AZURE_OPENAI_API_VERSION,
     DATABASE_URL,
     LANGSMITH_API_KEY,
     LANGSMITH_PROJECT,
@@ -21,7 +20,6 @@ from .deployments import (
 __all__ = [
     # Config variables
     "AZURE_OPENAI_API_KEY",
-    "AZURE_OPENAI_API_VERSION",
     "DATABASE_URL",
     "LANGSMITH_API_KEY",
     "LANGSMITH_PROJECT",

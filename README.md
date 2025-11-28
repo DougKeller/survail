@@ -58,7 +58,7 @@ cp .env.example .env
 
 Edit `.env` and set:
 - `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key (shared for both deployments)
-- `DATABASE_URL`: Postgres connection string (default works with docker-compose)
+- `DATABASE_URL`: Postgres connection string
 - `LANGSMITH_API_KEY`: (Optional) Your LangSmith API key
 - `LANGSMITH_TRACING`: (Optional) Set to `true` to enable tracing
 
@@ -66,10 +66,9 @@ Edit `.env` and set:
 
 **Required:**
 - `AZURE_OPENAI_API_KEY`: API key for Azure OpenAI (shared across deployments)
+- `DATABASE_URL`: Postgres connection string (e.g., `postgresql://postgres:postgres@localhost:5432/langgraph?sslmode=disable`)
 
 **Optional:**
-- `DATABASE_URL`: Postgres connection string (default: `postgresql://postgres:postgres@localhost:5432/langgraph?sslmode=disable`)
-- `AZURE_OPENAI_API_VERSION`: API version (default: `2024-02-15-preview`)
 - `LANGSMITH_API_KEY`: LangSmith API key for tracing
 - `LANGSMITH_TRACING`: Set to `true` to enable tracing
 - `LANGSMITH_PROJECT`: Project name for LangSmith (default: `mtg-langgraph-app`)

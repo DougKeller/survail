@@ -1,8 +1,9 @@
 """
-Configuration module for environment variables.
+Configuration module for application settings.
 
-This module loads and validates all required environment variables.
-Raises exceptions if required variables are not set.
+This module contains hard-coded configuration values and loads required
+environment variables (API keys). Raises exceptions if required variables
+are not set.
 """
 
 import os
@@ -55,7 +56,6 @@ def get_optional_env(key: str, default: Optional[str] = None) -> Optional[str]:
 # Required configuration variables
 AZURE_OPENAI_API_KEY: str = get_required_env("AZURE_OPENAI_API_KEY")
 DATABASE_URL: str = get_required_env("DATABASE_URL")
-AZURE_OPENAI_API_VERSION: str = get_required_env("AZURE_OPENAI_API_VERSION")
 
 # Optional configuration variables
 LANGSMITH_API_KEY: Optional[str] = get_optional_env("LANGSMITH_API_KEY")

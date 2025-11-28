@@ -21,7 +21,6 @@ from config.config import ConfigError
 try:
     from config.config import (
         AZURE_OPENAI_API_KEY,
-        AZURE_OPENAI_API_VERSION,
         DATABASE_URL,
         LANGSMITH_API_KEY,
         is_langsmith_enabled,
@@ -32,7 +31,6 @@ except ConfigError as e:
     print("\nPlease set all required environment variables in your .env file:")
     print("  - AZURE_OPENAI_API_KEY")
     print("  - DATABASE_URL")
-    print("  - AZURE_OPENAI_API_VERSION")
     exit(1)
 
 
@@ -59,8 +57,7 @@ def create_llm(deployment_name: str = "gpt-5.1") -> AzureChatOpenAI:
         azure_deployment=deployment.deployment,
         azure_endpoint=deployment.endpoint,
         api_key=AZURE_OPENAI_API_KEY,
-        api_version=AZURE_OPENAI_API_VERSION,
-        temperature=0.7,
+        api_version=deployment.api_version,
     )
 
 

@@ -5,7 +5,6 @@ This module contains configuration for different Azure OpenAI deployments.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -14,21 +13,23 @@ class AzureOpenAIDeployment:
     endpoint: str
     model_name: str
     deployment: str
-    api_key: Optional[str] = None  # Will be loaded from environment
+    api_version: str
 
 
 # GPT 5.1 Configuration
 GPT_5_1 = AzureOpenAIDeployment(
     endpoint="https://sondereastus2.openai.azure.com/",
     model_name="gpt-5.1",
-    deployment="dev-gpt-5.1",
+    deployment="gpt-5.1",
+    api_version="2024-12-01-preview",
 )
 
 # Text Embedding 3 Large Configuration
 TEXT_EMBEDDING_3_LARGE = AzureOpenAIDeployment(
-    endpoint="https://sondertest2.openai.azure.com/",
+    endpoint="https://sondereastus2.openai.azure.com/",
     model_name="text-embedding-3-large",
     deployment="dev-text-embedding-3-large",
+    api_version="2024-02-01",
 )
 
 # Dictionary mapping for easy access
