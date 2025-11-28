@@ -8,6 +8,7 @@ wheels/
 tmp/
 .env
 .vscode/
+.langgraph_api/
 
 # Virtual environments
 .venv

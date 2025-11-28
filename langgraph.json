@@ -1,0 +1,9 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "scryfall_assistant": "./src/agent.py:graph",
+    "scryfall_query_builder": "./src/tools/query_builder.py:graph"
+  },
+  "env": ".env"
+}
+
