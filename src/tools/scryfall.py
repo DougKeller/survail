@@ -8,11 +8,16 @@ Rate Limiting: Scryfall requests 50-100ms delay between requests (10 req/sec ave
 """
 
 import time
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 from functools import wraps
 
 import requests
 from langchain.tools import tool
+
+# Type definitions for discrete parameter values
+UniqueMode = Literal["cards", "art", "prints"]
+SortOrder = Literal["name", "set", "released", "rarity", "color", "usd", "tix", "eur", "cmc", "power", "toughness", "edhrec", "penny", "artist", "review"]
+SortDirection = Literal["auto", "asc", "desc"]
 
 # API Configuration
 SCRYFALL_BASE_URL = "https://api.scryfall.com"
@@ -127,10 +132,9 @@ def _format_card_list(cards: list, max_cards: int = 10) -> str:
 @tool
 def search_cards(
     query: str,
-    unique: str = "cards",
-    order: str = "name",
-    dir: str = "auto",
-    include_extras: bool = False,
+    unique: UniqueMode = "cards",
+    order: SortOrder = "name",
+    dir: SortDirection = "auto",
     page: int = 1,
 ) -> str:
     """
@@ -141,11 +145,25 @@ def search_cards(
     
     Args:
         query: A Scryfall syntax query string. Get this from `convert_to_scryfall_query`.
-        unique: Deduplication strategy - "cards" (default), "art", or "prints"
-        order: Sort order - "name", "set", "released", "rarity", "color", "usd", "cmc", "power", "edhrec"
-        dir: Sort direction - "auto", "asc", or "desc"
-        include_extras: Include tokens, planes, etc. (default: False)
-        page: Page number (default: 1)
+        unique: Deduplication mode:
+            - "cards": One result per card name (default)
+            - "art": One result per unique artwork
+            - "prints": All printings of each card
+        order: Sort order - choose based on context:
+            - "name": Alphabetical (default)
+            - "usd"/"eur"/"tix": By price (good for budget/value searches)
+            - "edhrec": By EDH popularity (good for Commander format)
+            - "cmc": By mana value
+            - "power"/"toughness": By P/T stats
+            - "rarity": By rarity
+            - "released": By release date
+            - "set": By set code
+            - "color": By color
+            - "penny": By Penny Dreadful ranking
+            - "artist": By artist name
+            - "review": Review order (color & CMC)
+        dir: Sort direction - "auto" (default), "asc", "desc"
+        page: Page number (default: 1, 175 cards per page)
         
     Returns:
         Formatted list of matching cards with details
@@ -155,7 +173,6 @@ def search_cards(
         "unique": unique,
         "order": order,
         "dir": dir,
-        "include_extras": str(include_extras).lower(),
         "page": page,
     }
     
@@ -164,11 +181,33 @@ def search_cards(
     cards = data.get("data", [])
     total = data.get("total_cards", len(cards))
     
-    result = f"Found {total} cards matching '{query}':\n\n"
-    result += _format_card_list(cards)
+    # Build result with assumptions noted
+    result = f"Found {total} cards matching '{query}'\n"
+    
+    # Note the settings used
+    settings = []
+    if unique == "cards":
+        settings.append("showing one version per card name")
+    elif unique == "art":
+        settings.append("showing unique artwork only")
+    elif unique == "prints":
+        settings.append("showing all printings")
+    
+    if order == "name":
+        settings.append("sorted alphabetically")
+    else:
+        settings.append(f"sorted by {order}")
+    
+    if dir != "auto":
+        settings.append(f"direction: {dir}")
+    
+    if settings:
+        result += f"*({', '.join(settings)})*\n"
+    
+    result += "\n" + _format_card_list(cards)
     
     if data.get("has_more"):
-        result += f"\n\nMore results available. Use page={page + 1} to see more."
+        result += f"\n\n📄 More results available (page {page} of {(total // 175) + 1}). Use page={page + 1} to see more."
     
     return result
 
@@ -180,11 +219,11 @@ def get_card_by_name(name: str, fuzzy: bool = True, set_code: Optional[str] = No
     
     Args:
         name: Card name to search for (e.g., "Black Lotus", "Lightning Bolt")
-        fuzzy: If True, allows partial/misspelled names (default: True)
-        set_code: Optional 3-letter set code to limit search (e.g., "lea", "dom")
+        fuzzy: If True (default), allows partial/misspelled names. If False, requires exact match.
+        set_code: Optional 3-letter set code to get a specific printing (e.g., "lea", "dom")
         
     Returns:
-        Detailed card information
+        Detailed card information from the most recent printing (unless set_code specified)
     """
     params = {}
     if fuzzy:
@@ -200,9 +239,15 @@ def get_card_by_name(name: str, fuzzy: bool = True, set_code: Optional[str] = No
     # Extended card details
     result = _format_card_summary(card)
     
-    # Add set info
+    # Add set info with note about printing selection
     result += f"\n\nSet: {card.get('set_name', 'Unknown')} ({card.get('set', '').upper()})"
+    if not set_code:
+        result += " *(most recent printing)*"
     result += f"\nRarity: {card.get('rarity', 'Unknown').title()}"
+    
+    # Note search mode
+    if fuzzy:
+        result += f"\n*Matched using fuzzy search for '{name}'*"
     
     # Legalities
     legalities = card.get("legalities", {})
@@ -239,8 +284,9 @@ def get_random_card(query: Optional[str] = None) -> str:
     Get a random Magic card, optionally filtered by a search query.
     
     Args:
-        query: Optional Scryfall query to filter random selection.
+        query: Optional Scryfall query to filter the random selection.
             Use `convert_to_scryfall_query` first if you have a natural language description.
+            If not provided, selects from all cards in the database.
             
     Returns:
         Random card details
@@ -251,7 +297,13 @@ def get_random_card(query: Optional[str] = None) -> str:
     
     card = _rate_limited_request("GET", "/cards/random", params=params)
     
-    result = "🎲 Random Card:\n\n"
+    result = "🎲 **Random Card"
+    if query:
+        result += f" (filtered by: {query})"
+    else:
+        result += " (from all cards)"
+    result += ":**\n\n"
+    
     result += _format_card_summary(card)
     result += f"\n\nSet: {card.get('set_name', 'Unknown')} ({card.get('set', '').upper()})"
     result += f"\nScryfall: {card.get('scryfall_uri', 'N/A')}"
@@ -260,24 +312,20 @@ def get_random_card(query: Optional[str] = None) -> str:
 
 
 @tool
-def autocomplete_card_name(partial_name: str, include_extras: bool = False) -> str:
+def autocomplete_card_name(partial_name: str) -> str:
     """
     Get autocomplete suggestions for a partial card name.
     
     Args:
         partial_name: Partial card name (at least 2 characters)
-        include_extras: Include tokens and other extras (default: False)
         
     Returns:
-        List of matching card names
+        List of up to 20 matching card names, sorted by relevance
     """
     if len(partial_name) < 2:
         return "Please provide at least 2 characters for autocomplete."
     
-    params = {
-        "q": partial_name,
-        "include_extras": str(include_extras).lower(),
-    }
+    params = {"q": partial_name}
     
     data = _rate_limited_request("GET", "/cards/autocomplete", params=params)
     
@@ -285,7 +333,7 @@ def autocomplete_card_name(partial_name: str, include_extras: bool = False) -> s
     if not names:
         return f"No card names found matching '{partial_name}'"
     
-    result = f"Card name suggestions for '{partial_name}':\n"
+    result = f"Card name suggestions for '{partial_name}' ({len(names)} matches, sorted by relevance):\n"
     for name in names:
         result += f"  • {name}\n"
     
@@ -302,14 +350,14 @@ def get_all_sets() -> str:
     Get a list of all Magic: The Gathering sets.
     
     Returns:
-        List of sets with codes, names, and release dates
+        List of the 20 most recent sets by release date, with total count
     """
     data = _rate_limited_request("GET", "/sets")
     
     sets = data.get("data", [])
     
-    # Group by set type
-    result = f"Found {len(sets)} Magic sets:\n\n"
+    result = f"Found {len(sets)} Magic sets total.\n"
+    result += "*Showing 20 most recent sets, sorted by release date (newest first):*\n\n"
     
     # Show recent sets (last 20)
     recent = sorted(
@@ -318,15 +366,15 @@ def get_all_sets() -> str:
         reverse=True
     )[:20]
     
-    result += "**Recent Sets:**\n"
     for s in recent:
         code = s.get("code", "???").upper()
         name = s.get("name", "Unknown")
         released = s.get("released_at", "Unknown")
         card_count = s.get("card_count", 0)
-        result += f"  • [{code}] {name} ({released}, {card_count} cards)\n"
+        set_type = s.get("set_type", "").replace("_", " ")
+        result += f"  • [{code}] {name} ({released}, {card_count} cards, {set_type})\n"
     
-    result += f"\n... and {len(sets) - 20} more sets."
+    result += f"\n📋 {len(sets) - 20} older sets not shown. Use `get_set_by_code` for specific set details."
     
     return result
 
@@ -397,10 +445,10 @@ def get_rulings_by_card_name(card_name: str) -> str:
     Get official rulings for a Magic card by searching for its name.
     
     Args:
-        card_name: The name of the card (can be fuzzy)
+        card_name: The name of the card (fuzzy matching enabled)
         
     Returns:
-        List of rulings with sources and dates
+        List of rulings with sources and dates, sorted by date (newest first)
     """
     # First, get the card to find its ID
     params = {"fuzzy": card_name}
@@ -415,9 +463,10 @@ def get_rulings_by_card_name(card_name: str) -> str:
     rulings = data.get("data", [])
     
     if not rulings:
-        return f"No rulings found for '{card_actual_name}'."
+        return f"No rulings found for '{card_actual_name}'.\n*Matched via fuzzy search for '{card_name}'*"
     
-    result = f"Rulings for **{card_actual_name}** ({len(rulings)} total):\n\n"
+    result = f"**Rulings for {card_actual_name}** ({len(rulings)} total)\n"
+    result += f"*Matched via fuzzy search for '{card_name}'*\n\n"
     
     for ruling in rulings:
         source = ruling.get("source", "unknown").upper()
@@ -594,11 +643,11 @@ def compare_cards(card1_name: str, card2_name: str) -> str:
     Compare two Magic cards side by side.
     
     Args:
-        card1_name: Name of the first card
-        card2_name: Name of the second card
+        card1_name: Name of the first card (fuzzy matching enabled)
+        card2_name: Name of the second card (fuzzy matching enabled)
         
     Returns:
-        Side-by-side comparison of the two cards
+        Side-by-side comparison using most recent printings of both cards
     """
     card1 = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card1_name})
     card2 = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card2_name})
@@ -606,11 +655,12 @@ def compare_cards(card1_name: str, card2_name: str) -> str:
     def get_val(card, key, default="N/A"):
         return card.get(key, default) or default
     
-    result = "**Card Comparison:**\n\n"
+    result = "**Card Comparison** *(using most recent printings)*\n\n"
     result += f"{'Property':<20} | {get_val(card1, 'name'):<30} | {get_val(card2, 'name'):<30}\n"
     result += "-" * 85 + "\n"
+    result += f"{'Set':<20} | {get_val(card1, 'set').upper():<30} | {get_val(card2, 'set').upper():<30}\n"
     result += f"{'Mana Cost':<20} | {get_val(card1, 'mana_cost'):<30} | {get_val(card2, 'mana_cost'):<30}\n"
-    result += f"{'CMC':<20} | {str(get_val(card1, 'cmc', 0)):<30} | {str(get_val(card2, 'cmc', 0)):<30}\n"
+    result += f"{'Mana Value':<20} | {str(get_val(card1, 'cmc', 0)):<30} | {str(get_val(card2, 'cmc', 0)):<30}\n"
     result += f"{'Type':<20} | {get_val(card1, 'type_line'):<30} | {get_val(card2, 'type_line'):<30}\n"
     
     if card1.get("power") or card2.get("power"):
@@ -635,7 +685,7 @@ def get_card_legality(card_name: str) -> str:
     Get the format legality for a specific Magic card.
     
     Args:
-        card_name: The name of the card to check
+        card_name: The name of the card to check (fuzzy matching enabled)
         
     Returns:
         Legality status across all Magic formats
@@ -645,7 +695,8 @@ def get_card_legality(card_name: str) -> str:
     legalities = card.get("legalities", {})
     name = card.get("name", card_name)
     
-    result = f"**Format Legality for {name}:**\n\n"
+    result = f"**Format Legality for {name}**\n"
+    result += f"*Matched via fuzzy search for '{card_name}'*\n\n"
     
     # Group by legality status
     legal = []
@@ -682,8 +733,8 @@ def get_card_price(card_name: str, set_code: Optional[str] = None) -> str:
     Get current prices for a Magic card from various marketplaces.
     
     Args:
-        card_name: The name of the card
-        set_code: Optional set code for a specific printing
+        card_name: The name of the card (fuzzy matching enabled)
+        set_code: Optional set code for a specific printing. If not provided, returns most recent printing.
         
     Returns:
         Price information in USD, EUR, and MTGO tickets
@@ -696,22 +747,36 @@ def get_card_price(card_name: str, set_code: Optional[str] = None) -> str:
     
     name = card.get("name", card_name)
     set_name = card.get("set_name", "Unknown")
+    set_code_actual = card.get("set", "").upper()
     prices = card.get("prices", {})
     
-    result = f"**Prices for {name}** ({set_name}):\n\n"
+    result = f"**Prices for {name}** ({set_name} [{set_code_actual}])"
+    if not set_code:
+        result += "\n*Showing most recent printing. Specify set_code for other printings.*"
+    result += "\n\n"
     
+    has_prices = False
     if prices.get("usd"):
         result += f"💵 USD (Non-Foil): ${prices['usd']}\n"
+        has_prices = True
     if prices.get("usd_foil"):
         result += f"✨ USD (Foil): ${prices['usd_foil']}\n"
+        has_prices = True
     if prices.get("usd_etched"):
         result += f"🔷 USD (Etched): ${prices['usd_etched']}\n"
+        has_prices = True
     if prices.get("eur"):
         result += f"💶 EUR (Non-Foil): €{prices['eur']}\n"
+        has_prices = True
     if prices.get("eur_foil"):
         result += f"✨ EUR (Foil): €{prices['eur_foil']}\n"
+        has_prices = True
     if prices.get("tix"):
         result += f"🎫 MTGO Tickets: {prices['tix']} tix\n"
+        has_prices = True
+    
+    if not has_prices:
+        result += "No price data available for this printing.\n"
     
     purchase = card.get("purchase_uris", {})
     if purchase:
