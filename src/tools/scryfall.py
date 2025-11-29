@@ -5,11 +5,12 @@ A comprehensive suite of tools for interacting with the Scryfall Magic: The Gath
 See https://scryfall.com/docs/api for full API documentation.
 
 Rate Limiting: Scryfall requests 50-100ms delay between requests (10 req/sec average).
+Caching: API responses are cached using LRU cache (256 entries) for performance.
 """
 
 import time
 from typing import Optional, Any, Literal
-from functools import wraps
+from functools import wraps, lru_cache
 
 import requests
 from langchain.tools import tool
@@ -24,32 +25,38 @@ SCRYFALL_BASE_URL = "https://api.scryfall.com"
 USER_AGENT = "MTGAgent/1.0"
 REQUEST_DELAY_MS = 75  # 75ms delay between requests
 
+# Pagination Configuration
+SCRYFALL_PAGE_SIZE = 175  # Scryfall's fixed page size
+VIRTUAL_PAGE_SIZE = 25    # Our virtual page size for agent consumption
+
 # Track last request time for rate limiting
 _last_request_time = 0.0
 
 
-def _rate_limited_request(
+@lru_cache(maxsize=256)
+def _cached_request(
     method: str,
     endpoint: str,
-    params: Optional[dict] = None,
-    json_data: Optional[dict] = None,
-    return_error: bool = False,
-) -> dict | tuple[dict | None, str | None]:
+    params_tuple: tuple,  # Frozen params as tuple of (key, value) pairs
+    json_tuple: Optional[tuple] = None,  # Frozen json as tuple of (key, value) pairs
+) -> dict:
     """
-    Make a rate-limited request to the Scryfall API.
+    Cached API request wrapper. Uses LRU cache with 256 entries.
+    
+    This function is separate from _rate_limited_request to enable caching
+    while maintaining rate limiting on actual network calls.
     
     Args:
         method: HTTP method (GET or POST)
-        endpoint: API endpoint (e.g., "/cards/search")
-        params: Query parameters
-        json_data: JSON body for POST requests
-        return_error: If True, return (None, error_message) instead of raising
+        endpoint: API endpoint path
+        params_tuple: Query parameters as frozen tuple of (key, value) pairs
+        json_tuple: JSON body as frozen tuple of (key, value) pairs
         
     Returns:
-        JSON response as dict, or tuple of (None, error_message) if return_error=True
+        JSON response as dict
         
     Raises:
-        Exception: If the API returns an error and return_error=False
+        Exception: If the API returns an error
     """
     global _last_request_time
     
@@ -63,6 +70,10 @@ def _rate_limited_request(
         "User-Agent": USER_AGENT,
         "Accept": "application/json",
     }
+    
+    # Convert tuples back to dicts
+    params = dict(params_tuple) if params_tuple else None
+    json_data = dict(json_tuple) if json_tuple else None
     
     if method.upper() == "GET":
         response = requests.get(url, headers=headers, params=params)
@@ -78,43 +89,113 @@ def _rate_limited_request(
     
     if response.status_code >= 400:
         error_msg = data.get("details", data.get("error", "Unknown error"))
+        raise Exception(f"Scryfall API error ({response.status_code}): {error_msg}")
+    
+    return data
+
+
+def _rate_limited_request(
+    method: str,
+    endpoint: str,
+    params: Optional[dict] = None,
+    json_data: Optional[dict] = None,
+    return_error: bool = False,
+) -> dict | tuple[dict | None, str | None]:
+    """
+    Make a rate-limited and cached request to the Scryfall API.
+    
+    Requests are cached based on method, endpoint, and parameters.
+    Cache size is 256 entries (LRU eviction).
+    
+    Args:
+        method: HTTP method (GET or POST)
+        endpoint: API endpoint (e.g., "/cards/search")
+        params: Query parameters
+        json_data: JSON body for POST requests
+        return_error: If True, return (None, error_message) instead of raising
+        
+    Returns:
+        JSON response as dict, or tuple of (None, error_message) if return_error=True
+        
+    Raises:
+        Exception: If the API returns an error and return_error=False
+    """
+    try:
+        # Convert dicts to frozen tuples for caching
+        params_tuple = tuple(sorted(params.items())) if params else ()
+        json_tuple = tuple(sorted(json_data.items())) if json_data else None
+        
+        data = _cached_request(method, endpoint, params_tuple, json_tuple)
+        
+        if return_error:
+            return data, None
+        else:
+            return data
+            
+    except Exception as e:
+        error_msg = str(e)
         
         if return_error:
             return None, error_msg
         else:
-            raise Exception(f"Scryfall API error ({response.status_code}): {error_msg}")
-    
-    if return_error:
-        return data, None
-    else:
-        return data
+            raise
 
 
 def _format_card_summary(card: dict) -> str:
-    """Format a card object into a readable summary."""
+    """
+    Format a card object into a comprehensive, readable summary.
+    
+    Includes all relevant gameplay information: oracle text, CMC, power/toughness,
+    loyalty, mana cost, type, and prices.
+    """
     name = card.get("name", "Unknown")
     mana_cost = card.get("mana_cost", "")
     type_line = card.get("type_line", "")
+    cmc = card.get("cmc", 0)
+    
+    # Get oracle text (check card_faces for multiface cards)
     oracle_text = card.get("oracle_text", "")
+    if not oracle_text and card.get("card_faces"):
+        # Multiface card - combine oracle text from all faces
+        faces = card["card_faces"]
+        oracle_texts = [face.get("oracle_text", "") for face in faces if face.get("oracle_text")]
+        oracle_text = "\n---\n".join(oracle_texts)
     
     # Handle power/toughness for creatures
     pt = ""
-    if card.get("power") and card.get("toughness"):
-        pt = f" ({card['power']}/{card['toughness']})"
+    power = card.get("power")
+    toughness = card.get("toughness")
+    if power is not None and toughness is not None:
+        pt = f" ({power}/{toughness})"
     
     # Handle loyalty for planeswalkers
-    if card.get("loyalty"):
-        pt = f" (Loyalty: {card['loyalty']})"
+    loyalty = card.get("loyalty")
+    if loyalty:
+        pt = f" (Loyalty: {loyalty})"
     
     # Prices
     prices = card.get("prices", {})
     usd = prices.get("usd") or prices.get("usd_foil") or "N/A"
+    eur = prices.get("eur") or prices.get("eur_foil") or "N/A"
+    tix = prices.get("tix") or "N/A"
     
+    # Build summary
     summary = f"**{name}** {mana_cost}\n"
     summary += f"*{type_line}*{pt}\n"
+    
+    # Always include CMC for reference
+    if cmc > 0 or mana_cost:  # Show CMC if card has mana cost
+        summary += f"**Mana Value (CMC):** {cmc}\n"
+    
+    # Oracle text (rules text) - CRITICAL for card verification
     if oracle_text:
-        summary += f"{oracle_text}\n"
-    summary += f"Price (USD): ${usd}"
+        summary += f"\n**Oracle Text:**\n{oracle_text}\n"
+    
+    # Prices
+    summary += f"\n**Prices:**\n"
+    summary += f"  • USD: ${usd}\n"
+    summary += f"  • EUR: €{eur}\n"
+    summary += f"  • MTGO (TIX): {tix}"
     
     return summary
 
@@ -152,6 +233,9 @@ def search_cards(
     IMPORTANT: Use the `convert_to_scryfall_query` tool first to convert natural language
     descriptions into valid Scryfall syntax, then pass the result to this tool.
     
+    NOTE: Results are paginated at 25 cards per page. The Scryfall API returns 175 cards
+    per page internally, which are cached for efficient pagination across multiple requests.
+    
     Args:
         query: A Scryfall syntax query string. Get this from `convert_to_scryfall_query`.
         unique: Deduplication mode:
@@ -172,17 +256,27 @@ def search_cards(
             - "artist": By artist name
             - "review": Review order (color & CMC)
         dir: Sort direction - "auto" (default), "asc", "desc"
-        page: Page number (default: 1, 175 cards per page)
+        page: Page number (default: 1). Each page contains 25 cards.
         
     Returns:
-        Formatted list of matching cards with details
+        Formatted list of 25 cards with pagination info
     """
+    # Calculate which Scryfall page we need and offset within it
+    # Virtual pages are 25 cards, Scryfall pages are 175 cards
+    # Page 1 = Scryfall page 1, cards 0-24
+    # Page 2 = Scryfall page 1, cards 25-49
+    # Page 7 = Scryfall page 1, cards 150-174
+    # Page 8 = Scryfall page 2, cards 0-24
+    
+    scryfall_page = ((page - 1) * VIRTUAL_PAGE_SIZE) // SCRYFALL_PAGE_SIZE + 1
+    offset_in_scryfall_page = ((page - 1) * VIRTUAL_PAGE_SIZE) % SCRYFALL_PAGE_SIZE
+    
     params = {
         "q": query,
         "unique": unique,
         "order": order,
         "dir": dir,
-        "page": page,
+        "page": scryfall_page,
     }
     
     data, error = _rate_limited_request("GET", "/cards/search", params=params, return_error=True)
@@ -202,20 +296,37 @@ def search_cards(
         
         return result
     
-    cards = data.get("data", [])
-    total = data.get("total_cards", len(cards))
+    all_cards_on_scryfall_page = data.get("data", [])
+    total_cards = data.get("total_cards", len(all_cards_on_scryfall_page))
+    scryfall_has_more = data.get("has_more", False)
+    
+    # Calculate virtual pagination info
+    total_virtual_pages = (total_cards + VIRTUAL_PAGE_SIZE - 1) // VIRTUAL_PAGE_SIZE
+    
+    # Slice to get our virtual page of 25 cards
+    start_idx = offset_in_scryfall_page
+    end_idx = min(start_idx + VIRTUAL_PAGE_SIZE, len(all_cards_on_scryfall_page))
+    cards = all_cards_on_scryfall_page[start_idx:end_idx]
+    
+    # Determine if there are more virtual pages available
+    # We have more if:
+    # 1. Current Scryfall page has more cards after our slice, OR
+    # 2. Scryfall has more pages to fetch
+    cards_remaining_on_scryfall_page = len(all_cards_on_scryfall_page) - end_idx
+    virtual_has_more = (cards_remaining_on_scryfall_page > 0) or scryfall_has_more
     
     # Build result with assumptions noted
-    result = f"Found {total} cards matching '{query}'\n"
+    result = f"**Search Results**: Found {total_cards} total cards matching '{query}'\n"
+    result += f"**Page {page} of {total_virtual_pages}** (showing {len(cards)} cards)\n"
     
     # Note the settings used
     settings = []
     if unique == "cards":
-        settings.append("showing one version per card name")
+        settings.append("one version per card name")
     elif unique == "art":
-        settings.append("showing unique artwork only")
+        settings.append("unique artwork only")
     elif unique == "prints":
-        settings.append("showing all printings")
+        settings.append("all printings")
     
     if order == "name":
         settings.append("sorted alphabetically")
@@ -230,8 +341,27 @@ def search_cards(
     
     result += "\n" + _format_card_list(cards)
     
-    if data.get("has_more"):
-        result += f"\n\n📄 More results available (page {page} of {(total // 175) + 1}). Use page={page + 1} to see more."
+    # Pagination guidance
+    if virtual_has_more:
+        cards_shown = page * VIRTUAL_PAGE_SIZE
+        cards_remaining = total_cards - cards_shown
+        result += f"\n\n📄 **More results available**\n"
+        result += f"   Showing cards {(page-1)*VIRTUAL_PAGE_SIZE + 1}-{(page-1)*VIRTUAL_PAGE_SIZE + len(cards)} of {total_cards}\n"
+        result += f"   To see next page ({VIRTUAL_PAGE_SIZE} more cards), call:\n"
+        result += f"   `search_cards(query='{query}', page={page + 1}";
+        if unique != "cards":
+            result += f", unique='{unique}'"
+        if order != "name":
+            result += f", order='{order}'"
+        if dir != "auto":
+            result += f", dir='{dir}'"
+        result += ")`\n"
+        result += f"   ({cards_remaining} cards remaining)\n"
+    elif page < total_virtual_pages:
+        # Edge case: last partial page
+        result += f"\n\n✅ Last page of results (showing final {len(cards)} cards)\n"
+    elif total_cards > VIRTUAL_PAGE_SIZE:
+        result += f"\n\n✅ End of results (page {page}/{total_virtual_pages})\n"
     
     return result
 
@@ -716,18 +846,30 @@ def compare_cards(card1_name: str, card2_name: str) -> str:
     def get_val(card, key, default="N/A"):
         return card.get(key, default) or default
     
+    # Get oracle text (handle multiface cards)
+    def get_oracle_text(card):
+        oracle_text = card.get("oracle_text", "")
+        if not oracle_text and card.get("card_faces"):
+            faces = card["card_faces"]
+            oracle_texts = [face.get("oracle_text", "") for face in faces if face.get("oracle_text")]
+            oracle_text = " // ".join(oracle_texts)
+        return oracle_text or "N/A"
+    
     result = "**Card Comparison** *(using most recent printings)*\n\n"
     result += f"{'Property':<20} | {get_val(card1, 'name'):<30} | {get_val(card2, 'name'):<30}\n"
     result += "-" * 85 + "\n"
     result += f"{'Set':<20} | {get_val(card1, 'set').upper():<30} | {get_val(card2, 'set').upper():<30}\n"
     result += f"{'Mana Cost':<20} | {get_val(card1, 'mana_cost'):<30} | {get_val(card2, 'mana_cost'):<30}\n"
-    result += f"{'Mana Value':<20} | {str(get_val(card1, 'cmc', 0)):<30} | {str(get_val(card2, 'cmc', 0)):<30}\n"
+    result += f"{'Mana Value (CMC)':<20} | {str(get_val(card1, 'cmc', 0)):<30} | {str(get_val(card2, 'cmc', 0)):<30}\n"
     result += f"{'Type':<20} | {get_val(card1, 'type_line'):<30} | {get_val(card2, 'type_line'):<30}\n"
     
     if card1.get("power") or card2.get("power"):
         pt1 = f"{get_val(card1, 'power')}/{get_val(card1, 'toughness')}" if card1.get("power") else "N/A"
         pt2 = f"{get_val(card2, 'power')}/{get_val(card2, 'toughness')}" if card2.get("power") else "N/A"
         result += f"{'Power/Toughness':<20} | {pt1:<30} | {pt2:<30}\n"
+    
+    if card1.get("loyalty") or card2.get("loyalty"):
+        result += f"{'Loyalty':<20} | {get_val(card1, 'loyalty'):<30} | {get_val(card2, 'loyalty'):<30}\n"
     
     result += f"{'Rarity':<20} | {get_val(card1, 'rarity').title():<30} | {get_val(card2, 'rarity').title():<30}\n"
     
@@ -736,6 +878,15 @@ def compare_cards(card1_name: str, card2_name: str) -> str:
     price1 = prices1.get("usd") or prices1.get("usd_foil") or "N/A"
     price2 = prices2.get("usd") or prices2.get("usd_foil") or "N/A"
     result += f"{'Price (USD)':<20} | ${price1:<29} | ${price2:<29}\n"
+    
+    # Add Oracle Text section (critical for comparing card effects)
+    oracle1 = get_oracle_text(card1)
+    oracle2 = get_oracle_text(card2)
+    
+    result += "\n" + "=" * 85 + "\n"
+    result += "**Oracle Text Comparison:**\n\n"
+    result += f"**{get_val(card1, 'name')}:**\n{oracle1}\n\n"
+    result += f"**{get_val(card2, 'name')}:**\n{oracle2}\n"
     
     return result
 

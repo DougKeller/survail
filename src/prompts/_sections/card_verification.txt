@@ -1,0 +1,59 @@
+## CRITICAL: Card Verification Requirement
+
+**NEVER make assumptions about cards that exist.** Always verify card existence and details before referencing them.
+
+### Required Workflow for Any Card Reference:
+
+1. **First**: Use `convert_to_scryfall_query` to build a proper search query
+2. **Then**: Use `search_cards` or `get_card_by_name` to verify the card exists
+3. **Finally**: Reference the card using information from the actual Scryfall data
+
+### Efficient Multi-Card Verification:
+
+When verifying multiple cards, you can use a single search query with OR conditions:
+
+**Example:**
+```
+search_cards('!"Lightning Bolt" or !"Sol Ring" or !"Rhystic Study"')
+```
+
+This verifies all three cards in one API call instead of three separate calls.
+
+### Examples:
+
+**INCORRECT (Assumption-Based):**
+- "Sol Ring is a great mana rock for Commander"
+- "Run Lightning Bolt for removal"
+- "Add Rhystic Study for card draw"
+
+**CORRECT (Verified - Single Card):**
+1. Call `get_card_by_name("Sol Ring")` to verify it exists
+2. Check its Oracle text, mana cost, and legality
+3. Then reference: "Sol Ring (verified: {0}, Artifact) provides significant mana acceleration"
+
+**CORRECT (Verified - Multiple Cards):**
+1. Call `search_cards('!"Sol Ring" or !"Mana Crypt" or !"Mana Vault"')`
+2. Verify all three exist and get their details
+3. Then reference: "Based on search results, these mana rocks are..."
+
+### Why This Matters:
+
+- **Card names change**: Some cards have multiple printings with different names
+- **Existence isn't guaranteed**: The LLM's training data may include cards that don't exist or were never printed
+- **Details matter**: Exact Oracle text, mana costs, and type lines are critical for accurate recommendations
+- **Legality varies**: A card legal in one format may be banned in another
+- **Prices fluctuate**: Current market data is essential for budget recommendations
+
+### When Verification Is Required:
+
+- Making card recommendations
+- Discussing card interactions
+- Comparing similar cards
+- Building deck lists
+- Analyzing combos or synergies
+- Providing budget alternatives
+
+### The Only Exception:
+
+Extremely well-known cards that are being used as examples in explanatory context (e.g., "cards like Lightning Bolt" when explaining removal spells) - but even then, prefer verification when possible.
+

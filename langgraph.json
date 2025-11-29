@@ -2,7 +2,8 @@
   "dependencies": ["."],
   "graphs": {
     "scryfall_assistant": "./src/agent.py:graph",
-    "scryfall_query_builder": "./src/tools/query_builder.py:graph"
+    "scryfall_query_builder": "./src/tools/query_builder.py:graph",
+    "statistics_calculator": "./src/tools/statistics_calculator.py:graph"
   },
   "env": ".env"
 }
