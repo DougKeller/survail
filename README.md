@@ -1,11 +1,27 @@
-# MTG LangGraph Application
+# MTG Deep Agent
 
-A basic LangGraph application with Azure OpenAI, Postgres checkpointer, and LangSmith tracing.
+A Magic: The Gathering assistant powered by LangGraph Deep Agents, Scryfall API, and Azure OpenAI.
 
 ## Features
 
+### Deep Agent Capabilities
+- **Planning & Task Management**: Automatic todo lists for complex deck building and research tasks
+- **Memory System**: Persistent storage for user preferences, strategies, and insights across sessions
+- **Specialized Subagents**: Delegate to expert agents for focused tasks:
+  - **Research Specialist**: Deep dives into card options and meta analysis
+  - **Combo Evaluator**: Analyzes card interactions, synergies, and nonbos
+  - **Brainstorming Agent**: Generates creative deck ideas and unconventional strategies
+  - **Price Analyst**: Budget optimization and price comparison
+
+### MTG-Specific Features
+- **Comprehensive Scryfall Integration**: 18+ tools for card search, rulings, prices, and more
+- **Natural Language Query Builder**: Converts plain English to Scryfall syntax
+- **Format-Aware Recommendations**: Automatically sorts by EDHREC rank (Commander) or price (competitive)
+- **Graceful Error Handling**: Helpful messages with suggestions when cards aren't found
+
+### Infrastructure
 - **LangGraph**: Stateful agent orchestration framework
-- **Azure OpenAI**: Integration with Azure OpenAI services using deployment configurations
+- **Azure OpenAI**: Integration with Azure OpenAI services (GPT-5.1)
 - **Postgres Checkpointer**: Persistent state management with pgvector support
 - **LangSmith**: Observability and tracing for debugging and monitoring
 - **Deployment Configurations**: Centralized configuration for multiple Azure OpenAI deployments
@@ -81,20 +97,24 @@ Edit `.env` and set:
 docker-compose up -d
 ```
 
-2. **Run the application**:
+## Usage
+
+### Run with LangGraph Dev Server (Recommended)
+
+The agent is configured for deployment with `langgraph.json`. To run locally:
+
+```bash
+uv run langgraph dev --no-browser --port 8123
+```
+
+This starts the LangGraph Studio server where you can interact with the agent through a web interface at http://localhost:8123.
+
+### Run with Python Script
+
+For quick testing without the dev server:
+
 ```bash
 uv run -m src.app
-```
-
-Or:
-
-```bash
-python -m src.app
-```
-
-Alternatively, you can run it directly (requires PYTHONPATH to include the project root):
-```bash
-PYTHONPATH=. python src/app.py
 ```
 
 ## Project Structure
@@ -102,14 +122,20 @@ PYTHONPATH=. python src/app.py
 ```
 .
 ├── src/                      # Source code directory
-│   ├── app.py               # Main LangGraph application
-│   └── config/
-│       ├── __init__.py      # Config module exports
-│       ├── config.py        # Environment variable configuration
-│       └── deployments.py   # Azure OpenAI deployment configurations
+│   ├── agent.py             # Main MTG Deep Agent with middleware & subagents
+│   ├── app.py               # Simple CLI for local testing
+│   ├── config/
+│   │   ├── __init__.py      # Config module exports
+│   │   ├── config.py        # Environment variable configuration
+│   │   └── deployments.py   # Azure OpenAI deployment configurations
+│   └── tools/
+│       ├── __init__.py      # Tools module exports
+│       ├── scryfall.py      # 18 Scryfall API tools
+│       └── query_builder.py # Natural language to Scryfall query converter
 ├── scripts/                  # Utility scripts (not part of core app)
 │   └── download_scryfall_docs.py  # Scryfall API docs crawler
 ├── docker-compose.yml       # Postgres with pgvector setup
+├── langgraph.json           # LangGraph deployment configuration
 ├── tmp/                      # Temporary files (gitignored)
 │   ├── cache/               # Cached HTML files
 │   └── markdown/            # Converted markdown files
@@ -120,15 +146,41 @@ PYTHONPATH=. python src/app.py
 
 ## How It Works
 
-The application creates a LangGraph agent that:
+The MTG Deep Agent uses LangGraph's deep agent architecture with three layers of middleware:
 
-1. **State Management**: Uses `AgentState` to track conversation messages
-2. **Postgres Checkpointer**: Persists state to Postgres database with pgvector support
-3. **Deployment Configurations**: Uses centralized configs from `config/deployments.py`
-   - GPT 5.1: Primary chat model
-   - Text Embedding 3 Large: For embeddings (available for future use)
-4. **Agent Node**: Processes user messages and generates responses using Azure OpenAI
-5. **Tracing**: Automatically sends traces to LangSmith when configured
+### 1. TodoList Middleware
+- Automatically creates and maintains todo lists for complex tasks
+- Example: "Build a Commander deck" → breaks into research, card selection, interaction checks, budget analysis
+- Tracks progress and updates as new information is discovered
+
+### 2. Filesystem Middleware
+- **Ephemeral storage** (per-thread): `/research/`, `/working/` for temporary card lists and analysis
+- **Persistent storage** (cross-thread): `/memories/` for user preferences, strategies, and insights
+- Example: Stores user's format preference, budget constraints, and previously researched synergies
+
+### 3. Subagent Middleware
+Four specialized subagents handle focused tasks:
+
+| Subagent | Purpose | Key Tools |
+|----------|---------|-----------|
+| **research_specialist** | Deep card research & meta analysis | All Scryfall tools + query builder |
+| **combo_evaluator** | Analyzes interactions, synergies, nonbos | Card lookup, rulings, legality checks |
+| **brainstorming** | Creative deck ideas & strategies | Random cards, filtered search, discovery |
+| **price_analyst** | Budget optimization & value analysis | Price comparison, budget alternatives |
+
+### Workflow Example
+
+```
+User: "Help me build a budget Commander deck around Zaxara"
+
+Agent:
+1. Creates todo list: research commander → find synergies → check budget → optimize
+2. Stores user preference: "budget: <$100" to /memories/user_preferences.txt
+3. Delegates to research_specialist: "Find X-spell payoffs for Zaxara under $5"
+4. Delegates to combo_evaluator: "Check if Freed from the Real + Zaxara goes infinite"
+5. Delegates to price_analyst: "Compare budget mana doublers"
+6. Synthesizes findings from filesystem and provides recommendations
+```
 
 ## Deployment Configurations
 

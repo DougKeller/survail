@@ -33,7 +33,8 @@ def _rate_limited_request(
     endpoint: str,
     params: Optional[dict] = None,
     json_data: Optional[dict] = None,
-) -> dict:
+    return_error: bool = False,
+) -> dict | tuple[dict | None, str | None]:
     """
     Make a rate-limited request to the Scryfall API.
     
@@ -42,12 +43,13 @@ def _rate_limited_request(
         endpoint: API endpoint (e.g., "/cards/search")
         params: Query parameters
         json_data: JSON body for POST requests
+        return_error: If True, return (None, error_message) instead of raising
         
     Returns:
-        JSON response as dict
+        JSON response as dict, or tuple of (None, error_message) if return_error=True
         
     Raises:
-        Exception: If the API returns an error
+        Exception: If the API returns an error and return_error=False
     """
     global _last_request_time
     
@@ -76,9 +78,16 @@ def _rate_limited_request(
     
     if response.status_code >= 400:
         error_msg = data.get("details", data.get("error", "Unknown error"))
-        raise Exception(f"Scryfall API error ({response.status_code}): {error_msg}")
+        
+        if return_error:
+            return None, error_msg
+        else:
+            raise Exception(f"Scryfall API error ({response.status_code}): {error_msg}")
     
-    return data
+    if return_error:
+        return data, None
+    else:
+        return data
 
 
 def _format_card_summary(card: dict) -> str:
@@ -176,7 +185,22 @@ def search_cards(
         "page": page,
     }
     
-    data = _rate_limited_request("GET", "/cards/search", params=params)
+    data, error = _rate_limited_request("GET", "/cards/search", params=params, return_error=True)
+    
+    # Handle search errors
+    if error:
+        result = f"❌ Search failed: \"{query}\"\n\n"
+        result += f"Scryfall says: {error}\n\n"
+        result += "**Possible reasons:**\n"
+        result += "- No cards match this search query\n"
+        result += "- The query syntax might be invalid\n"
+        result += "- The search criteria might be too restrictive\n"
+        result += "\n**Suggestions:**\n"
+        result += f"- Use `convert_to_scryfall_query()` to generate a valid query from natural language\n"
+        result += "- Try broadening your search (remove some filters)\n"
+        result += "- Check the Scryfall syntax guide: https://scryfall.com/docs/syntax\n"
+        
+        return result
     
     cards = data.get("data", [])
     total = data.get("total_cards", len(cards))
@@ -234,7 +258,26 @@ def get_card_by_name(name: str, fuzzy: bool = True, set_code: Optional[str] = No
     if set_code:
         params["set"] = set_code
     
-    card = _rate_limited_request("GET", "/cards/named", params=params)
+    card, error = _rate_limited_request("GET", "/cards/named", params=params, return_error=True)
+    
+    # Handle card not found
+    if error:
+        result = f"❌ Card not found: \"{name}\"\n\n"
+        result += f"Scryfall says: {error}\n\n"
+        result += "**Possible reasons:**\n"
+        result += "- The card name might be misspelled. Try checking the spelling.\n"
+        result += "- The card might use a different name or have multiple printings with variations.\n"
+        result += "- If it's a double-faced card, try the front face name.\n"
+        
+        if set_code:
+            result += f"- The card might not exist in set '{set_code}'. Try without specifying the set.\n"
+        
+        result += "\n**Suggestions:**\n"
+        result += f"- Use `autocomplete_card_name(\"{name}\")` to see similar card names\n"
+        result += f"- Use `search_cards()` with a broader query to find related cards\n"
+        result += "- Double-check the card name on Scryfall's website: https://scryfall.com\n"
+        
+        return result
     
     # Extended card details
     result = _format_card_summary(card)
@@ -452,7 +495,17 @@ def get_rulings_by_card_name(card_name: str) -> str:
     """
     # First, get the card to find its ID
     params = {"fuzzy": card_name}
-    card = _rate_limited_request("GET", "/cards/named", params=params)
+    card, error = _rate_limited_request("GET", "/cards/named", params=params, return_error=True)
+    
+    # Handle card not found
+    if error:
+        result = f"❌ Card not found: \"{card_name}\"\n\n"
+        result += f"Scryfall says: {error}\n\n"
+        result += "**Suggestions:**\n"
+        result += f"- Use `autocomplete_card_name(\"{card_name}\")` to see similar card names\n"
+        result += "- Check the spelling or try a different card name\n"
+        
+        return result
     
     card_id = card.get("id")
     card_actual_name = card.get("name", card_name)
@@ -649,8 +702,16 @@ def compare_cards(card1_name: str, card2_name: str) -> str:
     Returns:
         Side-by-side comparison using most recent printings of both cards
     """
-    card1 = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card1_name})
-    card2 = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card2_name})
+    card1, error1 = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card1_name}, return_error=True)
+    card2, error2 = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card2_name}, return_error=True)
+    
+    # Handle card not found errors
+    if error1 and error2:
+        return f"❌ Both cards not found:\n- \"{card1_name}\": {error1}\n- \"{card2_name}\": {error2}\n\nPlease check the spelling and try again."
+    elif error1:
+        return f"❌ First card not found: \"{card1_name}\"\nScryfall says: {error1}\n\nPlease check the spelling and try again."
+    elif error2:
+        return f"❌ Second card not found: \"{card2_name}\"\nScryfall says: {error2}\n\nPlease check the spelling and try again."
     
     def get_val(card, key, default="N/A"):
         return card.get(key, default) or default
@@ -690,7 +751,17 @@ def get_card_legality(card_name: str) -> str:
     Returns:
         Legality status across all Magic formats
     """
-    card = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card_name})
+    card, error = _rate_limited_request("GET", "/cards/named", params={"fuzzy": card_name}, return_error=True)
+    
+    # Handle card not found
+    if error:
+        result = f"❌ Card not found: \"{card_name}\"\n\n"
+        result += f"Scryfall says: {error}\n\n"
+        result += "**Suggestions:**\n"
+        result += f"- Use `autocomplete_card_name(\"{card_name}\")` to see similar card names\n"
+        result += "- Check the spelling or try a different card name\n"
+        
+        return result
     
     legalities = card.get("legalities", {})
     name = card.get("name", card_name)
