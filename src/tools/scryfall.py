@@ -143,59 +143,90 @@ def _rate_limited_request(
 
 def _format_card_summary(card: dict) -> str:
     """
-    Format a card object into a comprehensive, readable summary.
+    Format a card object into a readable summary with all relevant game information.
     
-    Includes all relevant gameplay information: oracle text, CMC, power/toughness,
-    loyalty, mana cost, type, and prices.
+    Includes: name, mana cost, CMC, type, oracle text, P/T, loyalty, prices.
+    Handles multiface cards by including face data.
     """
     name = card.get("name", "Unknown")
     mana_cost = card.get("mana_cost", "")
     type_line = card.get("type_line", "")
-    cmc = card.get("cmc", 0)
-    
-    # Get oracle text (check card_faces for multiface cards)
     oracle_text = card.get("oracle_text", "")
-    if not oracle_text and card.get("card_faces"):
-        # Multiface card - combine oracle text from all faces
-        faces = card["card_faces"]
-        oracle_texts = [face.get("oracle_text", "") for face in faces if face.get("oracle_text")]
-        oracle_text = "\n---\n".join(oracle_texts)
+    cmc = card.get("cmc")
+    
+    # Build header line with name and mana cost
+    summary = f"**{name}**"
+    if mana_cost:
+        summary += f" {mana_cost}"
+    summary += "\n"
+    
+    # Add CMC if present
+    if cmc is not None:
+        summary += f"CMC: {cmc}\n"
     
     # Handle power/toughness for creatures
     pt = ""
-    power = card.get("power")
-    toughness = card.get("toughness")
-    if power is not None and toughness is not None:
-        pt = f" ({power}/{toughness})"
+    if card.get("power") is not None and card.get("toughness") is not None:
+        pt = f" ({card['power']}/{card['toughness']})"
     
     # Handle loyalty for planeswalkers
-    loyalty = card.get("loyalty")
-    if loyalty:
-        pt = f" (Loyalty: {loyalty})"
+    loyalty = ""
+    if card.get("loyalty") is not None:
+        loyalty = f" (Loyalty: {card['loyalty']})"
+    
+    # Add type line with P/T or loyalty
+    summary += f"*{type_line}*{pt}{loyalty}\n"
+    
+    # Handle oracle text (including multiface cards)
+    if oracle_text:
+        summary += f"\n{oracle_text}\n"
+    elif card.get("card_faces"):
+        # Multiface card - include text from each face
+        summary += "\n"
+        for i, face in enumerate(card["card_faces"]):
+            face_name = face.get("name", "")
+            face_mana = face.get("mana_cost", "")
+            face_type = face.get("type_line", "")
+            face_text = face.get("oracle_text", "")
+            
+            summary += f"**{face_name}**"
+            if face_mana:
+                summary += f" {face_mana}"
+            summary += f"\n*{face_type}*\n"
+            
+            # Handle face P/T and loyalty
+            if face.get("power") is not None and face.get("toughness") is not None:
+                summary += f"({face['power']}/{face['toughness']})\n"
+            if face.get("loyalty") is not None:
+                summary += f"(Loyalty: {face['loyalty']})\n"
+            
+            if face_text:
+                summary += f"{face_text}\n"
+            
+            if i < len(card["card_faces"]) - 1:
+                summary += "---\n"
     
     # Prices
     prices = card.get("prices", {})
-    usd = prices.get("usd") or prices.get("usd_foil") or "N/A"
-    eur = prices.get("eur") or prices.get("eur_foil") or "N/A"
-    tix = prices.get("tix") or "N/A"
+    usd = prices.get("usd")
+    usd_foil = prices.get("usd_foil")
+    eur = prices.get("eur")
+    tix = prices.get("tix")
     
-    # Build summary
-    summary = f"**{name}** {mana_cost}\n"
-    summary += f"*{type_line}*{pt}\n"
+    price_parts = []
+    if usd:
+        price_parts.append(f"${usd} USD")
+    if usd_foil:
+        price_parts.append(f"${usd_foil} USD (foil)")
+    if eur:
+        price_parts.append(f"€{eur} EUR")
+    if tix:
+        price_parts.append(f"{tix} TIX")
     
-    # Always include CMC for reference
-    if cmc > 0 or mana_cost:  # Show CMC if card has mana cost
-        summary += f"**Mana Value (CMC):** {cmc}\n"
-    
-    # Oracle text (rules text) - CRITICAL for card verification
-    if oracle_text:
-        summary += f"\n**Oracle Text:**\n{oracle_text}\n"
-    
-    # Prices
-    summary += f"\n**Prices:**\n"
-    summary += f"  • USD: ${usd}\n"
-    summary += f"  • EUR: €{eur}\n"
-    summary += f"  • MTGO (TIX): {tix}"
+    if price_parts:
+        summary += f"\nPrice: {' | '.join(price_parts)}"
+    else:
+        summary += "\nPrice: N/A"
     
     return summary
 
@@ -418,17 +449,41 @@ def get_card_by_name(name: str, fuzzy: bool = True, set_code: Optional[str] = No
         result += " *(most recent printing)*"
     result += f"\nRarity: {card.get('rarity', 'Unknown').title()}"
     
+    # Add color identity (important for Commander)
+    color_identity = card.get("color_identity", [])
+    if color_identity:
+        result += f"\nColor Identity: {', '.join(color_identity)}"
+    else:
+        result += "\nColor Identity: Colorless"
+    
+    # Keywords
+    keywords = card.get("keywords", [])
+    if keywords:
+        result += f"\nKeywords: {', '.join(keywords)}"
+    
     # Note search mode
     if fuzzy:
-        result += f"\n*Matched using fuzzy search for '{name}'*"
+        result += f"\n\n*Matched using fuzzy search for '{name}'*"
     
-    # Legalities
+    # Legalities (show most common formats)
     legalities = card.get("legalities", {})
-    legal_formats = [fmt for fmt, status in legalities.items() if status == "legal"]
-    if legal_formats:
-        result += f"\nLegal in: {', '.join(legal_formats[:5])}"
-        if len(legal_formats) > 5:
-            result += f" (+{len(legal_formats) - 5} more)"
+    common_formats = ["standard", "modern", "pioneer", "commander", "legacy", "vintage", "pauper"]
+    legal_status = {}
+    for fmt in common_formats:
+        status = legalities.get(fmt, "not_legal")
+        if status in ["legal", "banned", "restricted"]:
+            legal_status[fmt] = status
+    
+    if legal_status:
+        result += f"\n\nFormat Legality:"
+        for fmt, status in legal_status.items():
+            emoji = "✅" if status == "legal" else "🚫" if status == "banned" else "⚠️"
+            result += f"\n  {emoji} {fmt.title()}: {status.title()}"
+    
+    # EDHREC rank (if available)
+    edhrec_rank = card.get("edhrec_rank")
+    if edhrec_rank:
+        result += f"\n\nEDHREC Rank: #{edhrec_rank}"
     
     # Scryfall link
     result += f"\n\nScryfall: {card.get('scryfall_uri', 'N/A')}"
@@ -846,47 +901,62 @@ def compare_cards(card1_name: str, card2_name: str) -> str:
     def get_val(card, key, default="N/A"):
         return card.get(key, default) or default
     
-    # Get oracle text (handle multiface cards)
-    def get_oracle_text(card):
-        oracle_text = card.get("oracle_text", "")
-        if not oracle_text and card.get("card_faces"):
-            faces = card["card_faces"]
-            oracle_texts = [face.get("oracle_text", "") for face in faces if face.get("oracle_text")]
-            oracle_text = " // ".join(oracle_texts)
-        return oracle_text or "N/A"
-    
     result = "**Card Comparison** *(using most recent printings)*\n\n"
-    result += f"{'Property':<20} | {get_val(card1, 'name'):<30} | {get_val(card2, 'name'):<30}\n"
-    result += "-" * 85 + "\n"
-    result += f"{'Set':<20} | {get_val(card1, 'set').upper():<30} | {get_val(card2, 'set').upper():<30}\n"
-    result += f"{'Mana Cost':<20} | {get_val(card1, 'mana_cost'):<30} | {get_val(card2, 'mana_cost'):<30}\n"
-    result += f"{'Mana Value (CMC)':<20} | {str(get_val(card1, 'cmc', 0)):<30} | {str(get_val(card2, 'cmc', 0)):<30}\n"
-    result += f"{'Type':<20} | {get_val(card1, 'type_line'):<30} | {get_val(card2, 'type_line'):<30}\n"
     
-    if card1.get("power") or card2.get("power"):
-        pt1 = f"{get_val(card1, 'power')}/{get_val(card1, 'toughness')}" if card1.get("power") else "N/A"
-        pt2 = f"{get_val(card2, 'power')}/{get_val(card2, 'toughness')}" if card2.get("power") else "N/A"
-        result += f"{'Power/Toughness':<20} | {pt1:<30} | {pt2:<30}\n"
+    # Tabular comparison of key stats
+    result += f"{'Property':<20} | {get_val(card1, 'name'):<35} | {get_val(card2, 'name'):<35}\n"
+    result += "-" * 95 + "\n"
+    result += f"{'Set':<20} | {get_val(card1, 'set').upper():<35} | {get_val(card2, 'set').upper():<35}\n"
+    result += f"{'Mana Cost':<20} | {get_val(card1, 'mana_cost'):<35} | {get_val(card2, 'mana_cost'):<35}\n"
+    result += f"{'Mana Value (CMC)':<20} | {str(get_val(card1, 'cmc', 0)):<35} | {str(get_val(card2, 'cmc', 0)):<35}\n"
+    result += f"{'Type':<20} | {get_val(card1, 'type_line'):<35} | {get_val(card2, 'type_line'):<35}\n"
     
-    if card1.get("loyalty") or card2.get("loyalty"):
-        result += f"{'Loyalty':<20} | {get_val(card1, 'loyalty'):<30} | {get_val(card2, 'loyalty'):<30}\n"
+    if card1.get("power") is not None or card2.get("power") is not None:
+        pt1 = f"{get_val(card1, 'power')}/{get_val(card1, 'toughness')}" if card1.get("power") is not None else "N/A"
+        pt2 = f"{get_val(card2, 'power')}/{get_val(card2, 'toughness')}" if card2.get("power") is not None else "N/A"
+        result += f"{'Power/Toughness':<20} | {pt1:<35} | {pt2:<35}\n"
     
-    result += f"{'Rarity':<20} | {get_val(card1, 'rarity').title():<30} | {get_val(card2, 'rarity').title():<30}\n"
+    if card1.get("loyalty") is not None or card2.get("loyalty") is not None:
+        loy1 = str(get_val(card1, 'loyalty')) if card1.get("loyalty") is not None else "N/A"
+        loy2 = str(get_val(card2, 'loyalty')) if card2.get("loyalty") is not None else "N/A"
+        result += f"{'Loyalty':<20} | {loy1:<35} | {loy2:<35}\n"
     
+    result += f"{'Rarity':<20} | {get_val(card1, 'rarity').title():<35} | {get_val(card2, 'rarity').title():<35}\n"
+    
+    # Color identity
+    ci1 = ', '.join(card1.get("color_identity", [])) or "Colorless"
+    ci2 = ', '.join(card2.get("color_identity", [])) or "Colorless"
+    result += f"{'Color Identity':<20} | {ci1:<35} | {ci2:<35}\n"
+    
+    # Prices
     prices1 = card1.get("prices", {})
     prices2 = card2.get("prices", {})
     price1 = prices1.get("usd") or prices1.get("usd_foil") or "N/A"
     price2 = prices2.get("usd") or prices2.get("usd_foil") or "N/A"
-    result += f"{'Price (USD)':<20} | ${price1:<29} | ${price2:<29}\n"
+    result += f"{'Price (USD)':<20} | ${price1:<34} | ${price2:<34}\n"
     
-    # Add Oracle Text section (critical for comparing card effects)
-    oracle1 = get_oracle_text(card1)
-    oracle2 = get_oracle_text(card2)
+    # Oracle text comparison (below the table)
+    result += "\n" + "="*95 + "\n\n"
+    result += f"**{get_val(card1, 'name')} - Oracle Text:**\n"
+    oracle1 = card1.get("oracle_text")
+    if oracle1:
+        result += f"{oracle1}\n"
+    elif card1.get("card_faces"):
+        for face in card1["card_faces"]:
+            result += f"// {face.get('name', '')}\n{face.get('oracle_text', '')}\n"
+    else:
+        result += "*(No oracle text)*\n"
     
-    result += "\n" + "=" * 85 + "\n"
-    result += "**Oracle Text Comparison:**\n\n"
-    result += f"**{get_val(card1, 'name')}:**\n{oracle1}\n\n"
-    result += f"**{get_val(card2, 'name')}:**\n{oracle2}\n"
+    result += "\n" + "-"*95 + "\n\n"
+    result += f"**{get_val(card2, 'name')} - Oracle Text:**\n"
+    oracle2 = card2.get("oracle_text")
+    if oracle2:
+        result += f"{oracle2}\n"
+    elif card2.get("card_faces"):
+        for face in card2["card_faces"]:
+            result += f"// {face.get('name', '')}\n{face.get('oracle_text', '')}\n"
+    else:
+        result += "*(No oracle text)*\n"
     
     return result
 

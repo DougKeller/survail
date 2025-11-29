@@ -3,18 +3,6 @@ revision = 2
 requires-python = ">=3.11"
 
 [[package]]
-name = "agentevals"
-version = "0.0.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openevals" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/31/ce/ebc8548e37d7352954980bb791594f262e084405c0bf29e749e44c8b341e/agentevals-0.0.9.tar.gz", hash = "sha256:35131a5e4b60d2a6ac3203d3d15983aa5f9162b8acb1b8700f9b2c777df1150d", size = 40136, upload-time = "2025-07-24T17:46:16.483Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/57/d5c3f161dcb74a2d853d44e02850be4341c92a3865d0562c10eca4ffc901/agentevals-0.0.9-py3-none-any.whl", hash = "sha256:4da425c1183fe8d24600e4316a31baca74e2bdc4d5e03d202fc1b314ece4cb02", size = 27453, upload-time = "2025-07-24T17:46:15.27Z" },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -995,18 +983,6 @@ wheels = [
 ]
 
 [[package]]
-name = "markdown-it-py"
-version = "4.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mdurl" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/f5/4ec618ed16cc4f8fb3b701563655a69816155e79e24a17b651541804721d/markdown_it_py-4.0.0.tar.gz", hash = "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3", size = 73070, upload-time = "2025-08-11T12:57:52.854Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/54/e7d793b573f298e1c9013b8c4dade17d481164aa517d1d7148619c2cedbf/markdown_it_py-4.0.0-py3-none-any.whl", hash = "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147", size = 87321, upload-time = "2025-08-11T12:57:51.923Z" },
-]
-
-[[package]]
 name = "markdownify"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1017,15 +993,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3f/bc/c8c8eea5335341306b0fa7e1cb33c5e1c8d24ef70ddd684da65f41c49c92/markdownify-1.2.2.tar.gz", hash = "sha256:b274f1b5943180b031b699b199cbaeb1e2ac938b75851849a31fd0c3d6603d09", size = 18816, upload-time = "2025-11-16T19:21:18.565Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/43/ce/f1e3e9d959db134cedf06825fae8d5b294bd368aacdd0831a3975b7c4d55/markdownify-1.2.2-py3-none-any.whl", hash = "sha256:3f02d3cc52714084d6e589f70397b6fc9f2f3a8531481bf35e8cc39f975e186a", size = 15724, upload-time = "2025-11-16T19:21:17.622Z" },
-]
-
-[[package]]
-name = "mdurl"
-version = "0.1.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
 ]
 
 [[package]]
@@ -1051,14 +1018,12 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
-    { name = "agentevals" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "agentevals", marker = "extra == 'dev'", specifier = ">=0.0.9" },
     { name = "beautifulsoup4", specifier = ">=4.14.2" },
     { name = "deepagents", specifier = ">=0.2.8" },
     { name = "langchain", specifier = ">=1.1.0" },
@@ -1095,21 +1060,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d5/e4/42591e356f1d53c568418dc7e30dcda7be31dd5a4d570bca22acb0525862/openai-2.8.1.tar.gz", hash = "sha256:cb1b79eef6e809f6da326a7ef6038719e35aa944c42d081807bfa1be8060f15f", size = 602490, upload-time = "2025-11-17T22:39:59.549Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/4f/dbc0c124c40cb390508a82770fb9f6e3ed162560181a85089191a851c59a/openai-2.8.1-py3-none-any.whl", hash = "sha256:c6c3b5a04994734386e8dad3c00a393f56d3b68a27cd2e8acae91a59e4122463", size = 1022688, upload-time = "2025-11-17T22:39:57.675Z" },
-]
-
-[[package]]
-name = "openevals"
-version = "0.1.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain" },
-    { name = "langchain-openai" },
-    { name = "langsmith" },
-    { name = "rich" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/93/5a/86c7e7ed141197641d8e73933afe05397783dc94333b0b8841b62883c7a3/openevals-0.1.2.tar.gz", hash = "sha256:792810252975853ec189c85ed1ab8df949c920da217f2e1e075e51b2d15ff53d", size = 97343, upload-time = "2025-10-31T22:19:28.787Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/40/7b171a5f77c5f3bc2378257a67785b2cd3da144f247e24b376d757f4698e/openevals-0.1.2-py3-none-any.whl", hash = "sha256:cbbd21bb9e1017ede6608cdd9cb5d9b65a6002e4aac3a228fbc18f97d6e5f52c", size = 64511, upload-time = "2025-10-31T22:19:27.461Z" },
 ]
 
 [[package]]
@@ -1767,19 +1717,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/61/d7545dafb7ac2230c70d38d31cbfe4cc64f7144dc41f6e4e4b78ecd9f5bb/requests-toolbelt-1.0.0.tar.gz", hash = "sha256:7681a0a3d047012b5bdc0ee37d7f8f07ebe76ab08caeccfc3921ce23c88d5bc6", size = 206888, upload-time = "2023-05-01T04:11:33.229Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3f/51/d4db610ef29373b879047326cbf6fa98b6c1969d6f6dc423279de2b1be2c/requests_toolbelt-1.0.0-py2.py3-none-any.whl", hash = "sha256:cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06", size = 54481, upload-time = "2023-05-01T04:11:28.427Z" },
-]
-
-[[package]]
-name = "rich"
-version = "14.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "markdown-it-py" },
-    { name = "pygments" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990, upload-time = "2025-10-09T14:16:53.064Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/7a/b0178788f8dc6cafce37a212c99565fa1fe7872c70c6c9c1e1a372d9d88f/rich-14.2.0-py3-none-any.whl", hash = "sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd", size = 243393, upload-time = "2025-10-09T14:16:51.245Z" },
 ]
 
 [[package]]
