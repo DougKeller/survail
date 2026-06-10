@@ -1,23 +1,86 @@
-version: '3.8'
-
 services:
-  postgres:
+  db:
     image: pgvector/pgvector:pg16
-    container_name: mtg-postgres
+    container_name: survail-db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: langgraph
+      POSTGRES_USER: survail
+      POSTGRES_PASSWORD: survail
+      POSTGRES_DB: survail
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U survail -d survail"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: survail-redis
+    command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      target: development
+    command:
+      [
+        "sh",
+        "-c",
+        "alembic upgrade head && uvicorn survail.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/survail",
+      ]
+    environment:
+      DATABASE_URL: postgresql+psycopg://survail:survail@db:5432/survail
+      API_BASE_URL: http://localhost:8000
+      WEB_BASE_URL: http://localhost:3000
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      AUTH_STRATEGY: ${AUTH_STRATEGY:-discord}
+      SESSION_SECRET: ${SESSION_SECRET:-local-development-secret-change-me}
+      REDIS_URL: redis://redis:6379/0
+      SCRYFALL_REQUESTS_PER_SECOND: ${SCRYFALL_REQUESTS_PER_SECOND:-5}
+      SCRYFALL_SEARCH_CACHE_TTL_SECONDS: ${SCRYFALL_SEARCH_CACHE_TTL_SECONDS:-86400}
+      DISCORD_OAUTH_CLIENT_ID: ${DISCORD_OAUTH_CLIENT_ID:-}
+      DISCORD_OAUTH_CLIENT_SECRET: ${DISCORD_OAUTH_CLIENT_SECRET:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_DESCRIPTION_MODEL: ${OPENAI_DESCRIPTION_MODEL:-gpt-4.1-mini}
+      DECK_DESCRIPTION_CACHE_TTL_SECONDS: ${DECK_DESCRIPTION_CACHE_TTL_SECONDS:-2592000}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./web
+      target: development
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
+  redis_data:
+  web_node_modules:
 

@@ -1,224 +1,124 @@
-# MTG Deep Agent
+# Survail
 
-A Magic: The Gathering assistant powered by LangGraph Deep Agents, Scryfall API, and Azure OpenAI.
+Survail is a deck-building backend for Magic: The Gathering applications.
 
-## Features
+The repository currently contains:
 
-### Deep Agent Capabilities
-- **Planning & Task Management**: Automatic todo lists for complex deck building and research tasks
-- **Memory System**: Persistent storage for user preferences, strategies, and insights across sessions
-- **Specialized Subagents**: Delegate to expert agents for focused tasks:
-  - **Research Specialist**: Deep dives into card options and meta analysis
-  - **Combo Evaluator**: Analyzes card interactions, synergies, and nonbos
-  - **Brainstorming Agent**: Generates creative deck ideas and unconventional strategies
-  - **Price Analyst**: Budget optimization and price comparison
+- `api/`: FastAPI backend, domain logic, migrations, and tests.
+- `web/`: React deck library and editor.
+- `docker-compose.yml`: PostgreSQL with pgvector, Redis, API, and web services.
 
-### MTG-Specific Features
-- **Comprehensive Scryfall Integration**: 18+ tools for card search, rulings, prices, and more
-- **Natural Language Query Builder**: Converts plain English to Scryfall syntax
-- **Format-Aware Recommendations**: Automatically sorts by EDHREC rank (Commander) or price (competitive)
-- **Graceful Error Handling**: Helpful messages with suggestions when cards aren't found
+## Implemented Capabilities
 
-### Infrastructure
-- **LangGraph**: Stateful agent orchestration framework
-- **Azure OpenAI**: Integration with Azure OpenAI services (GPT-5.1)
-- **Postgres Checkpointer**: Persistent state management with pgvector support
-- **LangSmith**: Observability and tracing for debugging and monitoring
-- **Deployment Configurations**: Centralized configuration for multiple Azure OpenAI deployments
+- Discord OAuth login and revocable cookie sessions.
+- Authenticated deck creation, editing, permanent deletion, and listing.
+- Local Scryfall bulk catalog search, exact-printing additions, card metadata, and card images.
+- Moxfield decklist preview and import with ranked printing preferences.
+- Resumable Oracle-card embedding backfill using `text-embedding-3-large` and pgvector.
+- Atomic deck card operations with immutable history and optimistic concurrency.
+- Deterministic deck-size, singleton, and format-legality validation.
+- PostgreSQL schema migrations with pgvector enabled.
+- Redis-backed Scryfall response caching with no eviction.
+- React deck library and editor.
 
-## Prerequisites
+## Core Model
 
-1. **Docker and Docker Compose**: For running Postgres with pgvector
-   - Install from [docker.com](https://www.docker.com/)
+- A `Deck` owns its title, discrete format, description, format-specific metadata, and cards.
+- Internally, each stored card selection identifies one exact Scryfall printing, finish, quantity,
+  and zone.
+- `printing_id` preserves the selected artwork/set/collector number. `oracle_id` identifies the
+  underlying card across printings and is used for copy-limit validation.
+- Stored Scryfall snapshots are strictly typed. Unknown upstream fields are discarded at the
+  integration boundary instead of leaking into the domain model.
+- Supported interactive searches and deck operations query PostgreSQL. Advanced Scryfall syntax
+  uses the throttled, Redis-cached live search fallback.
+- Validators are deterministic, composable format rules that return errors. They never prevent
+  persistence.
+  Current checks cover deck size, copy limits, Scryfall format legality, commander count, and
+  commander color identity.
 
-2. **Azure OpenAI Account**: You need Azure OpenAI resources with deployed models
-   - The app uses two deployments:
-     - GPT 5.1: `https://sondereastus2.openai.azure.com/`
-     - Text Embedding 3 Large: `https://sondertest2.openai.azure.com/`
-   - Both use the same API key: `AZURE_OPENAI_API_KEY`
+The backend is separated into HTTP routes, strict schemas, persistence models, Scryfall/Redis
+integrations, and deck validation domain logic. The web app consumes only the HTTP API.
 
-3. **LangSmith Account** (optional but recommended):
-   - Sign up at [smith.langchain.com](https://smith.langchain.com)
-   - Get your API key from the settings page
-   - See [LangSmith documentation](https://docs.langchain.com/langsmith/) for more info
+Redis is configured with `noeviction` and cached responses have no TTL. This is persistent
+cache-aside behavior, not an LRU eviction policy.
 
-## Installation
+See [docs/SCRYFALL_DATA.md](docs/SCRYFALL_DATA.md) for the live API safeguards and bulk catalog
+direction.
 
-This project uses `uv` as the package manager.
+## Local Setup
 
-1. Install dependencies:
-```bash
-uv sync
-```
+1. Install system and project dependencies, start pgvector, and run migrations:
 
-2. Install additional dependencies if needed:
-```bash
-uv add python-dotenv langgraph-checkpoint-postgres psycopg[binary,pool]
-```
+   ```bash
+   ./setup.sh
+   ```
 
-## Setup
+   Run this as the repository owner, never as root. The script does not use `sudo`; it verifies
+   Python, pip, Docker, Docker Compose, npm, repository ownership, and direct Docker access before
+   installing project dependencies.
 
-1. **Start Postgres with pgvector**:
-```bash
-docker-compose up -d
-```
+   Docker must already be running and accessible without `sudo`. On a standard Linux Docker Engine
+   installation, `/var/run/docker.sock` is owned by `root:docker` and the development user belongs
+   to the `docker` group. System-level Docker installation and permission changes are deliberately
+   outside the project setup script.
 
-This will start a Postgres container with pgvector extension on port 5432.
+   Setup also imports Scryfall's current Default Cards bulk export and generates missing Oracle
+   embeddings. It reads `OPENAI_API_KEY` from `.env`; when missing during an interactive run, it
+   securely prompts for the key and stores it in `.env`.
 
-2. **Configure environment variables**:
+2. Add `DISCORD_OAUTH_CLIENT_ID` and `DISCORD_OAUTH_CLIENT_SECRET` to `.env`. Configure this
+   redirect URI in Discord:
 
-Copy the example environment file:
-```bash
-cp .env.example .env
-```
+   ```text
+   http://localhost:8000/auth/discord/callback
+   ```
 
-Edit `.env` and set:
-- `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key (shared for both deployments)
-- `DATABASE_URL`: Postgres connection string
-- `LANGSMITH_API_KEY`: (Optional) Your LangSmith API key
-- `LANGSMITH_TRACING`: (Optional) Set to `true` to enable tracing
+3. Run all development services:
 
-### Environment Variables
+   ```bash
+   ./dev.sh
+   ```
 
-**Required:**
-- `AZURE_OPENAI_API_KEY`: API key for Azure OpenAI (shared across deployments)
-- `DATABASE_URL`: Postgres connection string (e.g., `postgresql://postgres:postgres@localhost:5432/langgraph?sslmode=disable`)
+   The API and web projects are bind-mounted into development containers. FastAPI and Vite reload
+   automatically when source files change. Rebuild only after changing Dockerfiles or project
+   dependencies:
 
-**Optional:**
-- `LANGSMITH_API_KEY`: LangSmith API key for tracing
-- `LANGSMITH_TRACING`: Set to `true` to enable tracing
-- `LANGSMITH_PROJECT`: Project name for LangSmith (default: `mtg-langgraph-app`)
-- `LANGSMITH_WORKSPACE_ID`: Workspace ID if using multiple workspaces
+   ```bash
+   docker compose build api web
+   ```
 
-## Usage
+For browser automation, set `AUTH_STRATEGY=mock` in `.env`. In development this automatically
+authenticates requests as a stable local user, allowing Playwright to open the app without Discord.
+Mock authentication is rejected when `ENVIRONMENT` is not `development`.
 
-1. **Start Postgres** (if not already running):
-```bash
-docker-compose up -d
-```
+Playwright and axe browser tests run as part of `./check.sh`. They use deterministic mocked API
+responses to verify keyboard interactions, dialog focus behavior, format-aware search, and
+automatically detectable accessibility violations.
 
-## Usage
+OpenAPI documentation is available at `http://localhost:8000/docs`.
 
-### Run with LangGraph Dev Server (Recommended)
+## Repository Layout
 
-The agent is configured for deployment with `langgraph.json`. To run locally:
-
-```bash
-uv run langgraph dev --no-browser --port 8123
-```
-
-This starts the LangGraph Studio server where you can interact with the agent through a web interface at http://localhost:8123.
-
-### Run with Python Script
-
-For quick testing without the dev server:
-
-```bash
-uv run -m src.app
-```
-
-## Project Structure
-
-```
+```text
 .
-├── src/                      # Source code directory
-│   ├── agent.py             # Main MTG Deep Agent with middleware & subagents
-│   ├── app.py               # Simple CLI for local testing
-│   ├── config/
-│   │   ├── __init__.py      # Config module exports
-│   │   ├── config.py        # Environment variable configuration
-│   │   └── deployments.py   # Azure OpenAI deployment configurations
-│   └── tools/
-│       ├── __init__.py      # Tools module exports
-│       ├── scryfall.py      # 18 Scryfall API tools
-│       └── query_builder.py # Natural language to Scryfall query converter
-├── scripts/                  # Utility scripts (not part of core app)
-│   └── download_scryfall_docs.py  # Scryfall API docs crawler
-├── docker-compose.yml       # Postgres with pgvector setup
-├── langgraph.json           # LangGraph deployment configuration
-├── tmp/                      # Temporary files (gitignored)
-│   ├── cache/               # Cached HTML files
-│   └── markdown/            # Converted markdown files
-├── .env.example             # Example environment variables
-├── pyproject.toml           # Project dependencies
-└── README.md                # This file
+├── api/
+│   ├── alembic/          # Database migrations
+│   ├── survail/          # Backend package
+│   └── tests/            # Deterministic tests
+├── docker-compose.yml
+├── setup.sh               # Install and initialize all projects
+├── dev.sh                 # Run the development stack
+├── check.sh               # Lint, typecheck, test, build, and validate migrations
+├── embed.sh               # One-off resumable Oracle-card embedding backfill
+├── web/                    # React deck library and editor
+└── README.md
 ```
 
-## How It Works
+See [api/README.md](api/README.md) for backend-specific commands and endpoint details.
 
-The MTG Deep Agent uses LangGraph's deep agent architecture with three layers of middleware:
+Run the complete strict verification suite with:
 
-### 1. TodoList Middleware
-- Automatically creates and maintains todo lists for complex tasks
-- Example: "Build a Commander deck" → breaks into research, card selection, interaction checks, budget analysis
-- Tracks progress and updates as new information is discovered
-
-### 2. Filesystem Middleware
-- **Ephemeral storage** (per-thread): `/research/`, `/working/` for temporary card lists and analysis
-- **Persistent storage** (cross-thread): `/memories/` for user preferences, strategies, and insights
-- Example: Stores user's format preference, budget constraints, and previously researched synergies
-
-### 3. Subagent Middleware
-Four specialized subagents handle focused tasks:
-
-| Subagent | Purpose | Key Tools |
-|----------|---------|-----------|
-| **research_specialist** | Deep card research & meta analysis | All Scryfall tools + query builder |
-| **combo_evaluator** | Analyzes interactions, synergies, nonbos | Card lookup, rulings, legality checks |
-| **brainstorming** | Creative deck ideas & strategies | Random cards, filtered search, discovery |
-| **price_analyst** | Budget optimization & value analysis | Price comparison, budget alternatives |
-
-### Workflow Example
-
+```bash
+./check.sh
 ```
-User: "Help me build a budget Commander deck around Zaxara"
-
-Agent:
-1. Creates todo list: research commander → find synergies → check budget → optimize
-2. Stores user preference: "budget: <$100" to /memories/user_preferences.txt
-3. Delegates to research_specialist: "Find X-spell payoffs for Zaxara under $5"
-4. Delegates to combo_evaluator: "Check if Freed from the Real + Zaxara goes infinite"
-5. Delegates to price_analyst: "Compare budget mana doublers"
-6. Synthesizes findings from filesystem and provides recommendations
-```
-
-## Deployment Configurations
-
-The app uses deployment configurations defined in `config/deployments.py`:
-
-- **GPT 5.1**: 
-  - Endpoint: `https://sondereastus2.openai.azure.com/`
-  - Deployment: `dev-gpt-5.1`
-  - Model: `gpt-5.1`
-
-- **Text Embedding 3 Large**:
-  - Endpoint: `https://sondertest2.openai.azure.com/`
-  - Deployment: `dev-text-embedding-3-large`
-  - Model: `text-embedding-3-large`
-
-Both deployments share the same `AZURE_OPENAI_API_KEY` from your `.env` file.
-
-## LangSmith Integration
-
-When `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` are set, the application will:
-
-- Automatically trace all LLM calls
-- Log state transitions
-- Provide visibility into agent execution
-- Enable debugging and monitoring in the LangSmith UI
-
-View your traces at: https://smith.langchain.com
-
-## Next Steps
-
-- Add tools to the agent for more functionality
-- Implement multi-agent workflows
-- Add streaming support
-- Deploy to LangSmith Deployment for production
-
-## References
-
-- [LangGraph Documentation](https://docs.langchain.com/langgraph)
-- [Azure OpenAI Documentation](https://docs.langchain.com/integrations/providers/microsoft)
-- [LangSmith Documentation](https://docs.langchain.com/langsmith)
-

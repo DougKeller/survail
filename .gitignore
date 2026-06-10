@@ -1,14 +1,28 @@
-# Python-generated files
+# Python
 __pycache__/
 *.py[oc]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environments and secrets
+.env
+api/.env
+.venv/
+api/.venv/
+
+# Build and editor output
 build/
 dist/
-wheels/
-*.egg-info
-tmp/
-.env
 .vscode/
-.langgraph_api/
 
-# Virtual environments
-.venv
+# Frontend placeholder
+web/node_modules/
+web/test-results/
+*.tsbuildinfo
+
+# Downloaded bulk data
+data/

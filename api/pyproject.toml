@@ -1,0 +1,57 @@
+[project]
+name = "survail-api"
+version = "0.1.0"
+description = "Deck-building API for Survail"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.14.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "ijson>=3.4.0",
+    "itsdangerous>=2.2.0",
+    "pgvector>=0.4.1",
+    "psycopg[binary]>=3.2.0",
+    "pydantic-settings>=2.7.0",
+    "redis>=5.2.0",
+    "sqlalchemy>=2.0.36",
+    "uvicorn[standard]>=0.34.0",
+]
+
+[project.scripts]
+survail-backfill-embeddings = "survail.embedding_backfill:main"
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.15.0",
+    "pytest>=8.3.0",
+    "ruff>=0.9.0",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["survail*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-q"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "DTZ", "N", "PERF", "PIE", "RUF", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+disallow_any_generics = true
+warn_return_any = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+mypy_path = "typings"
