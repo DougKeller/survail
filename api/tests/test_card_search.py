@@ -1,6 +1,9 @@
 from typing import cast
 
+from fastapi.routing import APIRoute
+
 from survail.catalog import CatalogRepository
+from survail.main import app
 from survail.routes.cards import _preferred_unique_cards
 from survail.schemas import NonUniversesBeyondPreference, ScryfallCardSnapshot
 
@@ -45,3 +48,9 @@ def test_search_returns_one_preferred_printing_per_oracle_card() -> None:
     )
 
     assert [card.id for card in cards] == ["non-ub", "other"]
+
+
+def test_semantic_search_is_not_exposed_as_a_public_card_route() -> None:
+    paths = {route.path for route in app.routes if isinstance(route, APIRoute)}
+
+    assert "/cards/semantic-search" not in paths

@@ -5,11 +5,13 @@ from sqlalchemy import text
 
 from survail.db import engine
 from survail.integrations.scryfall import ScryfallError, ScryfallNotFoundError
-from survail.routes import auth, cards, decks, formats, imports
+from survail.routes import agent, auth, cards, decks, evaluations, formats, imports
 from survail.settings import get_settings
+from survail.telemetry import configure_telemetry
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
+configure_telemetry(app, engine, settings)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.web_base_url],
@@ -22,6 +24,9 @@ app.include_router(cards.router)
 app.include_router(decks.router)
 app.include_router(formats.router)
 app.include_router(imports.router)
+app.include_router(agent.router)
+app.include_router(agent.guidance_router)
+app.include_router(evaluations.router)
 
 
 @app.exception_handler(ScryfallError)

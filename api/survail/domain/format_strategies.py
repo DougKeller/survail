@@ -40,6 +40,14 @@ class FormatStrategy(ABC):
     def metadata_matches(self, metadata: DeckMetadata) -> bool:
         return metadata.kind == self.metadata_kind
 
+    def deckbuilding_fundamentals(self) -> tuple[str, ...]:
+        return (
+            "Maintain reliable mana, card advantage, and interaction appropriate to the format.",
+            "Balance threats, answers, and mana against the deck's curve and game plan.",
+            "Use varied removal that can answer the permanent types and strategies common in the "
+            "format.",
+        )
+
     def commander_ids(self, metadata: DeckMetadata) -> list[str]:
         return []
 
@@ -88,6 +96,21 @@ class CommanderStrategy(FormatStrategy):
         if not isinstance(metadata, CommanderDeckMetadata):
             return []
         return metadata.commander_oracle_ids
+
+    def deckbuilding_fundamentals(self) -> tuple[str, ...]:
+        return (
+            "Meet Commander legality, singleton, deck-size, commander, and color-identity "
+            "requirements.",
+            "Include enough mana sources for the curve. As a rule of thumb, lands plus mana ramp "
+            "should total about 50, adjusted for mana value, card selection, and land utility.",
+            "Include card advantage, mana ramp, targeted removal, and board wipes in quantities "
+            "appropriate to the deck's plan.",
+            "Diversify removal by permanent type and effect. Balance board wipes against the "
+            "deck's own board: creature-heavy decks usually favor fewer, asymmetric, or "
+            "noncreature wipes.",
+            "Judge every recommendation against the current deck composition so it fills a need "
+            "without creating an imbalance.",
+        )
 
     def commander_error(
         self, card: ScryfallCardSnapshot, commanders: list[ScryfallCardSnapshot]

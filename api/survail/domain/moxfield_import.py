@@ -31,7 +31,7 @@ _SECTION_ZONES: dict[str, CardZone] = {
     "considering": CardZone.CONSIDERING,
     "companion": CardZone.COMPANION,
 }
-PrintingSelectionReason = Literal["ranked_preferences"]
+PrintingSelectionReason = Literal["ranked_preferences", "supplied_printing"]
 
 
 class MoxfieldCatalog(Protocol):
@@ -80,6 +80,15 @@ class ImportedCardSet:
 class MoxfieldImportPreview:
     cardsets: tuple[ImportedCardSet, ...]
     errors: tuple[MoxfieldImportIssue, ...]
+    used_ai_fallback: bool = False
+
+
+@dataclass(frozen=True)
+class ExtractedImportCard:
+    name: str
+    set_name: str | None
+    quantity: int
+    foil: bool
 
 
 def import_moxfield_decklist(
@@ -87,6 +96,7 @@ def import_moxfield_decklist(
     catalog: MoxfieldCatalog,
     *,
     preserve_tags: bool = False,
+    preserve_printings: bool = False,
     printing_preferences: list[ImportPrintingPreference] | None = None,
     default_zone: CardZone = CardZone.MAINBOARD,
 ) -> MoxfieldImportPreview:
@@ -97,6 +107,7 @@ def import_moxfield_decklist(
             card,
             catalog,
             preserve_tags=preserve_tags,
+            preserve_printings=preserve_printings,
             printing_preferences=printing_preferences or [],
         )
         if issue is not None:
@@ -106,6 +117,60 @@ def import_moxfield_decklist(
     return MoxfieldImportPreview(
         cardsets=tuple(_aggregate_cardsets(resolved)),
         errors=tuple(errors),
+    )
+
+
+def import_extracted_decklist(
+    cards: list[ExtractedImportCard],
+    catalog: MoxfieldCatalog,
+    *,
+    printing_preferences: list[ImportPrintingPreference] | None = None,
+    default_zone: CardZone = CardZone.MAINBOARD,
+) -> MoxfieldImportPreview:
+    resolved: list[ImportedCardSet] = []
+    errors: list[MoxfieldImportIssue] = []
+    for line_number, card in enumerate(cards, start=1):
+        selections = catalog.printings(card.name)
+        if card.set_name is not None:
+            matching_set = [
+                selection
+                for selection in selections
+                if selection.card.set_name.casefold() == card.set_name.casefold()
+            ]
+            selections = matching_set or selections
+        if not selections:
+            errors.append(
+                MoxfieldImportIssue(
+                    line_number, card.name, "unresolved_card", f"Could not resolve {card.name}"
+                )
+            )
+            continue
+        selection, finish = preferred_printing(selections, printing_preferences or [])
+        requested_finish = CardFinish.FOIL if card.foil else CardFinish.NONFOIL
+        if requested_finish.value in selection.card.finishes:
+            finish = requested_finish
+        printing = selection.card
+        resolved.append(
+            ImportedCardSet(
+                quantity=card.quantity,
+                printing_id=printing.id,
+                oracle_id=printing.oracle_id,
+                card_name=printing.name,
+                set_code=printing.set,
+                collector_number=printing.collector_number,
+                finish=finish,
+                zone=default_zone,
+                tags=(),
+                source_lines=(line_number,),
+                selected_price_usd=selection.price_for(finish),
+                printing_selection_reason="ranked_preferences",
+                scryfall=printing,
+            )
+        )
+    return MoxfieldImportPreview(
+        cardsets=tuple(_aggregate_cardsets(resolved)),
+        errors=tuple(errors),
+        used_ai_fallback=True,
     )
 
 
@@ -164,12 +229,20 @@ def _resolve_card(
     catalog: MoxfieldCatalog,
     *,
     preserve_tags: bool,
+    preserve_printings: bool,
     printing_preferences: list[ImportPrintingPreference],
 ) -> tuple[ImportedCardSet | None, MoxfieldImportIssue | None]:
     selections = catalog.printings(card.name)
     if not selections:
         return None, _issue(card, "unresolved_card", f"Could not resolve {card.name}")
-    selection, finish = preferred_printing(selections, printing_preferences)
+    supplied = _supplied_printing(card, selections) if preserve_printings else None
+    if supplied is None:
+        selection, finish = preferred_printing(selections, printing_preferences)
+        reason: PrintingSelectionReason = "ranked_preferences"
+    else:
+        selection = supplied
+        finish = _supplied_finish(card, selection)
+        reason = "supplied_printing"
     printing = selection.card
     return (
         ImportedCardSet(
@@ -184,7 +257,7 @@ def _resolve_card(
             tags=card.tags if preserve_tags else (),
             source_lines=(card.line_number,),
             selected_price_usd=selection.price_for(finish),
-            printing_selection_reason="ranked_preferences",
+            printing_selection_reason=reason,
             scryfall=printing,
         ),
         None,
@@ -228,6 +301,29 @@ def _optional_group(match: re.Match[str], name: str, *, lower: bool = False) -> 
 
 def _issue(card: ParsedMoxfieldCard, code: str, message: str) -> MoxfieldImportIssue:
     return MoxfieldImportIssue(card.line_number, card.raw_line, code, message)
+
+
+def _supplied_printing(
+    card: ParsedMoxfieldCard, selections: list[PrintingSelection]
+) -> PrintingSelection | None:
+    if card.set_code is None or card.collector_number is None:
+        return None
+    return next(
+        (
+            selection
+            for selection in selections
+            if selection.card.set.casefold() == card.set_code.casefold()
+            and selection.card.collector_number.casefold() == card.collector_number.casefold()
+        ),
+        None,
+    )
+
+
+def _supplied_finish(card: ParsedMoxfieldCard, selection: PrintingSelection) -> CardFinish:
+    preferred = CardFinish.FOIL if card.foil else CardFinish.NONFOIL
+    if preferred.value in selection.card.finishes:
+        return preferred
+    return CardFinish(selection.card.finishes[0])
 
 
 def _normalized_name(name: str) -> str:

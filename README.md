@@ -19,6 +19,7 @@ The repository currently contains:
 - Deterministic deck-size, singleton, and format-legality validation.
 - PostgreSQL schema migrations with pgvector enabled.
 - Redis-backed Scryfall response caching with no eviction.
+- OpenTelemetry API and agent observability with OpenInference, Jaeger, and Prometheus.
 - React deck library and editor.
 
 ## Core Model
@@ -97,6 +98,9 @@ responses to verify keyboard interactions, dialog focus behavior, format-aware s
 automatically detectable accessibility violations.
 
 OpenAPI documentation is available at `http://localhost:8000/docs`.
+Jaeger traces are available at `http://localhost:16686`, and Prometheus metrics are available at
+`http://localhost:9090`. See [docs/TELEMETRY.md](docs/TELEMETRY.md) for instrumentation and privacy
+configuration.
 
 ## Repository Layout
 

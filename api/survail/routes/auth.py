@@ -1,39 +1,19 @@
-import secrets
-from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from urllib.parse import urlencode
 
-import httpx
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, URLSafeTimedSerializer
-from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
 
 from survail.dependencies import AppSettings, CurrentUser, DbSession
-from survail.models import User, UserSession
+from survail.models import User
 from survail.schemas import UserRead
-from survail.security import hash_session_token
+from survail.services.auth import AuthService, DiscordOAuthError
 from survail.settings import Settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 DISCORD_AUTHORIZE_URL = "https://discord.com/oauth2/authorize"
-DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
-DISCORD_ME_URL = "https://discord.com/api/users/@me"
-
-
-class DiscordTokenResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore", strict=True)
-    access_token: str
-
-
-class DiscordUserResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore", strict=True)
-    id: str
-    username: str
-    global_name: str | None = None
-    avatar: str | None = None
 
 
 def _serializer(settings: Settings, salt: str) -> URLSafeTimedSerializer:
@@ -86,51 +66,9 @@ def discord_callback(
         raise HTTPException(status_code=400, detail="Invalid OAuth state") from exc
 
     try:
-        with httpx.Client(timeout=10.0) as client:
-            token_response = client.post(
-                DISCORD_TOKEN_URL,
-                data={
-                    "client_id": settings.discord_oauth_client_id,
-                    "client_secret": settings.discord_oauth_client_secret,
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": settings.discord_redirect_uri,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            if token_response.is_error:
-                raise HTTPException(status_code=502, detail="Discord token exchange failed")
-
-            token = DiscordTokenResponse.model_validate(token_response.json())
-            me_response = client.get(
-                DISCORD_ME_URL, headers={"Authorization": f"Bearer {token.access_token}"}
-            )
-            if me_response.is_error:
-                raise HTTPException(status_code=502, detail="Discord user lookup failed")
-            discord_user = DiscordUserResponse.model_validate(me_response.json())
-    except (httpx.HTTPError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail="Discord OAuth request failed") from exc
-
-    user = db.scalar(select(User).where(User.discord_id == discord_user.id))
-    if user is None:
-        user = User(discord_id=discord_user.id, username=discord_user.username)
-        db.add(user)
-
-    user.username = discord_user.username
-    user.display_name = discord_user.global_name
-    user.avatar_hash = discord_user.avatar
-    db.commit()
-    db.refresh(user)
-
-    session_token = secrets.token_urlsafe(32)
-    db.add(
-        UserSession(
-            user_id=user.id,
-            token_hash=hash_session_token(session_token),
-            expires_at=datetime.now(UTC) + timedelta(seconds=settings.session_max_age_seconds),
-        )
-    )
-    db.commit()
+        _user, session_token = AuthService(db).complete_discord_login(code, settings)
+    except DiscordOAuthError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     response = RedirectResponse(f"{settings.web_base_url.rstrip('/')}/decks", status_code=302)
     response.delete_cookie("discord_oauth_state")
     response.set_cookie(
@@ -157,12 +95,7 @@ def logout(
 ) -> Response:
     token = request.cookies.get(settings.session_cookie_name)
     if token:
-        session = db.scalar(
-            select(UserSession).where(UserSession.token_hash == hash_session_token(token))
-        )
-        if session:
-            db.delete(session)
-            db.commit()
+        AuthService(db).logout(token)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.delete_cookie(settings.session_cookie_name)
     return response

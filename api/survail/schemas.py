@@ -6,6 +6,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from survail.models import CardFinish, CardFrame, CardZone, DeckFormat
+from survail.types import JsonObject
 
 
 class StrictModel(BaseModel):
@@ -192,6 +193,7 @@ class DeckCreate(StrictModel):
     title: str = Field(min_length=1, max_length=120)
     format: DeckFormat = Field(strict=False)
     description: str = ""
+    goal: str = Field(default="", max_length=5000)
     metadata: DeckMetadata
 
     @field_validator("title")
@@ -199,6 +201,11 @@ class DeckCreate(StrictModel):
     def clean_title(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("title must not be blank")
+        return value.strip()
+
+    @field_validator("goal")
+    @classmethod
+    def clean_goal(cls, value: str) -> str:
         return value.strip()
 
     @model_validator(mode="after")
@@ -214,6 +221,7 @@ class DeckCreate(StrictModel):
 class DeckUpdate(StrictModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = None
+    goal: str | None = Field(default=None, max_length=5000)
     metadata: DeckMetadata | None = None
 
     @model_validator(mode="after")
@@ -232,12 +240,19 @@ class DeckUpdate(StrictModel):
             raise ValueError("title must not be blank")
         return value.strip()
 
+    @field_validator("goal")
+    @classmethod
+    def clean_optional_goal(cls, value: str | None) -> str | None:
+        return value.strip() if value is not None else None
+
 
 class DeckRead(StrictModel):
     id: uuid.UUID
     title: str
     format: DeckFormat
     description: str
+    goal: str
+    generated_description: str
     metadata: DeckMetadata
     cardsets: list[CardSetRead]
     is_sample: bool
@@ -264,6 +279,65 @@ class GeneratedDeckDescriptionRead(StrictModel):
     revision: int
     description: str
     cached: bool
+
+
+class QualitativeAnswerRead(StrictModel):
+    criterion_id: str
+    rating: Literal["very_low", "low", "neutral", "high", "very_high"]
+    score: int = Field(ge=0, le=100)
+
+
+class CardRoleScoreRead(StrictModel):
+    role: Literal[
+        "land",
+        "mana_ramp",
+        "card_advantage",
+        "removal",
+        "board_wipe",
+        "enabler",
+        "enhancer",
+        "payoff",
+    ]
+    score: int = Field(ge=0, le=100)
+    description: str
+    answers: list[QualitativeAnswerRead]
+
+
+class CardRoleEvaluationRead(StrictModel):
+    oracle_id: str
+    deck_revision: int
+    evaluator_version: str
+    overall_score: int = Field(ge=0, le=100)
+    overall_comment: str
+    roles: list[CardRoleScoreRead]
+    cached: bool
+
+
+class CardRoleEvaluationRequest(StrictModel):
+    oracle_ids: list[str] = Field(min_length=1, max_length=200)
+
+    @field_validator("oracle_ids")
+    @classmethod
+    def clean_oracle_ids(cls, value: list[str]) -> list[str]:
+        cleaned = [oracle_id.strip() for oracle_id in value]
+        if any(not oracle_id or len(oracle_id) > 40 for oracle_id in cleaned):
+            raise ValueError("oracle_ids must be non-blank and at most 40 characters")
+        return list(dict.fromkeys(cleaned))
+
+
+class DeckGuidanceProposalRead(StrictModel):
+    id: uuid.UUID
+    deck_id: uuid.UUID
+    expected_revision: int
+    reason: str
+    proposed_goal: str | None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class DeckGuidanceProposalDecision(StrictModel):
+    expected_revision: int = Field(ge=0)
 
 
 class CardSearchRead(StrictModel):
@@ -328,9 +402,25 @@ class CardSearchRequest(StrictModel):
         return self
 
 
+class SemanticCardSearchRequest(CardSearchRequest):
+    format: DeckFormat | None = Field(default=None, strict=False)
+    color_identity: list[Literal["W", "U", "B", "R", "G"]] | None = None
+    limit: int = Field(default=24, ge=1, le=60)
+
+
+class SemanticCardSearchResult(StrictModel):
+    card: ScryfallCardSnapshot
+    similarity: float = Field(ge=0, le=1)
+
+
+class SemanticCardSearchRead(StrictModel):
+    results: list[SemanticCardSearchResult]
+
+
 class MoxfieldImportRequest(StrictModel):
     decklist: str = Field(min_length=1, max_length=100_000)
     preserve_tags: bool = False
+    preserve_printings: bool = False
     printing_preferences: list[ImportPrintingPreference] = Field(default_factory=list, max_length=6)
     default_zone: CardZone = Field(default=CardZone.MAINBOARD, strict=False)
 
@@ -368,6 +458,7 @@ class MoxfieldImportIssueRead(StrictModel):
 class MoxfieldImportPreviewRead(StrictModel):
     cardsets: list[ImportedCardSetRead]
     errors: list[MoxfieldImportIssueRead]
+    used_ai_fallback: bool
 
 
 class MoxfieldDeckImportRequest(MoxfieldImportRequest):
@@ -392,3 +483,30 @@ class MoxfieldDeckImportRead(StrictModel):
 
 class CloneDeckRequest(StrictModel):
     title: str | None = Field(default=None, min_length=1, max_length=120)
+
+
+class DeckConversationRead(StrictModel):
+    id: uuid.UUID
+    deck_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class DeckAgentMessageCreate(StrictModel):
+    message: str = Field(min_length=1, max_length=10_000)
+
+    @field_validator("message")
+    @classmethod
+    def clean_message(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("message must not be blank")
+        return value.strip()
+
+
+class DeckAgentEventRead(StrictModel):
+    id: uuid.UUID
+    run_id: uuid.UUID
+    sequence: int
+    event_type: str
+    payload: JsonObject
+    created_at: datetime

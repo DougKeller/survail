@@ -1,3 +1,6 @@
+import json
+
+from survail.domain.decks import deck_validation_summary
 from survail.domain.format_strategies import FormatRules, strategy_for
 from survail.models import CardSet, Deck
 from survail.schemas import CardFace, ScryfallCardSnapshot
@@ -6,9 +9,18 @@ from survail.schemas import CardFace, ScryfallCardSnapshot
 def deck_description_context(deck: Deck) -> str:
     strategy = strategy_for(deck.format)
     sections = [
+        "Goal / North Star",
+        deck.goal or "None supplied",
+        "",
         "Format",
         f"Name: {deck.format.value.title()}",
         _format_rules(strategy.rules),
+        "",
+        "Format deckbuilding fundamentals (advisory, not rubric criteria)",
+        "\n".join(f"- {item}" for item in strategy.deckbuilding_fundamentals()),
+        "",
+        "Current validation",
+        json.dumps(deck_validation_summary(deck), indent=2),
         "",
         "Cards",
     ]

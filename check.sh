@@ -30,7 +30,7 @@ docker compose --project-directory "$ROOT_DIR" config --quiet
 
 if find "$API_DIR/survail" "$API_DIR/tests" "$WEB_DIR/src" \
   -type f \( -name '*.py' -o -name '*.ts' -o -name '*.tsx' \) -print0 |
-  xargs -0 grep -En '\b(Any|unknown)\b|type:[[:space:]]*ignore|noqa|eslint-disable' >/dev/null; then
+  xargs -0 grep -En '\bAny\b|:[[:space:]]*unknown\b|as[[:space:]]+unknown\b|<unknown>|type:[[:space:]]*ignore|noqa|eslint-disable' >/dev/null; then
   printf 'Prohibited loose types or lint suppressions found.\n' >&2
   exit 1
 fi

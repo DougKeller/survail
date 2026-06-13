@@ -1,9 +1,15 @@
 import type {
+  AgentUiEvent,
+  CardEvaluationProgress,
+  CardRoleEvaluation,
   Deck,
+  DeckConversation,
   DeckFormat,
+  DeckGuidanceProposal,
   DeckOperation,
   DeckOperationChangeInput,
   DeckOperationResult,
+  DeckUpdate,
   GeneratedDeckDescription,
   ImportPreferences,
   MoxfieldDeckImportResult,
@@ -85,6 +91,73 @@ function printingPreferences(preferences: ImportPreferences): object[] {
   }));
 }
 
+async function streamEvents(
+  path: string,
+  body: object,
+  onEvent: (event: AgentUiEvent) => void,
+): Promise<"completed" | "interrupted"> {
+  const startedAt = performance.now();
+  console.info("deck-agent stream request", { path });
+  const response = await fetch(`${API}${path}`, {
+    method: "POST", credentials: "include",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!response.ok || response.body === null) {
+    const responseText = await response.text();
+    console.error("deck-agent stream rejected", { path, status: response.status, responseText });
+    throw new ApiError(responseText, response.status);
+  }
+  console.info("deck-agent stream opened", { path, status: response.status });
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let reading = true;
+  let runId = "unknown";
+  let terminalType: "run_completed" | "run_failed" | null = null;
+  try {
+    while (reading) {
+      const chunk = await reader.read();
+      if (chunk.done) {
+        reading = false;
+        continue;
+      }
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const records = buffer.split("\n\n");
+      buffer = records.pop() ?? "";
+      for (const record of records) {
+        const data = record.split("\n").find((line) => line.startsWith("data: "));
+        if (data !== undefined) {
+          const event = JSON.parse(data.slice(6)) as AgentUiEvent;
+          runId = event.run_id;
+          if (event.type === "run_completed" || event.type === "run_failed") {
+            terminalType = event.type;
+          }
+          console.info("deck-agent stream event", { path, runId: event.run_id, eventType: event.type });
+          onEvent(event);
+        }
+      }
+    }
+  } catch (reason) {
+    console.error("deck-agent stream interrupted", { path, runId, reason });
+    onEvent({ type: "stream_closed", run_id: runId, payload: { expected: false, message: "The connection was interrupted. Your partial response is still available." } });
+    return "interrupted";
+  }
+  console.info("deck-agent stream closed", { path, runId, terminalType, durationMs: Math.round(performance.now() - startedAt) });
+  onEvent({
+    type: "stream_closed",
+    run_id: runId,
+    payload: {
+      expected: terminalType !== null,
+      message: terminalType === "run_completed"
+        ? "Response complete"
+        : terminalType === "run_failed"
+            ? "Response ended with an error"
+        : "The connection closed before the response finished. You can send another message to continue.",
+    },
+  });
+  return terminalType === null ? "interrupted" : "completed";
+}
+
 export const api = {
   me: () =>
     request<{ username: string; display_name: string | null }>("/auth/me"),
@@ -101,22 +174,24 @@ export const api = {
         metadata: metadataFor(format),
       }),
     }),
-  updateDeck: (id: string, title: string, description: string) =>
+  updateDeck: (id: string, update: DeckUpdate) =>
     request<Deck>(`/decks/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify(update),
     }),
   deleteDeck: (id: string) =>
     request<undefined>(`/decks/${id}`, { method: "DELETE" }),
   importMoxfield: (
     decklist: string,
     preferences: ImportPreferences,
+    preservePrintings = false,
   ) =>
     request<MoxfieldImportPreview>("/imports/moxfield", {
       method: "POST",
       body: JSON.stringify({
         decklist,
         preserve_tags: preferences.preserveTags,
+        preserve_printings: preservePrintings,
         printing_preferences: printingPreferences(preferences),
       }),
     }),
@@ -184,8 +259,73 @@ export const api = {
     ),
   validation: (deckId: string) =>
     request<Validation>(`/decks/${deckId}/validation`),
+  evaluateCurrentDeck: (deckId: string) =>
+    request<CardRoleEvaluation[]>(`/decks/${deckId}/card-evaluations/current`, {
+      method: "POST",
+      body: "{}",
+    }),
+  streamCurrentDeckEvaluation: async (
+    deckId: string,
+    onProgress: (progress: CardEvaluationProgress) => void,
+    onResult: (result: CardRoleEvaluation) => void,
+  ): Promise<CardRoleEvaluation[]> => {
+    const response = await fetch(`${API}/decks/${deckId}/card-evaluations/current/stream`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!response.ok || response.body === null) throw new ApiError("Could not evaluate cards", response.status);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let reading = true;
+    while (reading) {
+      const chunk = await reader.read();
+      if (chunk.done) {
+        reading = false;
+        continue;
+      }
+      buffer += decoder.decode(chunk.value, { stream: true });
+      const frames = buffer.split("\n\n");
+      buffer = frames.pop() ?? "";
+      for (const frame of frames) {
+        const data = frame.split("\n").find((line) => line.startsWith("data: "));
+        if (data === undefined) continue;
+        const event = JSON.parse(data.slice(6)) as
+          | { type: "progress"; payload: CardEvaluationProgress }
+          | { type: "result"; payload: CardRoleEvaluation }
+          | { type: "completed"; payload: { results: CardRoleEvaluation[] } }
+          | { type: "failed"; payload: { message: string } };
+        if (event.type === "progress") onProgress(event.payload);
+        if (event.type === "result") onResult(event.payload);
+        if (event.type === "completed") return event.payload.results;
+        if (event.type === "failed") throw new ApiError(event.payload.message, 502);
+      }
+    }
+    throw new ApiError("Card evaluation stream closed before completion", 502);
+  },
+  evaluateCards: (deckId: string, oracleIds: string[]) =>
+    request<CardRoleEvaluation[]>(`/decks/${deckId}/card-evaluations/evaluate`, {
+      method: "POST",
+      body: JSON.stringify({ oracle_ids: oracleIds }),
+    }),
+  decideGuidanceProposal: (
+    deckId: string,
+    proposalId: string,
+    revision: number,
+    decision: "approve" | "reject",
+  ) =>
+    request<DeckGuidanceProposal>(`/decks/${deckId}/guidance-proposals/${proposalId}/${decision}`, {
+      method: "POST",
+      body: JSON.stringify({ expected_revision: revision }),
+    }),
   generateDescription: (deckId: string, refresh = false) =>
     request<GeneratedDeckDescription>(`/decks/${deckId}/generate-description?refresh=${String(refresh)}`, {
       method: "POST",
     }),
+  createConversation: (deckId: string) =>
+    request<DeckConversation>(`/decks/${deckId}/conversations`, { method: "POST", body: "{}" }),
+  sendAgentMessage: (deckId: string, conversationId: string, message: string, onEvent: (event: AgentUiEvent) => void) =>
+    streamEvents(`/decks/${deckId}/conversations/${conversationId}/messages`, { message }, onEvent),
 };

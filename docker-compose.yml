@@ -30,6 +30,29 @@ services:
       timeout: 5s
       retries: 5
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.153.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+
+  jaeger:
+    image: jaegertracing/jaeger:2.19.0
+    ports:
+      - "16686:16686"
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    command: ["--config.file=/etc/prometheus/prometheus.yaml"]
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+    ports:
+      - "9090:9090"
+
   api:
     build:
       context: ./api
@@ -54,7 +77,16 @@ services:
       DISCORD_OAUTH_CLIENT_SECRET: ${DISCORD_OAUTH_CLIENT_SECRET:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_DESCRIPTION_MODEL: ${OPENAI_DESCRIPTION_MODEL:-gpt-4.1-mini}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-gpt-4.1-mini}
+      OPENAI_IMPORT_MODEL: ${OPENAI_IMPORT_MODEL:-gpt-5.4}
+      OPENAI_ROLE_EVALUATION_MODEL: ${OPENAI_ROLE_EVALUATION_MODEL:-gpt-5.4-mini}
       DECK_DESCRIPTION_CACHE_TTL_SECONDS: ${DECK_DESCRIPTION_CACHE_TTL_SECONDS:-2592000}
+      OTEL_ENABLED: ${OTEL_ENABLED:-true}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-survail-api}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE:-true}
+      OTEL_METRIC_EXPORT_INTERVAL_MS: ${OTEL_METRIC_EXPORT_INTERVAL_MS:-10000}
+      OTEL_CAPTURE_AGENT_CONTENT: ${OTEL_CAPTURE_AGENT_CONTENT:-false}
     ports:
       - "8000:8000"
     volumes:
@@ -64,6 +96,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
 
   web:
     build:

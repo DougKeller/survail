@@ -39,4 +39,8 @@ printf 'API: http://localhost:8000\n'
 printf 'API docs: http://localhost:8000/docs\n\n'
 printf 'Web: http://localhost:3000\n\n'
 
+printf 'Starting database dependencies and applying migrations...\n'
+docker compose --project-directory "$ROOT_DIR" up -d db redis
+docker compose --project-directory "$ROOT_DIR" run --rm --no-deps api alembic upgrade head
+
 docker compose --project-directory "$ROOT_DIR" up "$@"

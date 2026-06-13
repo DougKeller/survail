@@ -24,10 +24,19 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     openai_api_key: str = ""
     openai_description_model: str = Field(default="gpt-4.1-mini", min_length=1)
+    openai_agent_model: str = Field(default="gpt-4.1-mini", min_length=1)
+    openai_import_model: str = Field(default="gpt-5.4", min_length=1)
+    openai_role_evaluation_model: str = Field(default="gpt-5.4-mini", min_length=1)
     deck_description_cache_ttl_seconds: int = Field(default=2_592_000, ge=60)
     scryfall_user_agent: str = Field(default="Survail/0.1", min_length=1)
     scryfall_requests_per_second: float = Field(default=5.0, gt=0, le=9)
     scryfall_search_cache_ttl_seconds: int = Field(default=86_400, ge=60)
+    otel_enabled: bool = False
+    otel_service_name: str = Field(default="survail-api", min_length=1)
+    otel_exporter_otlp_endpoint: str = "http://localhost:4317"
+    otel_exporter_otlp_insecure: bool = True
+    otel_metric_export_interval_ms: int = Field(default=10_000, ge=1_000)
+    otel_capture_agent_content: bool = False
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

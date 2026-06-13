@@ -55,12 +55,19 @@ class DeckDescriptionClient:
         payload: JsonObject = {
             "model": self._model,
             "instructions": (
-                "Explain what this Magic: The Gathering deck does in two to four concise "
-                "paragraphs. Identify its primary plan, important synergies, interaction, and "
-                "likely weaknesses. Base every claim only on the supplied format and card data. "
-                "Do not list every card and do not invent absent cards. Whenever you cite a card "
-                "by name, wrap its exact supplied title in double square brackets, for example "
-                "[[Ephemerate]]."
+                "Return only concise Markdown using this exact schema:\n"
+                "# Overview\n"
+                "[Exactly four sentences: one sentence stating the plan and win condition; two "
+                "sentences describing the most important synergies and interactions; one sentence "
+                "describing the main weakness.]\n\n"
+                "# Gameplan\n"
+                "- Turns 1-3 - [one concise sentence]\n"
+                "- Midgame - [one concise sentence]\n"
+                "- Lategame - [one concise sentence]\n\n"
+                "Do not add other headings, bullets, preambles, or conclusions. Base every claim "
+                "only on supplied format and card data. Do not list every card or invent absent "
+                "cards. Whenever you cite a card by name, wrap its exact supplied title in double "
+                "square brackets, for example [[Ephemerate]]."
             ),
             "input": context,
         }

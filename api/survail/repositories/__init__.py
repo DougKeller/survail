@@ -1,0 +1,1 @@
+"""Typed database access repositories."""

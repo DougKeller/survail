@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from survail.domain.moxfield_import import import_moxfield_decklist
+from survail.domain.moxfield_import import (
+    ExtractedImportCard,
+    import_extracted_decklist,
+    import_moxfield_decklist,
+)
 from survail.domain.printing_preferences import PrintingSelection
 from survail.models import CardFinish, CardFrame, CardZone
 from survail.routes.imports import _operation_payload
@@ -109,6 +113,42 @@ def test_name_only_entry_resolves_through_ranked_printing_preferences() -> None:
     assert not preview.errors
     assert preview.cardsets[0].printing_id == "auntie"
     assert preview.cardsets[0].quantity == 1
+
+
+def test_preserve_printings_uses_supplied_set_and_collector_number() -> None:
+    preferred = selection("Arcane Signet", "preferred", "cmm", "1", price="0.25")
+    supplied = selection("Arcane Signet", "supplied", "ecc", "55", price="2.00")
+
+    preview = import_moxfield_decklist(
+        "1 Arcane Signet (ECC) 55",
+        FakeCatalog(cards={"Arcane Signet": [preferred, supplied]}),
+        preserve_printings=True,
+        printing_preferences=[CheapestPreference(kind="cheapest")],
+    )
+
+    assert preview.cardsets[0].printing_id == "supplied"
+    assert preview.cardsets[0].printing_selection_reason == "supplied_printing"
+
+
+def test_ai_extracted_cards_still_resolve_through_catalog() -> None:
+    card = selection("Tatyova, Benthic Druid", "tatyova", "fdn", "247", finishes=["foil"])
+
+    preview = import_extracted_decklist(
+        [
+            ExtractedImportCard(
+                name="Tatyova, Benthic Druid",
+                set_name="Test",
+                quantity=1,
+                foil=True,
+            )
+        ],
+        FakeCatalog(cards={"Tatyova, Benthic Druid": [card]}),
+    )
+
+    assert preview.used_ai_fallback
+    assert not preview.errors
+    assert preview.cardsets[0].printing_id == "tatyova"
+    assert preview.cardsets[0].finish == CardFinish.FOIL
 
 
 def test_name_only_entry_supports_tags() -> None:

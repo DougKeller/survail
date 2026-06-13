@@ -57,7 +57,7 @@ export interface ImportIssue {
   line_number: number; raw_line: string; code: string; message: string;
 }
 export interface MoxfieldImportPreview {
-  cardsets: ImportedCardSet[]; errors: ImportIssue[];
+  cardsets: ImportedCardSet[]; errors: ImportIssue[]; used_ai_fallback: boolean;
 }
 export interface MoxfieldDeckImportResult {
   deck_id: string; operation_id: string; revision: number;
@@ -68,10 +68,39 @@ export interface CardSet {
   printing_id: string; oracle_id: string; card_name: string; set_code: string;
   collector_number: string; tags: string[]; scryfall: ScryfallCard;
 }
+export type CardRole = "land" | "mana_ramp" | "card_advantage" | "removal" | "board_wipe" | "enabler" | "enhancer" | "payoff";
+export interface QualitativeAnswer {
+  criterion_id: string; rating: "very_low" | "low" | "neutral" | "high" | "very_high";
+  score: number;
+}
+export interface CardRoleScore {
+  role: CardRole; score: number; description: string; answers: QualitativeAnswer[];
+}
+export interface CardRoleEvaluation {
+  oracle_id: string;
+  deck_revision: number;
+  evaluator_version: string;
+  overall_score: number;
+  overall_comment: string;
+  roles: CardRoleScore[];
+  cached: boolean;
+}
+export interface CardEvaluationProgress {
+  completed: number;
+  total: number;
+  average_seconds_per_card: number | null;
+  eta_seconds: number | null;
+}
 export interface Deck {
-  id: string; title: string; format: DeckFormat; description: string;
+  id: string; title: string; format: DeckFormat; description: string; generated_description: string;
+  goal: string;
   metadata: { kind: string; commander_oracle_ids?: string[] };
   cardsets: CardSet[]; is_sample: boolean; revision: number; updated_at: string;
+}
+export interface DeckUpdate {
+  title?: string;
+  description?: string;
+  goal?: string;
 }
 export interface DeckOperationChangeInput {
   printing_id: string; quantity_delta: number; zone: CardZone; finish: CardFinish;
@@ -94,3 +123,31 @@ export interface GeneratedDeckDescription {
 }
 export interface ValidationError { error_id: string; code: string; message: string; cardset_id: string | null }
 export interface Validation { valid: boolean; card_count: number; errors: ValidationError[] }
+export interface DeckGuidanceProposal {
+  id: string;
+  deck_id: string;
+  expected_revision: number;
+  reason: string;
+  proposed_goal: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DeckConversation { id: string; deck_id: string; created_at: string; updated_at: string }
+export interface AgentCard {
+  printing_id: string; oracle_id: string; name: string; mana_cost: string | null;
+  type_line: string; image_uri: string | null; set: string; finishes: string[];
+}
+export type AgentUiEvent =
+  | { type: "user_message"; run_id: string; payload: { message: string } }
+  | { type: "run_started" | "status" | "model_started" | "heartbeat"; run_id: string; payload: { message: string } }
+  | { type: "tool_started" | "tool_completed"; run_id: string; payload: { message: string; tool_name: string } }
+  | { type: "assistant_text_delta"; run_id: string; payload: { delta: string } }
+  | { type: "assistant_completed"; run_id: string; payload: { message: string } }
+  | { type: "card_results"; run_id: string; payload: { query: string; cards: AgentCard[] } }
+  | { type: "guidance_proposal"; run_id: string; payload: { proposal_id: string; expected_revision: number; reason: string; proposed_goal: string | null } }
+  | { type: "operation_applied"; run_id: string; payload: { proposal_id: string; operation_id: string; revision: number; validation: Validation } }
+  | { type: "validation_results" | "deck_summary" | "run_completed"; run_id: string; payload: object }
+  | { type: "run_failed"; run_id: string; payload: { message: string } }
+  | { type: "stream_closed"; run_id: string; payload: { expected: boolean; message: string } };

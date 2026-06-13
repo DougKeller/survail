@@ -3,12 +3,12 @@ from typing import Annotated
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Response, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
 
-from survail.catalog import CatalogRepository
 from survail.dependencies import CurrentUser, DbSession
-from survail.domain.deck_description_service import generate_deck_description
+from survail.domain.deck_description_service import (
+    current_generated_description,
+    generate_deck_description,
+)
 from survail.domain.deck_operations import (
     DeckOperationConflictError,
     DeckOperationError,
@@ -18,14 +18,12 @@ from survail.domain.decks import validate_deck
 from survail.domain.format_strategies import strategy_for
 from survail.integrations.cache import get_cache
 from survail.integrations.openai_descriptions import OpenAIDeckDescriptionGenerator
-from survail.models import CardFinish, CardSet, CardZone, Deck, DeckFormat, DeckOperation, User
+from survail.models import CardSet, Deck, DeckOperation, User
 from survail.schemas import (
     CardSetRead,
     CloneDeckRequest,
-    CommanderDeckMetadata,
     DeckCreate,
     DeckMetadata,
-    DeckOperationChangeCreate,
     DeckOperationChangeRead,
     DeckOperationCreate,
     DeckOperationRead,
@@ -37,6 +35,16 @@ from survail.schemas import (
     GeneratedDeckDescriptionRead,
     ScryfallCardSnapshot,
     ValidationErrorRead,
+)
+from survail.services.decks import (
+    DeckMetadataError,
+    DeckNotFoundError,
+    DeckOperationNotFoundError,
+    DeckService,
+)
+from survail.services.sample_decks import (
+    SampleCatalogIncompleteError,
+    create_sample_commander_deck,
 )
 from survail.settings import get_settings
 
@@ -111,15 +119,11 @@ SAMPLE_CARDS: dict[str, int] = {
 }
 
 
-def _owned_deck(db: Session, user: User, deck_id: uuid.UUID) -> Deck:
-    deck = db.scalar(
-        select(Deck)
-        .options(selectinload(Deck.cardsets))
-        .where(Deck.id == deck_id, Deck.owner_id == user.id)
-    )
-    if deck is None:
-        raise HTTPException(status_code=404, detail="Deck not found")
-    return deck
+def _owned_deck(db: DbSession, user: User, deck_id: uuid.UUID) -> Deck:
+    try:
+        return DeckService(db).owned(user, deck_id)
+    except DeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 def _metadata(deck: Deck) -> DeckMetadata:
@@ -148,6 +152,8 @@ def _deck_read(deck: Deck) -> DeckRead:
         title=deck.title,
         format=deck.format,
         description=deck.description,
+        goal=deck.goal or "",
+        generated_description=current_generated_description(deck),
         metadata=_metadata(deck),
         cardsets=[_cardset_read(cardset) for cardset in deck.cardsets],
         is_sample=deck.is_sample,
@@ -206,13 +212,7 @@ def _validation_read(deck: Deck) -> DeckValidationRead:
 
 @router.get("", response_model=list[DeckRead])
 def list_decks(db: DbSession, user: CurrentUser) -> list[DeckRead]:
-    decks = db.scalars(
-        select(Deck)
-        .options(selectinload(Deck.cardsets))
-        .where(Deck.owner_id == user.id)
-        .order_by(Deck.updated_at.desc())
-    )
-    return [_deck_read(deck) for deck in decks]
+    return [_deck_read(deck) for deck in DeckService(db).list_owned(user)]
 
 
 @router.post("", response_model=DeckRead, status_code=status.HTTP_201_CREATED)
@@ -221,16 +221,7 @@ def create_deck(
     db: DbSession,
     user: CurrentUser,
 ) -> DeckRead:
-    deck = Deck(
-        owner_id=user.id,
-        title=payload.title,
-        format=payload.format,
-        description=payload.description,
-        metadata_json=payload.metadata.model_dump(mode="json"),
-    )
-    db.add(deck)
-    db.commit()
-    return _deck_read(_owned_deck(db, user, deck.id))
+    return _deck_read(DeckService(db).create(user, payload))
 
 
 @router.get("/{deck_id}", response_model=DeckRead)
@@ -249,21 +240,12 @@ def update_deck(
     db: DbSession,
     user: CurrentUser,
 ) -> DeckRead:
-    deck = _owned_deck(db, user, deck_id)
-    if payload.title is not None:
-        deck.title = payload.title
-    if payload.description is not None:
-        deck.description = payload.description
-    if payload.metadata is not None:
-        strategy = strategy_for(deck.format)
-        if not strategy.metadata_matches(payload.metadata):
-            raise HTTPException(
-                status_code=422,
-                detail=f"{deck.format.value} decks require {strategy.metadata_kind} metadata",
-            )
-        deck.metadata_json = payload.metadata.model_dump(mode="json")
-    db.commit()
-    return _deck_read(_owned_deck(db, user, deck_id))
+    try:
+        return _deck_read(DeckService(db).update(user, deck_id, payload))
+    except DeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DeckMetadataError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete("/{deck_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -272,9 +254,10 @@ def delete_deck(
     db: DbSession,
     user: CurrentUser,
 ) -> Response:
-    deck = _owned_deck(db, user, deck_id)
-    db.delete(deck)
-    db.commit()
+    try:
+        DeckService(db).delete(user, deck_id)
+    except DeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -311,15 +294,12 @@ def operation_history(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[DeckOperationRead]:
-    _owned_deck(db, user, deck_id)
-    operations = db.scalars(
-        select(DeckOperation)
-        .options(selectinload(DeckOperation.changes))
-        .where(DeckOperation.deck_id == deck_id)
-        .order_by(DeckOperation.revision_after.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    try:
+        operations = DeckService(db).operation_history(
+            user, deck_id, limit=limit, offset=offset
+        )
+    except DeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return [_operation_read(operation) for operation in operations]
 
 
@@ -335,29 +315,12 @@ def revert_operation(
     db: DbSession,
     user: CurrentUser,
 ) -> DeckOperationResult:
-    _owned_deck(db, user, deck_id)
-    original = db.scalar(
-        select(DeckOperation)
-        .options(selectinload(DeckOperation.changes))
-        .where(DeckOperation.id == operation_id, DeckOperation.deck_id == deck_id)
-    )
-    if original is None:
-        raise HTTPException(status_code=404, detail="Deck operation not found")
-    revert_payload = DeckOperationCreate(
-        client_operation_id=payload.client_operation_id,
-        expected_revision=payload.expected_revision,
-        reason=payload.reason or f"Revert operation {original.id}",
-        changes=[
-            DeckOperationChangeCreate(
-                printing_id=change.printing_id,
-                quantity_delta=-change.quantity_delta,
-                zone=change.zone,
-                finish=change.finish,
-                tags=change.tags_before,
-            )
-            for change in original.changes
-        ],
-    )
+    try:
+        revert_payload = DeckService(db).revert_payload(
+            user, deck_id, operation_id, payload
+        )
+    except (DeckNotFoundError, DeckOperationNotFoundError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return apply_operation(deck_id, revert_payload, db, user)
 
 
@@ -399,6 +362,7 @@ def generate_description(
         raise HTTPException(
             status_code=502, detail=f"Could not generate deck description: {exc}"
         ) from exc
+    DeckService(db).store_generated_description(deck, description)
     return GeneratedDeckDescriptionRead(
         deck_id=deck.id,
         revision=deck.revision,
@@ -413,47 +377,7 @@ def create_sample_commander(
     db: DbSession,
     user: CurrentUser,
 ) -> DeckRead:
-    catalog = CatalogRepository(db)
-    commander = catalog.exact_name(SAMPLE_COMMANDER)
-    resolved = [(catalog.exact_name(name), quantity) for name, quantity in SAMPLE_CARDS.items()]
-    if commander is None or any(card is None for card, _ in resolved):
-        raise HTTPException(
-            status_code=503, detail="Local card catalog is incomplete; run setup.sh"
-        )
-    resolved_cards = [(card, quantity) for card, quantity in resolved if card is not None]
-    deck = Deck(
-        owner_id=user.id,
-        title=payload.title or "Talrand Starter",
-        format=DeckFormat.COMMANDER,
-        description="A sample mono-blue spellslinger Commander deck.",
-        metadata_json=CommanderDeckMetadata(commander_oracle_ids=[commander.oracle_id]).model_dump(
-            mode="json"
-        ),
-        is_sample=True,
-    )
-    db.add(deck)
-    db.flush()
-    all_cards = [(commander, 1, CardZone.COMMANDER)] + [
-        (card, quantity, CardZone.MAINBOARD) for card, quantity in resolved_cards
-    ]
-    operation, updated_deck = apply_deck_operation(
-        db,
-        deck.id,
-        user,
-        DeckOperationCreate(
-            client_operation_id=uuid.uuid4(),
-            reason="Create sample Commander deck",
-            expected_revision=0,
-            changes=[
-                DeckOperationChangeCreate(
-                    printing_id=card.id,
-                    quantity_delta=quantity,
-                    zone=zone,
-                    finish=CardFinish(card.finishes[0]),
-                )
-                for card, quantity, zone in all_cards
-            ],
-        ),
-    )
-    del operation
-    return _deck_read(updated_deck)
+    try:
+        return _deck_read(create_sample_commander_deck(db, user, payload))
+    except SampleCatalogIncompleteError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

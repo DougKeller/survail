@@ -88,6 +88,18 @@ validation functions compose those values into shared checks for size, sideboard
 limits, legality, commander count, and color identity. New formats should normally register a
 strategy and reuse the shared rules rather than branch throughout routes or services.
 
+The backend follows an incremental feature/domain architecture:
+
+- `routes/` owns HTTP translation only: dependencies, status codes, and response models.
+- `services/` owns application workflows and transaction orchestration.
+- `repositories/` owns SQLAlchemy queries and persistence access.
+- `domain/` owns deterministic business rules that do not depend on FastAPI.
+- `integrations/` owns external systems such as OpenAI, Redis, and Scryfall.
+
+New features should keep database queries out of routes and expose business workflows through a
+typed service. Existing route modules are being migrated to this structure incrementally to avoid
+a risky all-at-once rewrite.
+
 ## Generated Deck Descriptions
 
 `POST /decks/{deck_id}/generate-description` asks OpenAI for a concise explanation of the deck's

@@ -45,6 +45,7 @@ def test_unknown_settings_are_ignored() -> None:
     configured = Settings.model_validate({"unknown_setting": "ignored"})
 
     assert configured.app_name == "Survail API"
+    assert configured.openai_role_evaluation_model == "gpt-5.4-mini"
 
 
 def test_non_development_environment_requires_session_secret() -> None:

@@ -1,6 +1,9 @@
 import uuid
 from dataclasses import dataclass
 
+import pytest
+from pydantic import ValidationError
+
 from survail.domain.decks import validate_deck
 from survail.models import CardZone, DeckFormat
 from survail.schemas import (
@@ -9,6 +12,7 @@ from survail.schemas import (
     DeckOperationChangeCreate,
     DeckOperationCreate,
     DeckOperationRevertCreate,
+    DeckUpdate,
     ScryfallCardSnapshot,
 )
 from survail.types import JsonObject
@@ -419,3 +423,20 @@ def test_operation_requests_accept_json_uuid_strings() -> None:
 
     assert str(operation.client_operation_id) == operation_id
     assert str(revert.client_operation_id) == operation_id
+
+
+def test_deck_goal_schema_is_strict_and_legacy_rubric_is_rejected() -> None:
+    deck = DeckCreate.model_validate(
+        {
+            "title": "Deck",
+            "format": "modern",
+            "goal": "Win with artifacts.",
+            "metadata": {"kind": "generic"},
+        }
+    )
+
+    assert deck.goal == "Win with artifacts."
+    with pytest.raises(ValidationError):
+        DeckUpdate.model_validate(
+            {"rubric": [{"description": "Adds interaction", "example": "Counters a spell"}]}
+        )
