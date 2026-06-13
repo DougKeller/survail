@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from survail.settings import Settings
+from survail.core.config import Settings
 
 
 def settings(

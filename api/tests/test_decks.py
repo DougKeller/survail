@@ -4,9 +4,8 @@ from dataclasses import dataclass
 import pytest
 from pydantic import ValidationError
 
-from survail.domain.decks import validate_deck
-from survail.models import CardZone, DeckFormat
-from survail.schemas import (
+from survail.core.models import CardZone, DeckFormat
+from survail.core.schemas import (
     CommanderDeckMetadata,
     DeckCreate,
     DeckOperationChangeCreate,
@@ -15,7 +14,8 @@ from survail.schemas import (
     DeckUpdate,
     ScryfallCardSnapshot,
 )
-from survail.types import JsonObject
+from survail.core.types import JsonObject
+from survail.modules.decks.service.validate import validate_deck
 
 
 def snapshot(

@@ -12,11 +12,11 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from survail.db import SessionLocal
-from survail.models import CatalogCard, OracleEmbedding
-from survail.schemas import ScryfallCardSnapshot
-from survail.settings import get_settings
-from survail.types import JsonObject, json_object
+from survail.core.config import get_settings
+from survail.core.db import SessionLocal
+from survail.core.models import CatalogCard, OracleEmbedding
+from survail.core.schemas import ScryfallCardSnapshot
+from survail.core.types import JsonObject, json_object
 
 logger = logging.getLogger(__name__)
 MODEL = "text-embedding-3-large"

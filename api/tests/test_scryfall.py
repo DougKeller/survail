@@ -1,8 +1,8 @@
 import httpx
 import pytest
 
-from survail.integrations.scryfall import ScryfallClient, ScryfallNotFoundError, UpstreamCard
-from survail.types import JsonObject
+from survail.core.types import JsonObject
+from survail.integrations.scryfall.client import ScryfallClient, ScryfallNotFoundError, UpstreamCard
 
 
 def card_payload(printing_id: str = "printing") -> JsonObject:

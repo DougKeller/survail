@@ -2,10 +2,10 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
+import survail.core.models  # noqa: F401
 from alembic import context
-from survail import models  # noqa: F401
-from survail.db import Base
-from survail.settings import get_settings
+from survail.core.config import get_settings
+from survail.core.db import Base
 
 config = context.config
 

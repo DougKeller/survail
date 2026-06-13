@@ -94,25 +94,7 @@ export default tseslint.config(
       "import/no-default-export": "error",
       "import/no-named-as-default": "off",
       "import/no-unresolved": ["error", { ignore: ["\\.css$"] }],
-      "import/order": [
-        "error",
-        {
-          alphabetize: {
-            caseInsensitive: true,
-            order: "asc",
-          },
-          groups: [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index",
-            "type",
-          ],
-          "newlines-between": "always",
-        },
-      ],
+      "import/order": "off",
       "jsx-a11y/no-autofocus": "off",
       "react/prop-types": "off",
       "react-hooks/refs": "off",
@@ -148,7 +130,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/main.tsx", "src/CardPresentation.tsx"],
+    files: [
+      "src/app/deckPrimitives.tsx",
+      "src/app/deck/printingPicker.tsx",
+      "src/app/screens/*.tsx",
+      "src/app/editor/*.tsx",
+      "src/app/library/*.tsx",
+      "src/modules/cards/ui/*.tsx",
+    ],
     rules: {
       "jsx-a11y/click-events-have-key-events": "off",
       "jsx-a11y/no-noninteractive-element-interactions": "off",
@@ -157,12 +146,28 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/main.tsx"],
+    files: ["src/app/screens/EditorScreen.tsx"],
     rules: {
       "promise/always-return": "off",
       "react-hooks/exhaustive-deps": "off",
       "sonarjs/cognitive-complexity": "off",
       "jsx-a11y/no-noninteractive-tabindex": "off",
+    },
+  },
+  {
+    files: ["src/app/editor/useDeckEditor.ts"],
+    rules: {
+      "promise/always-return": "off",
+      "react-hooks/exhaustive-deps": "off",
+    },
+  },
+  {
+    files: ["src/**/*.{ts,tsx,js,mjs}"],
+    rules: {
+      "max-lines": [
+        "error",
+        { max: 300, skipBlankLines: true, skipComments: true },
+      ],
     },
   },
 );

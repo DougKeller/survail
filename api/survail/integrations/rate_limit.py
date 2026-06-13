@@ -4,7 +4,7 @@ from typing import Protocol
 
 from redis import Redis
 
-from survail.types import RedisArg, RedisValue
+from survail.core.types import RedisArg, RedisValue
 
 
 class RedisEvalClient(Protocol):

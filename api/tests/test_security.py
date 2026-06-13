@@ -3,9 +3,9 @@ from typing import cast
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
-from survail.models import User
-from survail.security import get_current_user
-from survail.settings import Settings
+from survail.core.config import Settings
+from survail.core.models import User
+from survail.core.security import get_current_user
 
 
 class ExistingUserSession:

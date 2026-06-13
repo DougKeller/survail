@@ -91,7 +91,7 @@ const deck = {
   title: "Accessible Commander",
   format: "commander",
   description: "A browser-test deck",
-  generated_description: "",
+  generated_description: null,
   goal: "Cast the commander quickly and protect the winning turn.",
   metadata: { kind: "commander", commander_oracle_ids: [] },
   cardsets: [cardset, secondCardset, commanderCardset],
@@ -234,16 +234,44 @@ async function mockApi(page: Page): Promise<void> {
           .map((event) => `data: ${JSON.stringify(event)}\n\n`)
           .join(""),
       });
+    } else if (url.pathname === "/decks/deck-1/card-evaluations/evaluate") {
+      const payload = route.request().postDataJSON() as {
+        oracle_ids?: string[];
+      };
+      const oracleIds = payload.oracle_ids ?? [];
+      await fulfillJson(
+        route,
+        oracleIds
+          .map((oracleId) => {
+            if (oracleId === card.oracle_id) return cardScore;
+            if (oracleId === secondCard.oracle_id) return secondCardScore;
+            return null;
+          })
+          .filter((score): score is typeof cardScore => score !== null),
+      );
     } else if (url.pathname === "/decks/deck-1/operations") {
       await fulfillJson(route, []);
     } else if (url.pathname === "/decks/deck-1/generate-description") {
       await fulfillJson(route, {
         deck_id: deck.id,
         revision: deck.revision,
-        description:
-          "# Overview\nThis deck uses [[Arcane Signet]] to develop its mana.\n\n# Gameplan\n- Turns 1-3 - Develop mana.\n- Midgame - Cast the commander.\n- Lategame - Protect the winning turn.",
+        description: {
+          overview: "This deck uses [[Arcane Signet]] to develop its mana.",
+          early_game: "Develop mana.",
+          midgame: "Cast the commander.",
+          lategame: "Protect the winning turn.",
+        },
         cached: false,
       });
+    } else if (
+      url.pathname === `/decks/deck-1/card-evaluations/oracle/${card.oracle_id}`
+    ) {
+      await fulfillJson(route, cardScore);
+    } else if (
+      url.pathname ===
+      `/decks/deck-1/card-evaluations/oracle/${secondCard.oracle_id}`
+    ) {
+      await fulfillJson(route, secondCardScore);
     } else if (url.pathname === "/cards/search") {
       await fulfillJson(route, {
         cards: [card],
@@ -579,6 +607,9 @@ test("card grid consolidates duplicate cards and opens shared card details", asy
 
   await arcaneImage.click();
   const dialog = page.getByRole("dialog", { name: "Arcane Signet" });
+  await expect(dialog).toContainText("Overall score");
+  await expect(dialog).toContainText(cardScore.overall_comment);
+  await dialog.getByRole("tab", { name: "Info" }).click();
   await expect(dialog).toContainText("Mana cost");
   await expect(dialog).toContainText(card.oracle_text);
   await expect(dialog).toContainText("Market prices");
@@ -609,12 +640,15 @@ test("text view uses responsive columns for card groups", async ({ page }) => {
 test("scores are presented in a dedicated sortable view", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
+  await page.getByRole("button", { name: "Evaluate cards" }).click();
 
   const scoresView = page.locator(".scores-view");
   await expect(scoresView).toBeVisible();
   await expect(scoresView).toContainText("2/2");
-  await expect(scoresView.locator(".score-card-row")).toHaveCount(2);
-  await expect(scoresView.getByLabel("Evaluation sort")).toBeVisible();
+  await expect(scoresView.locator(".score-table-row")).toHaveCount(2);
+  await expect(
+    scoresView.getByRole("button", { name: /Overall/ }),
+  ).toBeVisible();
 });
 
 test("card evaluation clearly requires a Goal or North Star", async ({
@@ -636,9 +670,42 @@ test("card evaluation clearly requires a Goal or North Star", async ({
   await expect(page.getByRole("dialog", { name: "Edit deck" })).toBeVisible();
 });
 
-test("card scores load in the background and cards sort by role score", async ({
+test("card scores only load after manual evaluation and cards sort by role score", async ({
   page,
 }) => {
+  let evaluationRequests = 0;
+  await page.route(
+    "http://localhost:8000/decks/deck-1/card-evaluations/current/stream",
+    async (route) => {
+      evaluationRequests += 1;
+      await route.fulfill({
+        contentType: "text/event-stream",
+        body: [
+          {
+            type: "progress",
+            payload: {
+              completed: 0,
+              total: 3,
+              average_seconds_per_card: null,
+              eta_seconds: null,
+            },
+          },
+          {
+            type: "progress",
+            payload: {
+              completed: 3,
+              total: 3,
+              average_seconds_per_card: 1.5,
+              eta_seconds: 0,
+            },
+          },
+          { type: "completed", payload: { results: scores } },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join(""),
+      });
+    },
+  );
   await page.addInitScript(() => {
     localStorage.setItem(
       "survail.deck-display-preferences",
@@ -652,15 +719,21 @@ test("card scores load in the background and cards sort by role score", async ({
   await page.goto("/decks/deck-1");
 
   await page.getByRole("button", { name: "Scores" }).click();
-  await expect(page.locator(".role-tag")).toHaveText([
-    "Mana Ramp",
-    "Mana Ramp",
+  await expect(page.locator(".score-table-row")).toHaveCount(0);
+  await expect.poll(() => evaluationRequests).toBe(0);
+  await page.getByRole("button", { name: "Evaluate cards" }).click();
+  await expect(page.locator(".score-table-row")).toHaveCount(2);
+  await expect.poll(() => evaluationRequests).toBe(1);
+  await expect(page.locator(".score-table-row")).toContainText([
+    "Sol Ring",
+    "Arcane Signet",
   ]);
-  await expect(page.locator(".score-card > p")).toHaveText([
+  await expect(page.locator(".score-row-preview-comment")).toHaveCount(0);
+  await page.locator(".score-table-row").first().hover();
+  await expect(page.locator(".score-row-preview-comment")).toContainText(
     "An efficient source of acceleration for this deck.",
-    "A serviceable but replaceable source of acceleration.",
-  ]);
-  await page.getByLabel("Evaluation sort").selectOption("mana_ramp");
+  );
+  await page.getByRole("button", { name: /Mana Ramp/ }).click();
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   await page.getByText("Organize").click();
   await page.getByLabel("Card sort").selectOption("score");
@@ -716,8 +789,9 @@ test("completed card evaluations remain visible when a later evaluation fails", 
   );
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
+  await page.getByRole("button", { name: "Evaluate cards" }).click();
 
-  await expect(page.locator(".score-card-row")).toHaveCount(1);
+  await expect(page.locator(".score-table-row")).toHaveCount(1);
   await expect(page.getByRole("main")).toContainText(
     "Rate limit retries exhausted",
   );

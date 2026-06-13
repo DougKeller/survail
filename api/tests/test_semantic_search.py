@@ -5,8 +5,8 @@ from typing import cast
 import pytest
 from sqlalchemy.orm import Session
 
-from survail.domain import semantic_search as subject
-from survail.schemas import ScryfallCardSnapshot
+from survail.core.schemas import ScryfallCardSnapshot
+from survail.modules.cards.service import semantic_search as subject
 
 
 class FakeEmbeddingClient:

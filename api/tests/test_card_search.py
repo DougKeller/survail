@@ -2,10 +2,10 @@ from typing import cast
 
 from fastapi.routing import APIRoute
 
-from survail.catalog import CatalogRepository
-from survail.main import app
-from survail.routes.cards import _preferred_unique_cards
-from survail.schemas import NonUniversesBeyondPreference, ScryfallCardSnapshot
+from survail.app import app
+from survail.core.schemas import NonUniversesBeyondPreference, ScryfallCardSnapshot
+from survail.modules.cards.api.router import _preferred_unique_cards
+from survail.modules.cards.repository.cards import CatalogRepository
 
 
 class EmptyPrintingCatalog:

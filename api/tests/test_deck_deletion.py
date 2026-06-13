@@ -4,8 +4,8 @@ from typing import cast
 from fastapi.routing import APIRoute
 from sqlalchemy.orm import Session
 
-from survail.models import CardSet, Deck, DeckFormat, DeckOperation, DeckOperationChange, User
-from survail.routes.decks import delete_deck, router
+from survail.core.models import CardSet, Deck, DeckFormat, DeckOperation, DeckOperationChange, User
+from survail.modules.decks.api.router import delete_deck, router
 
 
 class FakeDeleteSession:

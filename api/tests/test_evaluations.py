@@ -6,10 +6,10 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from survail.models import Deck, DeckFormat, User
-from survail.routes import evaluations
-from survail.schemas import CardRoleEvaluationRead
-from survail.services import evaluations as evaluation_service
+from survail.core.models import Deck, DeckFormat, User
+from survail.modules.decks.evaluations.api import router as evaluations
+from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead
+from survail.modules.decks.evaluations.service import run as evaluation_service
 
 
 class FakeDb:

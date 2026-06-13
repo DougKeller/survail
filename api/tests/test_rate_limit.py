@@ -1,5 +1,5 @@
+from survail.core.types import RedisValue
 from survail.integrations.rate_limit import RedisRateLimiter
-from survail.types import RedisValue
 
 
 class FakeRedis:

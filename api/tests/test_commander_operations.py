@@ -2,9 +2,12 @@ import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 
-from survail.domain.deck_operations import CardSetIdentity, _replace_incompatible_commanders
-from survail.models import CardFinish, CardSet, CardZone, Deck, DeckFormat
-from survail.schemas import ScryfallCardSnapshot
+from survail.core.models import CardFinish, CardSet, CardZone, Deck, DeckFormat
+from survail.core.schemas import ScryfallCardSnapshot
+from survail.modules.decks.operations.service.apply import (
+    CardSetIdentity,
+    _replace_incompatible_commanders,
+)
 
 
 def snapshot(

@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
@@ -9,18 +8,19 @@ import pytest
 from openai import APIConnectionError, AsyncOpenAI, RateLimitError
 from sqlalchemy.orm import Session
 
-from survail.domain.role_evaluation import (
+from survail.core.models import CardFinish, CardRoleEvaluation, CardSet, CardZone, Deck, DeckFormat
+from survail.core.schemas import ScryfallCardSnapshot
+from survail.modules.decks.evaluations.service.evaluator import (
+    MAX_CONCURRENT_EVALUATIONS,
     CardRole,
     OpenAIRoleEvaluator,
     QualitativeRating,
     StructuredAnswer,
-    StructuredRoleScore,
-    StructuredTagging,
+    StructuredApplicableRole,
+    StructuredLLMaaJ,
     _retry_delay,
     evaluate_oracle_ids,
 )
-from survail.models import CardFinish, CardRoleEvaluation, CardSet, CardZone, Deck, DeckFormat
-from survail.schemas import ScryfallCardSnapshot
 
 
 class FakeDb:
@@ -47,19 +47,14 @@ class FakeEvaluator:
     active: int = 0
     max_active: int = 0
 
-    async def classify(self, deck: Deck, oracle_id: str, card_context: str) -> StructuredTagging:
+    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> StructuredLLMaaJ:
         del deck, oracle_id, card_context
+        from survail.modules.decks.evaluations.service.evaluator import ROLE_RUBRICS
+
         self.active += 1
         self.max_active = max(self.max_active, self.active)
         await asyncio.sleep(0)
         self.active -= 1
-        return StructuredTagging(tags=[CardRole.CARD_ADVANTAGE, CardRole.BOARD_WIPE])
-
-    async def score_role(
-        self, deck: Deck, oracle_id: str, card_context: str, role: CardRole
-    ) -> StructuredRoleScore:
-        del deck, oracle_id, card_context
-        from survail.domain.role_evaluation import ROLE_RUBRICS
 
         ratings = [
             QualitativeRating.VERY_HIGH,
@@ -67,25 +62,29 @@ class FakeEvaluator:
             QualitativeRating.NEUTRAL,
             QualitativeRating.LOW,
         ]
-        return StructuredRoleScore(
-            role=role,
-            description=f"This card is a useful {role.value.replace('_', ' ')}.",
-            answers=[
-                StructuredAnswer(criterion_id=criterion_id, rating=rating)
-                for (criterion_id, _), rating in zip(ROLE_RUBRICS[role], ratings, strict=True)
-            ],
-        )
+        def applicable(role: CardRole) -> StructuredApplicableRole:
+            return StructuredApplicableRole(
+                description=f"This card is a useful {role.value.replace('_', ' ')}.",
+                answers=[
+                    StructuredAnswer(criterion_id=criterion_id, rating=rating)
+                    for (criterion_id, _), rating in zip(ROLE_RUBRICS[role], ratings, strict=True)
+                ],
+            )
 
-    async def summarize(
-        self,
-        deck: Deck,
-        oracle_id: str,
-        card_context: str,
-        role_scores: Sequence[StructuredRoleScore],
-    ) -> str:
-        del deck, oracle_id, card_context
-        descriptions = " ".join(score.description for score in role_scores)
-        return f"Overall: {descriptions}"
+        return StructuredLLMaaJ(
+            land="N/A",
+            mana_ramp="N/A",
+            card_advantage=applicable(CardRole.CARD_ADVANTAGE),
+            removal="N/A",
+            board_wipe=applicable(CardRole.BOARD_WIPE),
+            enabler="N/A",
+            enhancer="N/A",
+            payoff="N/A",
+            overall_summary=(
+                "Overall: This card is a useful card advantage. "
+                "This card is a useful board wipe."
+            ),
+        )
 
 
 def _cardset(oracle_id: str) -> CardSet:
@@ -147,7 +146,7 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_revision() -> None:
     progress: list[tuple[int, int, float | None]] = []
 
     async def report(update: object) -> None:
-        from survail.domain.role_evaluation import EvaluationProgress
+        from survail.modules.decks.evaluations.service.evaluator import EvaluationProgress
 
         parsed = cast("EvaluationProgress", update)
         progress.append((parsed.completed, parsed.total, parsed.eta_seconds))
@@ -170,24 +169,50 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_revision() -> None:
     assert [role.role for role in results[1].roles] == ["card_advantage", "board_wipe"]
     assert results[1].roles[0].description == "This card is a useful card advantage."
     assert [answer.score for answer in results[1].roles[0].answers] == [100, 75, 50, 25]
-    assert evaluator.max_active == 4
+    assert evaluator.max_active == MAX_CONCURRENT_EVALUATIONS
     assert progress[0][:2] == (1, 10)
     assert progress[-1][0] == 10
     assert progress[-1][2] == 0
 
 
 def test_structured_role_outputs_include_role_description_but_not_per_answer_prose() -> None:
-    tagging_schema = StructuredTagging.model_json_schema()
-    score_schema = StructuredRoleScore.model_json_schema()
+    score_schema = StructuredLLMaaJ.model_json_schema()
     answer_schema = score_schema["$defs"]["StructuredAnswer"]
 
-    assert set(tagging_schema["properties"]) == {"tags"}
-    assert set(score_schema["properties"]) == {"role", "description", "answers"}
+    assert set(score_schema["properties"]) == {
+        "land",
+        "mana_ramp",
+        "card_advantage",
+        "removal",
+        "board_wipe",
+        "enabler",
+        "enhancer",
+        "payoff",
+        "overall_summary",
+    }
     assert set(answer_schema["properties"]) == {"criterion_id", "rating"}
 
 
 def test_openai_role_evaluator_retries_transient_errors_with_exponential_backoff() -> None:
-    result = StructuredTagging(tags=[CardRole.ENABLER])
+    result = StructuredLLMaaJ(
+        land="N/A",
+        mana_ramp="N/A",
+        card_advantage="N/A",
+        removal="N/A",
+        board_wipe="N/A",
+        enabler=StructuredApplicableRole(
+            description="Starts the engine efficiently.",
+            answers=[
+                StructuredAnswer(criterion_id="directness", rating=QualitativeRating.HIGH),
+                StructuredAnswer(criterion_id="reliability", rating=QualitativeRating.HIGH),
+                StructuredAnswer(criterion_id="versatility", rating=QualitativeRating.NEUTRAL),
+                StructuredAnswer(criterion_id="deck_need", rating=QualitativeRating.HIGH),
+            ],
+        ),
+        enhancer="N/A",
+        payoff="N/A",
+        overall_summary="A strong enabler for this deck.",
+    )
 
     class FakeResponses:
         calls = 0
@@ -221,7 +246,7 @@ def test_openai_role_evaluator_retries_transient_errors_with_exponential_backoff
     )
     deck.cardsets = []
 
-    tagged = asyncio.run(evaluator.classify(deck, "oracle", "{}"))
+    tagged = asyncio.run(evaluator.evaluate(deck, "oracle", "{}"))
 
     assert tagged == result
     assert sleeps == [1.0]
@@ -247,12 +272,12 @@ def test_retry_delay_parses_millisecond_rate_limit_message() -> None:
 
 def test_completed_cards_are_persisted_when_another_card_fails() -> None:
     class PartiallyFailingEvaluator(FakeEvaluator):
-        async def classify(
+        async def evaluate(
             self, deck: Deck, oracle_id: str, card_context: str
-        ) -> StructuredTagging:
+        ) -> StructuredLLMaaJ:
             if oracle_id == "bad":
                 raise RuntimeError("failed")
-            return await super().classify(deck, oracle_id, card_context)
+            return await super().evaluate(deck, oracle_id, card_context)
 
     deck = Deck(
         id=uuid.uuid4(),
@@ -269,7 +294,7 @@ def test_completed_cards_are_persisted_when_another_card_fails() -> None:
     streamed: list[str] = []
 
     async def result(update: object) -> None:
-        from survail.schemas import CardRoleEvaluationRead
+        from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead
 
         streamed.append(cast("CardRoleEvaluationRead", update).oracle_id)
 

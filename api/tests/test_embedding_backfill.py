@@ -3,6 +3,8 @@ import asyncio
 import httpx
 import pytest
 
+from survail.core.schemas import CardFace, ScryfallCardSnapshot
+from survail.core.types import json_object
 from survail.embedding_backfill import (
     DIMENSIONS,
     MODEL,
@@ -13,8 +15,6 @@ from survail.embedding_backfill import (
     source_needs_embedding,
     sync_missing_embeddings,
 )
-from survail.schemas import CardFace, ScryfallCardSnapshot
-from survail.types import json_object
 
 
 def test_embedding_source_has_stable_payload_and_hash() -> None:
@@ -185,7 +185,7 @@ def test_embedding_client_does_not_retry_non_transient_response() -> None:
 
 def test_sync_missing_embeddings_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     from survail import embedding_backfill
-    from survail.settings import Settings
+    from survail.core.config import Settings
 
     monkeypatch.setattr(
         embedding_backfill,

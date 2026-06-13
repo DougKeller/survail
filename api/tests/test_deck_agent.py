@@ -6,15 +6,30 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import cast
 
+import httpx
 import pytest
 from agents import FunctionTool
 from agents.tool_context import ToolContext
+from openai import APIStatusError, RateLimitError
 from sqlalchemy.orm import Session
 
-from survail.deck_agent import service as agent_service
-from survail.deck_agent.events import AgentEventSink
-from survail.deck_agent.service import (
+from survail.core.models import (
+    CardFinish,
+    CardSet,
+    CardZone,
+    Deck,
+    DeckAgentEvent,
+    DeckFormat,
+    DeckGuidanceProposal,
+    User,
+)
+from survail.core.schemas import ScryfallCardSnapshot
+from survail.core.types import JsonObject
+from survail.modules.agent.service import chat as agent_service
+from survail.modules.agent.service.chat import (
+    MAX_AGENT_RUN_ATTEMPTS,
     DeckAgentContext,
+    _agent_retry_delay,
     _cohesive_context_prompt,
     _deck_color_identity,
     _event_context_summary,
@@ -25,21 +40,11 @@ from survail.deck_agent.service import (
     build_agent,
     search_legal_cards,
 )
-from survail.domain.decks import deck_validation_summary
-from survail.models import (
-    CardFinish,
-    CardSet,
-    CardZone,
-    Deck,
-    DeckAgentEvent,
-    DeckFormat,
-    DeckGuidanceProposal,
-    User,
-)
-from survail.repositories.agent import AgentRepository
-from survail.routes import agent as agent_routes
-from survail.schemas import DeckGuidanceProposalDecision, ScryfallCardSnapshot
-from survail.types import JsonObject
+from survail.modules.agent.service.events import AgentEventSink
+from survail.modules.decks.guidance.api import router as guidance_routes
+from survail.modules.decks.guidance.api.schemas import DeckGuidanceProposalDecision
+from survail.modules.decks.guidance.repository.proposals import GuidanceProposalRepository
+from survail.modules.decks.service.validate import deck_validation_summary
 
 
 def _snapshot(name: str, oracle_id: str, color_identity: list[str]) -> ScryfallCardSnapshot:
@@ -167,11 +172,11 @@ def test_advanced_search_bypasses_local_catalog_and_uses_scryfall(
     deck = _deck()
     deck.revision = 9
     card = _snapshot("Helpful Card", "helpful-card", [])
-    emitted: list[tuple[str, object]] = []
+    emitted: list[tuple[str, dict[str, object]]] = []
 
     class FakeSink:
         async def emit(self, event_type: str, payload: object) -> None:
-            emitted.append((event_type, payload))
+            emitted.append((event_type, cast("dict[str, object]", payload)))
 
     class FakeSession:
         def __enter__(self) -> "FakeSession":
@@ -224,7 +229,68 @@ def test_advanced_search_bypasses_local_catalog_and_uses_scryfall(
     assert payload["search_source"] == "scryfall"
     assert payload["cards"][0]["name"] == "Helpful Card"
     assert queries == ["(t:creature OR t:artifact) o:draw legal:commander"]
-    assert emitted[0][0] == "card_results"
+    assert emitted[0][0] == "status"
+    assert emitted[0][1]["tool_name"] == "search_legal_cards"
+    assert emitted[-1][0] == "card_results"
+
+
+def test_search_legal_cards_returns_refinement_tips_when_no_results_are_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    deck = _deck()
+    deck.revision = 12
+
+    class FakeSink:
+        async def emit(self, event_type: str, payload: object) -> None:
+            del event_type, payload
+
+    class FakeSession:
+        def __enter__(self) -> "FakeSession":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            del args
+
+    class EmptyCatalog:
+        def __init__(self, db: object) -> None:
+            del db
+
+        def search(
+            self, query: str, page_size: int
+        ) -> tuple[list[ScryfallCardSnapshot], int, bool]:
+            del query, page_size
+            return [], 0, False
+
+    monkeypatch.setattr(agent_service, "_owned_deck", lambda owner_id, deck_id: deck)
+    monkeypatch.setattr(agent_service, "SessionLocal", FakeSession)
+    monkeypatch.setattr(agent_service, "CatalogRepository", EmptyCatalog)
+    context = DeckAgentContext(
+        deck.owner_id,
+        deck.id,
+        uuid.uuid4(),
+        uuid.uuid4(),
+        cast("AgentEventSink", FakeSink()),
+    )
+
+    async def invoke() -> object:
+        return await search_legal_cards.on_invoke_tool(
+            ToolContext(
+                context,
+                tool_name="search_legal_cards",
+                tool_call_id="tool-call-2",
+                tool_arguments='{"query":"o:\\"whenever a creature enters draw a card\\""}',
+            ),
+            json.dumps({"query": 'o:"whenever a creature enters draw a card"'}),
+        )
+
+    result = asyncio.run(invoke())
+    payload = json.loads(cast("str", result))
+
+    assert payload["unique_cards_returned"] == 0
+    assert payload["search_tips"]
+    assert any("regex" in tip.lower() for tip in payload["search_tips"])
+    assert any("o:/when.*?enter.*?draw/" in tip for tip in payload["search_tips"])
+    assert any("o:/whenever.*?draw/" in tip for tip in payload["search_tips"])
 
 
 def test_event_context_preserves_prior_proposals_and_outcomes() -> None:
@@ -252,6 +318,117 @@ def test_event_context_preserves_prior_proposals_and_outcomes() -> None:
     assert "Relevant actions and results from earlier turns" in context
     assert context.index("propose_operation") < context.index("operation_applied")
     assert "proposal-1" in context
+
+
+def test_agent_retry_delay_prefers_retry_after_hint_from_error_message() -> None:
+    response = httpx.Response(
+        429,
+        headers={"retry-after": "1"},
+        request=httpx.Request("POST", "https://api.openai.com/v1/responses"),
+    )
+    error = RateLimitError(
+        "Rate limit reached. Please try again in 2.598s.",
+        response=response,
+        body=None,
+    )
+
+    assert _agent_retry_delay(error, 0) == pytest.approx(2.598)
+
+
+def test_agent_retries_transient_openai_errors_before_succeeding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = 0
+    delays: list[float] = []
+    emitted: list[tuple[str, dict[str, str]]] = []
+    response = httpx.Response(
+        429,
+        request=httpx.Request("POST", "https://api.openai.com/v1/responses"),
+    )
+
+    class FakeSink:
+        async def emit(self, event_type: str, payload: object) -> None:
+            emitted.append((event_type, cast("dict[str, str]", payload)))
+
+    async def fake_run_once(context: DeckAgentContext, prompt: str) -> str:
+        nonlocal attempts
+        del context, prompt
+        attempts += 1
+        if attempts < 3:
+            raise RateLimitError(
+                "Rate limit reached. Please try again in 2.5s.",
+                response=response,
+                body=None,
+            )
+        return "done"
+
+    async def fake_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr(agent_service, "_run_agent_once", fake_run_once)
+    monkeypatch.setattr(agent_service.asyncio, "sleep", fake_sleep)
+    context = DeckAgentContext(
+        uuid.uuid4(),
+        uuid.uuid4(),
+        uuid.uuid4(),
+        uuid.uuid4(),
+        cast("AgentEventSink", FakeSink()),
+    )
+
+    result = asyncio.run(agent_service._run_agent_with_retry(context, "prompt"))
+
+    assert result == "done"
+    assert attempts == 3
+    assert delays == [2.5, 2.5]
+    assert [
+        message
+        for event_type, payload in emitted
+        if event_type == "status"
+        and (message := payload.get("message")) is not None
+    ] == [
+        "OpenAI temporarily rate-limited this run; retrying in 2.5s.",
+        "OpenAI temporarily rate-limited this run; retrying in 2.5s.",
+    ]
+
+
+def test_agent_stops_retrying_after_max_attempts(monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts = 0
+    response = httpx.Response(
+        429,
+        request=httpx.Request("POST", "https://api.openai.com/v1/responses"),
+    )
+
+    class FakeSink:
+        async def emit(self, event_type: str, payload: object) -> None:
+            del event_type, payload
+
+    async def fake_run_once(context: DeckAgentContext, prompt: str) -> str:
+        nonlocal attempts
+        del context, prompt
+        attempts += 1
+        raise APIStatusError(
+            "rate limited",
+            response=response,
+            body=None,
+        )
+
+    async def fake_sleep(delay: float) -> None:
+        del delay
+
+    monkeypatch.setattr(agent_service, "_run_agent_once", fake_run_once)
+    monkeypatch.setattr(agent_service.asyncio, "sleep", fake_sleep)
+    context = DeckAgentContext(
+        uuid.uuid4(),
+        uuid.uuid4(),
+        uuid.uuid4(),
+        uuid.uuid4(),
+        cast("AgentEventSink", FakeSink()),
+    )
+
+    with pytest.raises(APIStatusError):
+        asyncio.run(agent_service._run_agent_with_retry(context, "prompt"))
+
+    assert attempts == MAX_AGENT_RUN_ATTEMPTS
 
 
 def test_operation_failure_result_explicitly_says_deck_was_not_changed(
@@ -379,11 +556,11 @@ def test_guidance_approval_applies_fields_and_increments_expected_revision(
             del value
 
     db = FakeDb()
-    monkeypatch.setattr(AgentRepository, "pending_guidance_proposal", lambda *args: proposal)
-    monkeypatch.setattr(AgentRepository, "locked_owned_deck", lambda *args: deck)
+    monkeypatch.setattr(GuidanceProposalRepository, "pending_proposal", lambda *args: proposal)
+    monkeypatch.setattr(GuidanceProposalRepository, "locked_owned_deck", lambda *args: deck)
     user = User(id=owner_id, discord_id="1", username="owner")
 
-    result = agent_routes.approve_guidance_proposal(
+    result = guidance_routes.approve_guidance_proposal(
         deck.id,
         proposal.id,
         DeckGuidanceProposalDecision(expected_revision=5),

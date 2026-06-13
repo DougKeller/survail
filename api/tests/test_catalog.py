@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-from survail.catalog import CatalogQueryError, SearchTerm, _snapshot, parse_query
 from survail.catalog_import import (
     _BULK_TYPE,
     DownloadProgress,
@@ -12,8 +11,14 @@ from survail.catalog_import import (
     _cards,
     _format_bytes,
 )
-from survail.integrations.scryfall import UpstreamCard
-from survail.models import CatalogCard
+from survail.core.models import CatalogCard
+from survail.integrations.scryfall.client import UpstreamCard
+from survail.modules.cards.repository.cards import (
+    CatalogQueryError,
+    SearchTerm,
+    _snapshot,
+    parse_query,
+)
 
 
 def test_parse_query_supports_common_deckbuilder_filters() -> None:

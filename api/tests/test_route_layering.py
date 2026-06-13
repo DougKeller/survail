@@ -1,15 +1,16 @@
 import ast
 from pathlib import Path
 
-ROUTES = ("agent.py", "auth.py", "decks.py", "imports.py", "evaluations.py")
+API_ROOT = Path(__file__).parents[1] / "survail" / "modules"
 DIRECT_DB_METHODS = {"add", "delete", "commit", "flush", "rollback"}
 DB_RECEIVER_NAMES = {"db", "session"}
 
 
-def test_layered_routes_do_not_perform_direct_database_io() -> None:
-    routes_directory = Path(__file__).parents[1] / "survail" / "routes"
-    for filename in ROUTES:
-        tree = ast.parse((routes_directory / filename).read_text())
+def test_api_layer_does_not_perform_direct_database_io() -> None:
+    for path in API_ROOT.rglob("api/*.py"):
+        if path.name == "__init__.py" or path.name == "schemas.py":
+            continue
+        tree = ast.parse(path.read_text())
         sqlalchemy_imports = [
             node
             for node in ast.walk(tree)
@@ -34,5 +35,5 @@ def test_layered_routes_do_not_perform_direct_database_io() -> None:
             and isinstance(node.func.value, ast.Name)
             and node.func.value.id in DB_RECEIVER_NAMES
         ]
-        assert not sqlalchemy_imports, f"{filename} imports SQLAlchemy directly"
-        assert not direct_calls, f"{filename} performs direct database I/O"
+        assert not sqlalchemy_imports, f"{path} imports SQLAlchemy directly"
+        assert not direct_calls, f"{path} performs direct database I/O"

@@ -3,8 +3,8 @@ from functools import lru_cache
 
 from redis import Redis
 
-from survail.settings import get_settings
-from survail.types import JsonObject, json_object
+from survail.core.config import get_settings
+from survail.core.types import JsonObject, json_object
 
 
 class JsonCache:

@@ -1,4 +1,4 @@
-from survail.integrations.openai_imports import _sanitized_import_text
+from survail.integrations.openai.imports import _sanitized_import_text
 
 
 def test_marketplace_import_sends_only_item_blocks_to_ai() -> None:

@@ -14,9 +14,9 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from survail.db import SessionLocal
-from survail.integrations.scryfall import ScryfallClient, UpstreamCard
-from survail.models import CatalogCard, CatalogImport
+from survail.core.db import SessionLocal
+from survail.core.models import CatalogCard, CatalogImport
+from survail.integrations.scryfall.client import ScryfallClient, UpstreamCard
 
 logger = logging.getLogger(__name__)
 _BULK_TYPE = "default_cards"

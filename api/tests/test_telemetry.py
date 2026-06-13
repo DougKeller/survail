@@ -3,10 +3,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import cast
 
-from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 import pytest
+from opentelemetry.metrics import Counter, Histogram, UpDownCounter
 
-from survail import telemetry
+from survail.core import telemetry
 
 
 @dataclass
