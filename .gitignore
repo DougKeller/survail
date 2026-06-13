@@ -21,6 +21,8 @@ dist/
 
 # Frontend placeholder
 web/node_modules/
+web/coverage/
+web/playwright-report/
 web/test-results/
 *.tsbuildinfo
 

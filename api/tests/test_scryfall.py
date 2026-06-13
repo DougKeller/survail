@@ -74,12 +74,8 @@ def test_rate_limit_response_sets_shared_cooldown_without_retry() -> None:
         limiter=limiter,
     )
 
-    try:
+    with pytest.raises(RuntimeError, match="retry after 12 seconds"):
         client.bulk_data("default_cards")
-    except RuntimeError as exc:
-        assert "retry after 12 seconds" in str(exc)
-    else:
-        raise AssertionError("Expected rate-limit error")
 
     assert limiter.acquisitions == 1
     assert limiter.cooldowns == [12]

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import cast
 
 from opentelemetry.metrics import Counter, Histogram, UpDownCounter
-from pytest import MonkeyPatch
+import pytest
 
 from survail import telemetry
 
@@ -20,7 +20,9 @@ class RecordedInstrument:
         self.values.append((amount, attributes))
 
 
-def test_agent_run_metrics_record_completion_and_failure(monkeypatch: MonkeyPatch) -> None:
+def test_agent_run_metrics_record_completion_and_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     runs = RecordedInstrument()
     active = RecordedInstrument()
     duration = RecordedInstrument()
@@ -28,11 +30,11 @@ def test_agent_run_metrics_record_completion_and_failure(monkeypatch: MonkeyPatc
         telemetry,
         "AGENT_METRICS",
         telemetry.AgentMetrics(
-            runs=cast(Counter, runs),
-            active_runs=cast(UpDownCounter, active),
-            run_duration=cast(Histogram, duration),
-            model_phases=cast(Counter, RecordedInstrument()),
-            tool_calls=cast(Counter, RecordedInstrument()),
+            runs=cast("Counter", runs),
+            active_runs=cast("UpDownCounter", active),
+            run_duration=cast("Histogram", duration),
+            model_phases=cast("Counter", RecordedInstrument()),
+            tool_calls=cast("Counter", RecordedInstrument()),
         ),
     )
 
@@ -55,17 +57,17 @@ def test_agent_run_metrics_record_completion_and_failure(monkeypatch: MonkeyPatc
     ]
 
 
-def test_agent_run_metrics_record_cancellation(monkeypatch: MonkeyPatch) -> None:
+def test_agent_run_metrics_record_cancellation(monkeypatch: pytest.MonkeyPatch) -> None:
     runs = RecordedInstrument()
     monkeypatch.setattr(
         telemetry,
         "AGENT_METRICS",
         telemetry.AgentMetrics(
-            runs=cast(Counter, runs),
-            active_runs=cast(UpDownCounter, RecordedInstrument()),
-            run_duration=cast(Histogram, RecordedInstrument()),
-            model_phases=cast(Counter, RecordedInstrument()),
-            tool_calls=cast(Counter, RecordedInstrument()),
+            runs=cast("Counter", runs),
+            active_runs=cast("UpDownCounter", RecordedInstrument()),
+            run_duration=cast("Histogram", RecordedInstrument()),
+            model_phases=cast("Counter", RecordedInstrument()),
+            tool_calls=cast("Counter", RecordedInstrument()),
         ),
     )
 

@@ -76,7 +76,11 @@ def _normalize_gameplan(gameplan: str) -> tuple[str, str, str] | None:
     labels = ("Turns 1-3", "Midgame", "Lategame")
     if any(label not in normalized for label in labels):
         return None
-    return tuple(normalized[label] for label in labels)
+    return (
+        normalized["Turns 1-3"],
+        normalized["Midgame"],
+        normalized["Lategame"],
+    )
 
 
 def _normalize_description(description: str) -> str:

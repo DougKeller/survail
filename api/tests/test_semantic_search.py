@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import cast
 
+import pytest
 from sqlalchemy.orm import Session
 
 from survail.domain import semantic_search as subject
@@ -58,9 +59,7 @@ def _snapshot(oracle_id: str, identity: list[str], legality: str) -> ScryfallCar
 def test_semantic_search_filters_format_and_identity_and_returns_similarity(
     monkeypatch: object,
 ) -> None:
-    from pytest import MonkeyPatch
-
-    patch = cast(MonkeyPatch, monkeypatch)
+    patch = cast("pytest.MonkeyPatch", monkeypatch)
     patch.setattr(subject, "EmbeddingClient", FakeEmbeddingClient)
     patch.setattr(subject, "CatalogRepository", FakeCatalog)
     snapshots = {
@@ -84,7 +83,7 @@ def test_semantic_search_filters_format_and_identity_and_returns_similarity(
 
     results = asyncio.run(
         subject.semantic_search(
-            cast(Session, FakeDb()),
+            cast("Session", FakeDb()),
             "repeatable graveyard recursion",
             "test-key",
             deck_format="commander",

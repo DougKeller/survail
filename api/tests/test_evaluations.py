@@ -67,7 +67,7 @@ def test_single_card_evaluation_uses_owned_deck_and_returns_cached_revision(
         evaluations.evaluate_card(
             deck.id,
             "oracle-1",
-            cast(Session, FakeDb(deck)),
+            cast("Session", FakeDb(deck)),
             user,
         )
     )
@@ -87,7 +87,7 @@ def test_card_evaluation_requires_goal() -> None:
             evaluations.evaluate_card(
                 deck.id,
                 "oracle-1",
-                cast(Session, FakeDb(deck)),
+                cast("Session", FakeDb(deck)),
                 user,
             )
         )
@@ -105,7 +105,7 @@ def test_card_evaluation_does_not_expose_another_users_deck() -> None:
             evaluations.evaluate_card(
                 uuid.uuid4(),
                 "oracle-1",
-                cast(Session, FakeDb(None)),
+                cast("Session", FakeDb(None)),
                 user,
             )
         )

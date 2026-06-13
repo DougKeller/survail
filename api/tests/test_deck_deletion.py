@@ -38,7 +38,7 @@ def test_delete_deck_permanently_deletes_owned_deck() -> None:
     )
     fake_session = FakeDeleteSession(deck)
 
-    response = delete_deck(deck.id, cast(Session, fake_session), user)
+    response = delete_deck(deck.id, cast("Session", fake_session), user)
 
     assert response.status_code == 204
     assert fake_session.deleted is deck

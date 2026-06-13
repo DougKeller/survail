@@ -364,8 +364,8 @@ def test_generate_description_persists_text_and_current_revision(
 
     result = deck_routes.generate_description(
         subject.id,
-        cast(Session, db),
-        cast(User, object()),
+        cast("Session", db),
+        cast("User", object()),
         False,
     )
 

@@ -20,7 +20,7 @@ class ExistingUserSession:
 def test_mock_auth_returns_local_user_without_session_cookie() -> None:
     user = User(discord_id="mock-local-user", username="local-developer")
     request = Request({"type": "http", "headers": []})
-    db = cast(Session, ExistingUserSession(user))
+    db = cast("Session", ExistingUserSession(user))
     settings = Settings(auth_strategy="mock")
 
     assert get_current_user(request, db, settings) is user

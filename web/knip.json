@@ -1,0 +1,10 @@
+{
+  "entry": [
+    "src/main.tsx",
+    "playwright.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "*.config.{js,ts}"],
+  "ignore": ["src/vite-env.d.ts"]
+}

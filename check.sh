@@ -13,16 +13,24 @@ fi
 
 (
   cd "$API_DIR"
-  "$VENV_DIR/bin/ruff" format --check survail tests alembic/versions
-  "$VENV_DIR/bin/ruff" check survail tests alembic/versions
-  PYTHONPATH=. "$VENV_DIR/bin/mypy" survail tests
-  PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. "$VENV_DIR/bin/pytest"
+  "$VENV_DIR/bin/python" -m survail.devtools fix
+  "$VENV_DIR/bin/python" -m survail.devtools lint
+  "$VENV_DIR/bin/python" -m survail.devtools typecheck
+  "$VENV_DIR/bin/python" -m survail.devtools deps
+  "$VENV_DIR/bin/python" -m survail.devtools test
   "$VENV_DIR/bin/alembic" upgrade head --sql >/dev/null
 )
 
+npm --prefix "$WEB_DIR" run format
+npm --prefix "$WEB_DIR" run format:check
+npm --prefix "$WEB_DIR" run lint:fix
 npm --prefix "$WEB_DIR" run lint
+npm --prefix "$WEB_DIR" run depcruise
+npm --prefix "$WEB_DIR" run knip
+npm --prefix "$WEB_DIR" run test
 npm --prefix "$WEB_DIR" run typecheck
 npm --prefix "$WEB_DIR" run build
+npm --prefix "$WEB_DIR" run size
 npm --prefix "$WEB_DIR" run test:e2e
 
 bash -n "$ROOT_DIR/setup.sh" "$ROOT_DIR/dev.sh" "$ROOT_DIR/check.sh" "$ROOT_DIR/embed.sh"

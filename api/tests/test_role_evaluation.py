@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import cast
 
 import httpx
+import pytest
 from openai import APIConnectionError, AsyncOpenAI, RateLimitError
 from sqlalchemy.orm import Session
 
@@ -148,12 +149,12 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_revision() -> None:
     async def report(update: object) -> None:
         from survail.domain.role_evaluation import EvaluationProgress
 
-        parsed = cast(EvaluationProgress, update)
+        parsed = cast("EvaluationProgress", update)
         progress.append((parsed.completed, parsed.total, parsed.eta_seconds))
 
     results = asyncio.run(
         evaluate_oracle_ids(
-            cast(Session, db),
+            cast("Session", db),
             deck,
             [card.oracle_id for card in deck.cardsets],
             evaluator,
@@ -207,7 +208,7 @@ def test_openai_role_evaluator_retries_transient_errors_with_exponential_backoff
         sleeps.append(delay)
 
     evaluator = OpenAIRoleEvaluator("test-key", "test-model", sleep=sleep, random_value=lambda: 0)
-    evaluator._client = cast(AsyncOpenAI, FakeClient())
+    evaluator._client = cast("AsyncOpenAI", FakeClient())
     deck = Deck(
         id=uuid.uuid4(),
         owner_id=uuid.uuid4(),
@@ -270,19 +271,17 @@ def test_completed_cards_are_persisted_when_another_card_fails() -> None:
     async def result(update: object) -> None:
         from survail.schemas import CardRoleEvaluationRead
 
-        streamed.append(cast(CardRoleEvaluationRead, update).oracle_id)
+        streamed.append(cast("CardRoleEvaluationRead", update).oracle_id)
 
     async def run() -> None:
-        try:
+        with pytest.raises(RuntimeError, match="failed"):
             await evaluate_oracle_ids(
-                cast(Session, db),
+                cast("Session", db),
                 deck,
                 ["good", "bad"],
                 PartiallyFailingEvaluator(),
                 result_callback=result,
             )
-        except RuntimeError as error:
-            assert str(error) == "failed"
 
     asyncio.run(run())
 
@@ -304,9 +303,8 @@ def test_evaluation_requires_nonblank_goal_before_reading_cache_or_calling_evalu
     deck.cardsets = [_cardset("card")]
     db = FakeDb()
 
-    try:
-        asyncio.run(evaluate_oracle_ids(cast(Session, db), deck, ["card"], FakeEvaluator()))
-    except ValueError as error:
-        assert str(error) == "Deck must have a Goal / North Star before cards can be evaluated"
-    else:
-        raise AssertionError("Expected evaluation without a goal to fail")
+    with pytest.raises(
+        ValueError,
+        match="Deck must have a Goal / North Star before cards can be evaluated",
+    ):
+        asyncio.run(evaluate_oracle_ids(cast("Session", db), deck, ["card"], FakeEvaluator()))

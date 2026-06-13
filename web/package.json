@@ -5,11 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "lint": "eslint src --max-warnings=0",
-    "typecheck": "tsc -b",
-    "build": "tsc -b && vite build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint src tests eslint.config.js vite.config.ts vitest.config.ts playwright.config.ts .dependency-cruiser.cjs --max-warnings=0",
+    "lint:fix": "eslint src tests eslint.config.js vite.config.ts vitest.config.ts playwright.config.ts .dependency-cruiser.cjs --fix --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "depcruise": "depcruise src --config .dependency-cruiser.cjs",
+    "knip": "knip",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "size": "node ./scripts/check-bundle-size.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -25,7 +33,22 @@
     "@playwright/test": "^1.60.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "@vitest/coverage-v8": "^4.1.8",
+    "dependency-cruiser": "^17.4.3",
     "eslint": "^9.0.0",
-    "typescript-eslint": "^8.0.0"
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-promise": "^7.3.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-sonarjs": "^4.0.3",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "jsdom": "^29.1.1",
+    "knip": "^6.16.1",
+    "prettier": "^3.8.4",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^4.1.8"
   }
 }

@@ -31,6 +31,14 @@ interface ErrorResponse {
   detail?: string | ValidationIssue[] | ImportIssueDetail;
 }
 
+type JsonValue =
+  | boolean
+  | null
+  | number
+  | string
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -43,7 +51,14 @@ export class ApiError extends Error {
 export const API: string =
   import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+function parseJson(body: string): JsonValue {
+  return JSON.parse(body) as JsonValue;
+}
+
+export async function request<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
 
@@ -56,26 +71,38 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!response.ok) {
     const responseBody = await response.text();
     const error =
-      responseBody === "" ? {} : (JSON.parse(responseBody) as ErrorResponse);
-    throw new ApiError(errorMessage(error.detail, response.statusText), response.status);
+      responseBody === "" ? {} : (parseJson(responseBody) as ErrorResponse);
+    throw new ApiError(
+      errorMessage(error.detail, response.statusText),
+      response.status,
+    );
   }
 
   const responseBody = await response.text();
-  return responseBody === "" ? (undefined as T) : (JSON.parse(responseBody) as T);
+  return responseBody === ""
+    ? (undefined as T)
+    : (parseJson(responseBody) as T);
 }
 
-function errorMessage(detail: ErrorResponse["detail"], fallback: string): string {
+export function errorMessage(
+  detail: ErrorResponse["detail"],
+  fallback: string,
+): string {
   if (detail === undefined) return fallback;
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     return detail
-      .map((issue) => `${issue.loc.slice(1).join(".") || "Request"}: ${issue.msg}`)
+      .map(
+        (issue) => `${issue.loc.slice(1).join(".") || "Request"}: ${issue.msg}`,
+      )
       .join("\n");
   }
-  return detail.errors.map((issue) => `Line ${String(issue.line_number)}: ${issue.message}`).join("\n");
+  return detail.errors
+    .map((issue) => `Line ${String(issue.line_number)}: ${issue.message}`)
+    .join("\n");
 }
 
-function metadataFor(format: DeckFormat): object {
+export function metadataFor(format: DeckFormat): object {
   return format === "commander"
     ? { kind: "commander", commander_oracle_ids: [] }
     : format === "brawl"
@@ -83,7 +110,7 @@ function metadataFor(format: DeckFormat): object {
       : { kind: "generic" };
 }
 
-function printingPreferences(preferences: ImportPreferences): object[] {
+export function printingPreferences(preferences: ImportPreferences): object[] {
   return preferences.rules.map((rule) => ({
     kind: rule.kind,
     ...(rule.kind === "cheapest" ? { buffer_percent: rule.bufferPercent } : {}),
@@ -91,23 +118,21 @@ function printingPreferences(preferences: ImportPreferences): object[] {
   }));
 }
 
-async function streamEvents(
+export async function streamEvents(
   path: string,
   body: object,
   onEvent: (event: AgentUiEvent) => void,
 ): Promise<"completed" | "interrupted"> {
-  const startedAt = performance.now();
-  console.info("deck-agent stream request", { path });
   const response = await fetch(`${API}${path}`, {
-    method: "POST", credentials: "include",
-    headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
   if (!response.ok || response.body === null) {
     const responseText = await response.text();
-    console.error("deck-agent stream rejected", { path, status: response.status, responseText });
     throw new ApiError(responseText, response.status);
   }
-  console.info("deck-agent stream opened", { path, status: response.status });
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -125,34 +150,42 @@ async function streamEvents(
       const records = buffer.split("\n\n");
       buffer = records.pop() ?? "";
       for (const record of records) {
-        const data = record.split("\n").find((line) => line.startsWith("data: "));
+        const data = record
+          .split("\n")
+          .find((line) => line.startsWith("data: "));
         if (data !== undefined) {
-          const event = JSON.parse(data.slice(6)) as AgentUiEvent;
+          const event = parseJson(data.slice(6)) as AgentUiEvent;
           runId = event.run_id;
           if (event.type === "run_completed" || event.type === "run_failed") {
             terminalType = event.type;
           }
-          console.info("deck-agent stream event", { path, runId: event.run_id, eventType: event.type });
           onEvent(event);
         }
       }
     }
-  } catch (reason) {
-    console.error("deck-agent stream interrupted", { path, runId, reason });
-    onEvent({ type: "stream_closed", run_id: runId, payload: { expected: false, message: "The connection was interrupted. Your partial response is still available." } });
+  } catch {
+    onEvent({
+      type: "stream_closed",
+      run_id: runId,
+      payload: {
+        expected: false,
+        message:
+          "The connection was interrupted. Your partial response is still available.",
+      },
+    });
     return "interrupted";
   }
-  console.info("deck-agent stream closed", { path, runId, terminalType, durationMs: Math.round(performance.now() - startedAt) });
   onEvent({
     type: "stream_closed",
     run_id: runId,
     payload: {
       expected: terminalType !== null,
-      message: terminalType === "run_completed"
-        ? "Response complete"
-        : terminalType === "run_failed"
+      message:
+        terminalType === "run_completed"
+          ? "Response complete"
+          : terminalType === "run_failed"
             ? "Response ended with an error"
-        : "The connection closed before the response finished. You can send another message to continue.",
+            : "The connection closed before the response finished. You can send another message to continue.",
     },
   });
   return terminalType === null ? "interrupted" : "completed";
@@ -223,25 +256,24 @@ export const api = {
       }),
     }),
   printings: (oracleId: string) =>
-    request<ScryfallCard[]>(`/cards/oracle/${encodeURIComponent(oracleId)}/printings`),
+    request<ScryfallCard[]>(
+      `/cards/oracle/${encodeURIComponent(oracleId)}/printings`,
+    ),
   applyOperation: (
     deckId: string,
     revision: number,
     changes: DeckOperationChangeInput[],
     reason?: string,
   ) =>
-    request<DeckOperationResult>(
-      `/decks/${deckId}/operations`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          client_operation_id: crypto.randomUUID(),
-          expected_revision: revision,
-          reason,
-          changes,
-        }),
-      },
-    ),
+    request<DeckOperationResult>(`/decks/${deckId}/operations`, {
+      method: "POST",
+      body: JSON.stringify({
+        client_operation_id: crypto.randomUUID(),
+        expected_revision: revision,
+        reason,
+        changes,
+      }),
+    }),
   operations: (deckId: string, limit = 50, offset = 0) =>
     request<DeckOperation[]>(
       `/decks/${deckId}/operations?limit=${String(limit)}&offset=${String(offset)}`,
@@ -269,13 +301,17 @@ export const api = {
     onProgress: (progress: CardEvaluationProgress) => void,
     onResult: (result: CardRoleEvaluation) => void,
   ): Promise<CardRoleEvaluation[]> => {
-    const response = await fetch(`${API}/decks/${deckId}/card-evaluations/current/stream`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-    if (!response.ok || response.body === null) throw new ApiError("Could not evaluate cards", response.status);
+    const response = await fetch(
+      `${API}/decks/${deckId}/card-evaluations/current/stream`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      },
+    );
+    if (!response.ok || response.body === null)
+      throw new ApiError("Could not evaluate cards", response.status);
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -290,9 +326,11 @@ export const api = {
       const frames = buffer.split("\n\n");
       buffer = frames.pop() ?? "";
       for (const frame of frames) {
-        const data = frame.split("\n").find((line) => line.startsWith("data: "));
+        const data = frame
+          .split("\n")
+          .find((line) => line.startsWith("data: "));
         if (data === undefined) continue;
-        const event = JSON.parse(data.slice(6)) as
+        const event = parseJson(data.slice(6)) as
           | { type: "progress"; payload: CardEvaluationProgress }
           | { type: "result"; payload: CardRoleEvaluation }
           | { type: "completed"; payload: { results: CardRoleEvaluation[] } }
@@ -300,32 +338,54 @@ export const api = {
         if (event.type === "progress") onProgress(event.payload);
         if (event.type === "result") onResult(event.payload);
         if (event.type === "completed") return event.payload.results;
-        if (event.type === "failed") throw new ApiError(event.payload.message, 502);
+        if (event.type === "failed")
+          throw new ApiError(event.payload.message, 502);
       }
     }
     throw new ApiError("Card evaluation stream closed before completion", 502);
   },
   evaluateCards: (deckId: string, oracleIds: string[]) =>
-    request<CardRoleEvaluation[]>(`/decks/${deckId}/card-evaluations/evaluate`, {
-      method: "POST",
-      body: JSON.stringify({ oracle_ids: oracleIds }),
-    }),
+    request<CardRoleEvaluation[]>(
+      `/decks/${deckId}/card-evaluations/evaluate`,
+      {
+        method: "POST",
+        body: JSON.stringify({ oracle_ids: oracleIds }),
+      },
+    ),
   decideGuidanceProposal: (
     deckId: string,
     proposalId: string,
     revision: number,
     decision: "approve" | "reject",
   ) =>
-    request<DeckGuidanceProposal>(`/decks/${deckId}/guidance-proposals/${proposalId}/${decision}`, {
-      method: "POST",
-      body: JSON.stringify({ expected_revision: revision }),
-    }),
+    request<DeckGuidanceProposal>(
+      `/decks/${deckId}/guidance-proposals/${proposalId}/${decision}`,
+      {
+        method: "POST",
+        body: JSON.stringify({ expected_revision: revision }),
+      },
+    ),
   generateDescription: (deckId: string, refresh = false) =>
-    request<GeneratedDeckDescription>(`/decks/${deckId}/generate-description?refresh=${String(refresh)}`, {
-      method: "POST",
-    }),
+    request<GeneratedDeckDescription>(
+      `/decks/${deckId}/generate-description?refresh=${String(refresh)}`,
+      {
+        method: "POST",
+      },
+    ),
   createConversation: (deckId: string) =>
-    request<DeckConversation>(`/decks/${deckId}/conversations`, { method: "POST", body: "{}" }),
-  sendAgentMessage: (deckId: string, conversationId: string, message: string, onEvent: (event: AgentUiEvent) => void) =>
-    streamEvents(`/decks/${deckId}/conversations/${conversationId}/messages`, { message }, onEvent),
+    request<DeckConversation>(`/decks/${deckId}/conversations`, {
+      method: "POST",
+      body: "{}",
+    }),
+  sendAgentMessage: (
+    deckId: string,
+    conversationId: string,
+    message: string,
+    onEvent: (event: AgentUiEvent) => void,
+  ) =>
+    streamEvents(
+      `/decks/${deckId}/conversations/${conversationId}/messages`,
+      { message },
+      onEvent,
+    ),
 };

@@ -28,11 +28,19 @@ dependencies = [
 
 [project.scripts]
 survail-backfill-embeddings = "survail.embedding_backfill:main"
+survail-api-check = "survail.devtools:check"
+survail-api-fix = "survail.devtools:fix"
+survail-api-lint = "survail.devtools:lint"
+survail-api-typecheck = "survail.devtools:typecheck"
+survail-api-test = "survail.devtools:test"
+survail-api-deps = "survail.devtools:deps"
 
 [project.optional-dependencies]
 dev = [
+    "deptry>=0.23.0",
     "mypy>=1.15.0",
     "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
     "ruff>=0.9.0",
 ]
 
@@ -45,21 +53,51 @@ include = ["survail*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["-q"]
+addopts = [
+    "-q",
+    "--strict-config",
+    "--strict-markers",
+    "--cov=survail",
+    "--cov-branch",
+    "--cov-report=term-missing:skip-covered",
+]
+xfail_strict = true
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "C4", "DTZ", "N", "PERF", "PIE", "RUF", "SIM"]
+select = ["E", "F", "I", "UP", "ANN", "B", "C4", "DTZ", "N", "PERF", "PIE", "PT", "RUF", "SIM", "T20", "TC006"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/env.py" = ["F401", "RUF100"]
+"survail/catalog_import.py" = ["T201"]
+"survail/embedding_backfill.py" = ["T201"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
+check_untyped_defs = true
 disallow_any_generics = true
-warn_return_any = true
-warn_unreachable = true
-show_error_codes = true
-pretty = true
+disallow_subclassing_any = true
+files = ["survail", "tests"]
 mypy_path = "typings"
+no_implicit_reexport = true
+plugins = ["pydantic.mypy"]
+pretty = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+[tool.coverage.run]
+branch = true
+source = ["survail"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+skip_covered = true

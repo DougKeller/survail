@@ -204,7 +204,7 @@ def test_advanced_search_bypasses_local_catalog_and_uses_scryfall(
         deck.id,
         uuid.uuid4(),
         uuid.uuid4(),
-        cast(AgentEventSink, FakeSink()),
+        cast("AgentEventSink", FakeSink()),
     )
 
     async def invoke() -> object:
@@ -219,7 +219,7 @@ def test_advanced_search_bypasses_local_catalog_and_uses_scryfall(
         )
 
     result = asyncio.run(invoke())
-    payload = json.loads(cast(str, result))
+    payload = json.loads(cast("str", result))
 
     assert payload["search_source"] == "scryfall"
     assert payload["cards"][0]["name"] == "Helpful Card"
@@ -269,7 +269,7 @@ def test_operation_failure_result_explicitly_says_deck_was_not_changed(
     assert result["applied"] is False
     assert result["current_revision"] == 8
     assert result["validation"] == deck_validation_summary(subject)
-    assert "deck was not changed" in cast(str, result["message"])
+    assert "deck was not changed" in cast("str", result["message"])
 
 
 def test_cohesive_context_marks_revision_as_stale_after_mutation() -> None:
@@ -387,7 +387,7 @@ def test_guidance_approval_applies_fields_and_increments_expected_revision(
         deck.id,
         proposal.id,
         DeckGuidanceProposalDecision(expected_revision=5),
-        cast(Session, db),
+        cast("Session", db),
         user,
     )
 

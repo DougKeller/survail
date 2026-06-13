@@ -35,7 +35,7 @@ def snapshot(printing_id: str, oracle_id: str, *, universes_beyond: bool) -> Scr
 
 
 def test_search_returns_one_preferred_printing_per_oracle_card() -> None:
-    catalog = cast(CatalogRepository, EmptyPrintingCatalog())
+    catalog = cast("CatalogRepository", EmptyPrintingCatalog())
 
     cards = _preferred_unique_cards(
         [
