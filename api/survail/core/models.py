@@ -356,7 +356,6 @@ class CardRoleEvaluation(TimestampMixin, Base):
     context_key: Mapped[str] = mapped_column(String(64), index=True)
     evaluator_version: Mapped[str] = mapped_column(String(40), index=True)
     oracle_id: Mapped[str] = mapped_column(String(40), index=True)
-    overall_score: Mapped[int] = mapped_column(Integer)
     overall_comment: Mapped[str] = mapped_column(Text)
     roles: Mapped[list[JsonObject]] = mapped_column(JSONB)
 

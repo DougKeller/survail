@@ -28,6 +28,7 @@ ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
 ROLE_JUDGE_MAX_TEXT_LENGTH = 600
 MAX_CLASSIFICATION_OUTPUT_TOKENS = 200
 MAX_ROLE_JUDGE_OUTPUT_TOKENS = 1000
+OVERALL_SCORE_WEIGHTING_EXPONENT = 2.5
 logger = logging.getLogger(__name__)
 ProgressCallback = Callable[["EvaluationProgress"], Awaitable[None]]
 ResultCallback = Callable[[CardRoleEvaluationRead], Awaitable[None]]
@@ -352,13 +353,14 @@ def _context_cardset_lines(cardsets: Sequence[CardSet]) -> list[str]:
 
 
 def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluationRead:
+    role_scores = [CardRoleScoreRead.model_validate(item, strict=False) for item in evaluation.roles]
     return CardRoleEvaluationRead(
         oracle_id=evaluation.oracle_id,
         deck_revision=evaluation.deck_revision,
         evaluator_version=evaluation.evaluator_version,
-        overall_score=evaluation.overall_score,
+        overall_score=_calculate_overall_score(role_scores),
         overall_comment=evaluation.overall_comment,
-        roles=[CardRoleScoreRead.model_validate(item, strict=False) for item in evaluation.roles],
+        roles=role_scores,
         cached=cached,
     )
 
@@ -471,40 +473,17 @@ def _validate_llmaaj(evaluation: StructuredLLMaaJ) -> None:
         if actual != expected:
             raise ValueError(f"OpenAI returned answers that do not match the {role.value} rubric")
 
-SECONDARY_BONUS_WEIGHT = 0.10
-TERTIARY_BONUS_WEIGHT = 0.03
-MAX_BONUS_LIFT = 0.25
-
-
-def _normalize_score(score: int | float) -> float:
-    """Convert a 0-100 score into 0.0-1.0."""
-    return max(0.0, min(float(score), 100.0)) / 100.0
-
-
 def _calculate_overall_score(role_scores: list[CardRoleScoreRead]) -> int:
     if not role_scores:
         return 0
 
     sorted_scores = sorted(role_scores, key=lambda item: item.score, reverse=True)
+    final_score = sum(
+        float(role_score.score) / ((index + 1) ** OVERALL_SCORE_WEIGHTING_EXPONENT)
+        for index, role_score in enumerate(sorted_scores)
+    )
 
-    primary = sorted_scores[0]
-    primary_score = max(0.0, min(float(primary.score), 100.0))
-
-    bonus_lift = 0.0
-
-    for index, role_score in enumerate(sorted_scores[1:], start=1):
-        role_quality = _normalize_score(role_score.score)
-
-        if index == 1:
-            bonus_lift += SECONDARY_BONUS_WEIGHT * role_quality
-        else:
-            bonus_lift += TERTIARY_BONUS_WEIGHT * role_quality
-
-    bonus_lift = min(MAX_BONUS_LIFT, bonus_lift)
-
-    final_score = primary_score + ((100.0 - primary_score) * bonus_lift)
-
-    return round(max(0.0, min(final_score, 100.0)))
+    return round(final_score)
 
 
 def _assign_role_centralities(
@@ -610,8 +589,6 @@ async def evaluate_oracle_ids(
             for role_score in ranked_role_scores
         ]
 
-        overall_score = _calculate_overall_score(ranked_role_scores)
-
         overall_comment = (
             llmaaj.overall_summary
             if ranked_role_scores
@@ -624,7 +601,6 @@ async def evaluate_oracle_ids(
             context_key=context_keys[oracle_id],
             evaluator_version=EVALUATOR_VERSION,
             oracle_id=oracle_id,
-            overall_score=overall_score,
             overall_comment=overall_comment,
             roles=roles,
         )

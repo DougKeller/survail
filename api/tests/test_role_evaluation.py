@@ -10,14 +10,17 @@ from sqlalchemy.orm import Session
 
 from survail.core.models import CardFinish, CardRoleEvaluation, CardSet, CardZone, Deck, DeckFormat
 from survail.core.schemas import ScryfallCardSnapshot
+from survail.modules.decks.evaluations.api.schemas import CardRoleScoreRead
 from survail.modules.decks.evaluations.service.evaluator import (
     MAX_CONCURRENT_EVALUATIONS,
+    OVERALL_SCORE_WEIGHTING_EXPONENT,
     CardRole,
     OpenAIRoleEvaluator,
     QualitativeRating,
     StructuredAnswer,
     StructuredApplicableRole,
     StructuredLLMaaJ,
+    _calculate_overall_score,
     _context_key,
     _retry_delay,
     evaluate_oracle_ids,
@@ -140,9 +143,21 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
         context_key=_context_key(deck, "0"),
         evaluator_version="roles-v5",
         oracle_id="0",
-        overall_score=80,
         overall_comment="Cached comment.",
-        roles=[],
+        roles=[
+            {
+                "role": "card_advantage",
+                "score": 100,
+                "description": "Cached primary role.",
+                "answers": [],
+            },
+            {
+                "role": "board_wipe",
+                "score": 50,
+                "description": "Cached secondary role.",
+                "answers": [],
+            },
+        ],
     )
     db = FakeDb([cached])
     evaluator = FakeEvaluator()
@@ -164,8 +179,14 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
         )
     )
 
+    cached_expected = _calculate_overall_score(
+        [CardRoleScoreRead.model_validate(item, strict=False) for item in cached.roles]
+    )
+    fresh_expected = _calculate_overall_score(results[1].roles)
+
     assert results[0].cached is True
-    assert results[1].overall_score == 62
+    assert results[0].overall_score == cached_expected
+    assert results[1].overall_score == fresh_expected
     assert results[1].overall_comment == (
         "Overall: This card is a useful card advantage. This card is a useful board wipe."
     )
@@ -200,6 +221,38 @@ def test_context_key_stays_stable_across_revision_only_changes() -> None:
     deck.revision = 4
 
     assert _context_key(deck, subject.oracle_id) == first
+
+
+def test_overall_score_uses_shared_weighting_exponent_without_upper_clamp() -> None:
+    role_scores = [
+        CardRoleScoreRead.model_validate(
+            {
+                "role": role,
+                "score": 100,
+                "description": description,
+                "answers": [],
+            }
+        )
+        for role, description in (
+            ("card_advantage", "Primary"),
+            ("board_wipe", "Secondary"),
+            ("payoff", "Tertiary"),
+            ("enabler", "Quaternary"),
+            ("enhancer", "Quinary"),
+        )
+    ]
+
+    expected = round(
+        sum(
+            role_score.score / ((index + 1) ** OVERALL_SCORE_WEIGHTING_EXPONENT)
+            for index, role_score in enumerate(
+                sorted(role_scores, key=lambda item: item.score, reverse=True)
+            )
+        )
+    )
+
+    assert expected > 100
+    assert _calculate_overall_score(role_scores) == expected
 
 
 def test_structured_role_outputs_include_role_description_but_not_per_answer_prose() -> None:
