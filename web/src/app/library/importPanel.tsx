@@ -7,56 +7,38 @@ import type {
 
 import type { DeckFormat } from "../../modules/decks/contracts";
 import type {
-  ImportPreferenceKind,
-  ImportPreferenceRule,
   ImportPreferences,
   MoxfieldImportPreview,
 } from "../../modules/imports/contracts";
 import { DECK_FORMATS } from "../deckPrimitives";
-import { ImportPreferencesEditor } from "./importPreferencesEditor";
 import { ImportPreviewPanel } from "./importPreviewPanel";
 
 export function ImportPanel({
   busy,
   createImportedDeck,
   decklist,
-  draggedPreference,
   format,
   handleFormatChange,
   handlePreview,
   importPreferences,
-  movePreference,
   preview,
   setDecklist,
-  setDraggedPreference,
   setImportPreferences,
   title,
   setTitle,
-  updateCheapestBuffer,
-  updateFrame,
 }: {
   busy: boolean;
   createImportedDeck: () => Promise<void>;
   decklist: string;
-  draggedPreference: ImportPreferenceKind | null;
   format: DeckFormat;
   handleFormatChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   handlePreview: (event: SyntheticEvent<HTMLFormElement>) => Promise<void>;
   importPreferences: ImportPreferences;
-  movePreference: (
-    source: ImportPreferenceKind,
-    target: ImportPreferenceKind,
-  ) => void;
   preview: MoxfieldImportPreview | null;
   setDecklist: (value: string) => void;
-  setDraggedPreference: (value: ImportPreferenceKind | null) => void;
   setImportPreferences: Dispatch<SetStateAction<ImportPreferences>>;
   setTitle: (value: string) => void;
   title: string;
-  updateCheapestBuffer: (bufferPercent: number) => void;
-  updateFrame: (
-    frame: Extract<ImportPreferenceRule, { kind: "frame" }>["frame"],
-  ) => void;
 }) {
   return (
     <section className="import-panel">
@@ -64,7 +46,8 @@ export function ImportPanel({
         <h2>Import Moxfield decklist</h2>
         <p className="muted">
           Paste an exported list. Imported cards begin in the Mainboard; move
-          commanders and sideboard cards after creation.
+          commanders and sideboard cards after creation. Imports resolve to the
+          original non-foil printing when available.
         </p>
         <form
           className="import-form"
@@ -101,15 +84,18 @@ export function ImportPanel({
                 value={decklist}
               />
             </label>
-            <ImportPreferencesEditor
-              draggedPreference={draggedPreference}
-              importPreferences={importPreferences}
-              movePreference={movePreference}
-              setDraggedPreference={setDraggedPreference}
-              setImportPreferences={setImportPreferences}
-              updateCheapestBuffer={updateCheapestBuffer}
-              updateFrame={updateFrame}
-            />
+            <label>
+              <input
+                checked={importPreferences.preserveTags}
+                onChange={(event) => {
+                  setImportPreferences({
+                    preserveTags: event.target.checked,
+                  });
+                }}
+                type="checkbox"
+              />{" "}
+              Preserve tags
+            </label>
           </div>
           <footer className="import-actions">
             <button disabled={busy}>

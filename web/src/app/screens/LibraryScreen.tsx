@@ -15,15 +15,12 @@ import { ImportPanel } from "../library/importPanel";
 import {
   isDeckFormat,
   messageFor,
-  PREFERENCE_LABELS,
   storedImportPreferences,
   useModalBehavior,
 } from "../deckPrimitives";
 
 import type { Deck, DeckFormat } from "../../modules/decks/contracts";
 import type {
-  ImportPreferenceKind,
-  ImportPreferenceRule,
   ImportPreferences,
   MoxfieldImportPreview,
 } from "../../modules/imports/contracts";
@@ -41,9 +38,6 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
   const [error, setError] = useState<string | null>(null);
   const [showAddDeck, setShowAddDeck] = useState(false);
   const [openDeckMenu, setOpenDeckMenu] = useState<string | null>(null);
-  const [draggedPreference, setDraggedPreference] =
-    useState<ImportPreferenceKind | null>(null);
-  const [preferenceAnnouncement, setPreferenceAnnouncement] = useState("");
   const navigate = useNavigate();
   const addDeckButtonRef = useRef<HTMLButtonElement>(null);
   const closeAddDeck = useCallback(() => {
@@ -85,46 +79,6 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
 
   function handleFormatChange(event: ChangeEvent<HTMLSelectElement>): void {
     if (isDeckFormat(event.target.value)) setFormat(event.target.value);
-  }
-
-  function movePreference(
-    source: ImportPreferenceKind,
-    target: ImportPreferenceKind,
-  ): void {
-    setImportPreferences((current) => {
-      const rules = [...current.rules];
-      const sourceIndex = rules.findIndex((rule) => rule.kind === source);
-      const targetIndex = rules.findIndex((rule) => rule.kind === target);
-      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex)
-        return current;
-      const [moved] = rules.splice(sourceIndex, 1);
-      if (moved === undefined) return current;
-      rules.splice(targetIndex, 0, moved);
-      setPreferenceAnnouncement(
-        `${PREFERENCE_LABELS[source]} moved to priority ${String(targetIndex + 1)}`,
-      );
-      return { ...current, rules };
-    });
-  }
-
-  function updateCheapestBuffer(bufferPercent: number): void {
-    setImportPreferences((current) => ({
-      ...current,
-      rules: current.rules.map((rule) =>
-        rule.kind === "cheapest" ? { ...rule, bufferPercent } : rule,
-      ),
-    }));
-  }
-
-  function updateFrame(
-    frame: Extract<ImportPreferenceRule, { kind: "frame" }>["frame"],
-  ): void {
-    setImportPreferences((current) => ({
-      ...current,
-      rules: current.rules.map((rule) =>
-        rule.kind === "frame" ? { ...rule, frame } : rule,
-      ),
-    }));
   }
 
   async function handleCreateDeck(): Promise<void> {
@@ -199,16 +153,13 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
       <div className="sr-only" aria-live="polite" aria-atomic="true">
         {busy ? "Working" : ""}
       </div>
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {preferenceAnnouncement}
-      </div>
       <section className="page-heading">
         <div>
           <h1>{mode === "decks" ? "Your decks" : "Import a deck"}</h1>
           <p>
             {mode === "decks"
               ? "Build and manage your deck collection."
-              : "Resolve a decklist and review every selected printing."}
+              : "Resolve a decklist and review the imported cards."}
           </p>
         </div>
         {mode === "decks" && (
@@ -232,20 +183,15 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
           busy={busy}
           createImportedDeck={createImportedDeck}
           decklist={decklist}
-          draggedPreference={draggedPreference}
           format={format}
           handleFormatChange={handleFormatChange}
           handlePreview={handlePreview}
           importPreferences={importPreferences}
-          movePreference={movePreference}
           preview={preview}
           setDecklist={setDecklist}
-          setDraggedPreference={setDraggedPreference}
           setImportPreferences={setImportPreferences}
           setTitle={setTitle}
           title={title}
-          updateCheapestBuffer={updateCheapestBuffer}
-          updateFrame={updateFrame}
         />
       )}
       {mode === "decks" && (

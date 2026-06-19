@@ -1,9 +1,9 @@
 import { useContext } from "react";
 
+import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type { CardSet, DeckFormat } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
-import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
-
+import { CoreCardToggle } from "./coreCardToggle";
 import {
   type DeckView,
   type GroupBy,
@@ -33,35 +33,22 @@ function commanderEligible(
 
 function DeckCardImage({
   cardset,
-  open,
-  disabled,
 }: {
   cardset: CardSet;
-  open: () => void;
-  disabled: boolean;
 }) {
   return (
     <div className="card-art">
       <ClickableCardImage card={cardset} className="card-image" />
-      <button
-        aria-label={`Choose printing for ${cardset.card_name}`}
-        className="art-button"
-        disabled={disabled}
-        onClick={open}
-        title="Choose printing"
-      >
-        <MaterialIcon name="imagesmode" />
-      </button>
     </div>
   );
 }
 
 function ImageCard(props: {
   card: CardSet;
-  open: () => void;
   add: () => void;
   remove: () => void;
   markCommander: (() => void) | null;
+  toggleCore: () => void;
   disabled: boolean;
   stacked: boolean;
   index: number;
@@ -69,10 +56,10 @@ function ImageCard(props: {
 }) {
   const {
     card,
-    open,
     add,
     remove,
     markCommander,
+    toggleCore,
     disabled,
     stacked,
     index,
@@ -87,7 +74,7 @@ function ImageCard(props: {
           : undefined
       }
     >
-      <DeckCardImage cardset={card} disabled={disabled} open={open} />
+      <DeckCardImage cardset={card} />
       {!stacked && card.quantity > 1 && (
         <span
           aria-label={`${String(card.quantity)} copies`}
@@ -108,10 +95,17 @@ function ImageCard(props: {
         </span>
       )}
       <div className="card-quick-actions">
+        <CoreCardToggle
+          active={card.core}
+          disabled={disabled}
+          label={card.card_name}
+          onClick={toggleCore}
+        />
         <button
           aria-label={`Remove one ${card.card_name}`}
           disabled={disabled}
           onClick={remove}
+          type="button"
         >
           <MaterialIcon name="remove" />
         </button>
@@ -119,6 +113,7 @@ function ImageCard(props: {
           aria-label={`Add one ${card.card_name}`}
           disabled={disabled}
           onClick={add}
+          type="button"
         >
           <MaterialIcon name="add" />
         </button>
@@ -127,6 +122,7 @@ function ImageCard(props: {
             aria-label={`Mark ${card.card_name} as commander`}
             disabled={disabled}
             onClick={markCommander}
+            type="button"
           >
             <MaterialIcon name="shield_person" />
           </button>
@@ -142,10 +138,10 @@ export function VisualCardGroups(props: {
   groupBy: GroupBy;
   sortBy: SortBy;
   format: DeckFormat;
-  openPrinting: (card: CardSet) => void;
   addCard: (card: CardSet) => void;
   removeCard: (card: CardSet) => void;
   markCommander: (card: CardSet) => void;
+  toggleCoreCard: (card: CardSet) => void;
   busy: boolean;
   scores: ReadonlyMap<string, CardRoleEvaluation>;
 }) {
@@ -155,10 +151,10 @@ export function VisualCardGroups(props: {
     groupBy,
     sortBy,
     format,
-    openPrinting,
     addCard,
     removeCard,
     markCommander,
+    toggleCoreCard,
     busy,
     scores,
   } = props;
@@ -193,14 +189,14 @@ export function VisualCardGroups(props: {
                           }
                         : null
                     }
-                    open={() => {
-                      openPrinting(card);
-                    }}
                     remove={() => {
                       removeCard(card);
                     }}
                     score={null}
                     stacked={view === "stacks"}
+                    toggleCore={() => {
+                      toggleCoreCard(card);
+                    }}
                   />
                 ),
               ),

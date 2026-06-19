@@ -115,23 +115,51 @@ def test_name_only_entry_resolves_through_ranked_printing_preferences() -> None:
     assert preview.cardsets[0].quantity == 1
 
 
-def test_preserve_printings_uses_supplied_set_and_collector_number() -> None:
-    preferred = selection("Arcane Signet", "preferred", "cmm", "1", price="0.25")
-    supplied = selection("Arcane Signet", "supplied", "ecc", "55", price="2.00")
+def test_import_ignores_supplied_printing_and_uses_original_default() -> None:
+    preferred = selection(
+        "Arcane Signet",
+        "preferred",
+        "cmm",
+        "1",
+        price="0.25",
+        released_at="2023-08-04",
+    )
+    supplied = selection(
+        "Arcane Signet",
+        "supplied",
+        "ecc",
+        "55",
+        price="2.00",
+        released_at="2024-11-08",
+    )
+    original = selection(
+        "Arcane Signet",
+        "original",
+        "lea",
+        "1",
+        price="8.00",
+        released_at="1993-08-05",
+    )
 
     preview = import_moxfield_decklist(
         "1 Arcane Signet (ECC) 55",
-        FakeCatalog(cards={"Arcane Signet": [preferred, supplied]}),
+        FakeCatalog(cards={"Arcane Signet": [preferred, supplied, original]}),
         preserve_printings=True,
         printing_preferences=[CheapestPreference(kind="cheapest")],
     )
 
-    assert preview.cardsets[0].printing_id == "supplied"
-    assert preview.cardsets[0].printing_selection_reason == "supplied_printing"
+    assert preview.cardsets[0].printing_id == "original"
+    assert preview.cardsets[0].printing_selection_reason == "ranked_preferences"
 
 
 def test_ai_extracted_cards_still_resolve_through_catalog() -> None:
-    card = selection("Tatyova, Benthic Druid", "tatyova", "fdn", "247", finishes=["foil"])
+    card = selection(
+        "Tatyova, Benthic Druid",
+        "tatyova",
+        "fdn",
+        "247",
+        finishes=["nonfoil", "foil"],
+    )
 
     preview = import_extracted_decklist(
         [
@@ -148,7 +176,7 @@ def test_ai_extracted_cards_still_resolve_through_catalog() -> None:
     assert preview.used_ai_fallback
     assert not preview.errors
     assert preview.cardsets[0].printing_id == "tatyova"
-    assert preview.cardsets[0].finish == CardFinish.FOIL
+    assert preview.cardsets[0].finish == CardFinish.NONFOIL
 
 
 def test_name_only_entry_supports_tags() -> None:
@@ -203,7 +231,7 @@ def test_supplied_export_syntax_supports_slash_names_promos_foil_and_tags() -> N
         "3 - Removal",
         "Theme - Taxes",
     )
-    assert preview.cardsets[3].finish == CardFinish.FOIL
+    assert preview.cardsets[3].finish == CardFinish.NONFOIL
     assert preview.cardsets[3].printing_selection_reason == "ranked_preferences"
 
 
@@ -287,7 +315,7 @@ def test_preferences_are_soft_and_fall_back_to_available_printing_and_finish() -
     assert preview.cardsets[0].finish == CardFinish.FOIL
 
 
-def test_ranked_preferences_choose_non_ub_then_frame_then_cheapest() -> None:
+def test_secondary_preferences_apply_when_original_dates_are_unavailable() -> None:
     cards = [
         selection(
             "Sol Ring",
@@ -328,10 +356,10 @@ def test_cheapest_preference_can_select_cheapest_finish() -> None:
         printing_preferences=[CheapestPreference(kind="cheapest")],
     )
 
-    assert preview.cardsets[0].finish == CardFinish.FOIL
+    assert preview.cardsets[0].finish == CardFinish.NONFOIL
 
 
-def test_cheapest_buffer_allows_secondary_original_priority() -> None:
+def test_original_default_overrides_secondary_price_preferences() -> None:
     cards = [
         selection("Sol Ring", "original", "lea", "1", price="10.50", released_at="1993-08-05"),
         selection("Sol Ring", "cheapest", "cmm", "1", price="10.00", released_at="2023-08-04"),
@@ -355,7 +383,7 @@ def test_cheapest_buffer_allows_secondary_original_priority() -> None:
     )
 
     assert buffered.cardsets[0].printing_id == "original"
-    assert strict.cardsets[0].printing_id == "cheapest"
+    assert strict.cardsets[0].printing_id == "original"
 
 
 def test_empty_decklist_returns_structured_error() -> None:

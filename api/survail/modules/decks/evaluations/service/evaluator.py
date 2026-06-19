@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import random
@@ -18,10 +19,9 @@ from survail.core.models import CardRoleEvaluation, CardSet, Deck
 from survail.core.types import JsonObject, json_object
 from survail.modules.cards.repository.cards import CatalogRepository
 from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead, CardRoleScoreRead
-from survail.modules.decks.service.context import deck_description_context
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v4"
+EVALUATOR_VERSION = "roles-v5"
 MAX_ATTEMPTS = 8
 MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
@@ -205,7 +205,9 @@ class OpenAIRoleEvaluator:
                 "for every criterion in that role's rubric using only: very_low, low, neutral, "
                 f"high, or very_high. Aim for about {ROLE_JUDGE_TARGET_WORDS} per applicable role "
                 "description. Do not calculate numbers. Copy criterion IDs exactly and preserve "
-                "their rubric order. Treat incidental or negligible functionality as inapplicable. "
+                "their rubric order. Only mark land as applicable when the card's type line "
+                "explicitly includes Land. Treat incidental or negligible functionality as "
+                "inapplicable. "
                 "Then return exactly one concise overall_summary sentence based only on the role "
                 "evaluations, emphasizing the strongest contribution and any important limitation."
             ),
@@ -293,11 +295,60 @@ def _retry_delay(error: Exception, attempt: int, random_value: float) -> float:
 
 
 def _evaluation_input(deck: Deck, oracle_id: str, card_context: str) -> str:
-    return (
-        f"Goal / North Star:\n{deck.goal}\n\n"
-        f"Full deck context:\n{deck_description_context(deck)}\n\n"
-        f"Card under evaluation ({oracle_id}):\n{card_context}"
-    )
+    context_cards = _strategic_context_cardsets(deck, oracle_id)
+    sections = [
+        "Goal / North Star:",
+        deck.goal,
+        "",
+        "Scoring context cards:",
+    ]
+    if context_cards:
+        sections.extend(_context_cardset_lines(context_cards))
+    else:
+        sections.append("No commander or starred core cards are currently selected.")
+    sections.extend(["", f"Card under evaluation ({oracle_id}):", card_context])
+    return "\n".join(sections)
+
+
+def _context_key(deck: Deck, oracle_id: str) -> str:
+    payload = {
+        "goal": " ".join(deck.goal.split()),
+        "format": deck.format.value,
+        "commanders": sorted(
+            {cardset.oracle_id for cardset in deck.cardsets if cardset.zone.value == "commander"}
+        ),
+        "core": sorted(
+            {
+                cardset.oracle_id
+                for cardset in deck.cardsets
+                if cardset.core and cardset.zone.value != "commander"
+            }
+        ),
+        "oracle_id": oracle_id,
+    }
+    return hashlib.sha256(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+
+
+def _strategic_context_cardsets(deck: Deck, oracle_id: str) -> list[CardSet]:
+    relevant = [
+        cardset
+        for cardset in deck.cardsets
+        if (
+            cardset.zone.value == "commander"
+            or (cardset.core and cardset.zone.value != "commander")
+        )
+        and cardset.oracle_id != oracle_id
+    ]
+    return sorted(relevant, key=lambda cardset: (cardset.zone.value, cardset.card_name, cardset.id))
+
+
+def _context_cardset_lines(cardsets: Sequence[CardSet]) -> list[str]:
+    return [
+        _deck_card_context([cardset])
+        for cardset in cardsets
+    ]
 
 
 def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluationRead:
@@ -310,6 +361,28 @@ def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluation
         roles=[CardRoleScoreRead.model_validate(item, strict=False) for item in evaluation.roles],
         cached=cached,
     )
+
+
+def read_cached_oracle_ids(
+    db: Session, deck: Deck, oracle_ids: Sequence[str]
+) -> list[CardRoleEvaluationRead]:
+    unique_ids = list(dict.fromkeys(oracle_ids))
+    if not deck.goal.strip():
+        return []
+    context_keys = {oracle_id: _context_key(deck, oracle_id) for oracle_id in unique_ids}
+    stored = db.scalars(
+        select(CardRoleEvaluation).where(
+            CardRoleEvaluation.deck_id == deck.id,
+            CardRoleEvaluation.context_key.in_(context_keys.values()),
+            CardRoleEvaluation.evaluator_version == EVALUATOR_VERSION,
+        )
+    )
+    cached = {
+        item.oracle_id: _read(item, cached=True)
+        for item in stored
+        if context_keys.get(item.oracle_id) == item.context_key
+    }
+    return [cached[oracle_id] for oracle_id in unique_ids if oracle_id in cached]
 
 
 def _card_contexts(db: Session, deck: Deck, oracle_ids: Sequence[str]) -> dict[str, str]:
@@ -328,11 +401,27 @@ def _card_contexts(db: Session, deck: Deck, oracle_ids: Sequence[str]) -> dict[s
 def _deck_card_context(cardsets: Sequence[CardSet]) -> str:
     return json.dumps(
         [
-            {"quantity": item.quantity, "zone": item.zone.value, "card": item.scryfall}
+            {
+                "quantity": item.quantity,
+                "zone": item.zone.value,
+                "core": item.core,
+                "card": item.scryfall,
+            }
             for item in cardsets
         ],
         indent=2,
     )
+
+
+def _is_land_card_context(card_context: str) -> bool:
+    with contextlib.suppress(json.JSONDecodeError, KeyError, IndexError, TypeError):
+        payload = json.loads(card_context)
+        if isinstance(payload, list):
+            type_line = payload[0]["card"]["type_line"]
+        else:
+            type_line = payload["type_line"]
+        return isinstance(type_line, str) and "Land" in type_line
+    return False
 
 
 def _role_json(result: StructuredRoleScore) -> JsonObject:
@@ -358,9 +447,11 @@ def _role_json(result: StructuredRoleScore) -> JsonObject:
 
 
 def _role_score_from_llmaaj(
-    role: CardRole, evaluation: StructuredLLMaaJ
+    role: CardRole, evaluation: StructuredLLMaaJ, *, is_land: bool
 ) -> StructuredRoleScore | None:
     role_value = getattr(evaluation, role.value)
+    if role == CardRole.LAND and not is_land:
+        return None
     if role_value == "N/A":
         return None
     return StructuredRoleScore(
@@ -380,6 +471,60 @@ def _validate_llmaaj(evaluation: StructuredLLMaaJ) -> None:
         if actual != expected:
             raise ValueError(f"OpenAI returned answers that do not match the {role.value} rubric")
 
+SECONDARY_BONUS_WEIGHT = 0.10
+TERTIARY_BONUS_WEIGHT = 0.03
+MAX_BONUS_LIFT = 0.25
+
+
+def _normalize_score(score: int | float) -> float:
+    """Convert a 0-100 score into 0.0-1.0."""
+    return max(0.0, min(float(score), 100.0)) / 100.0
+
+
+def _calculate_overall_score(role_scores: list[CardRoleScoreRead]) -> int:
+    if not role_scores:
+        return 0
+
+    sorted_scores = sorted(role_scores, key=lambda item: item.score, reverse=True)
+
+    primary = sorted_scores[0]
+    primary_score = max(0.0, min(float(primary.score), 100.0))
+
+    bonus_lift = 0.0
+
+    for index, role_score in enumerate(sorted_scores[1:], start=1):
+        role_quality = _normalize_score(role_score.score)
+
+        if index == 1:
+            bonus_lift += SECONDARY_BONUS_WEIGHT * role_quality
+        else:
+            bonus_lift += TERTIARY_BONUS_WEIGHT * role_quality
+
+    bonus_lift = min(MAX_BONUS_LIFT, bonus_lift)
+
+    final_score = primary_score + ((100.0 - primary_score) * bonus_lift)
+
+    return round(max(0.0, min(final_score, 100.0)))
+
+
+def _assign_role_centralities(
+    role_scores: list[CardRoleScoreRead],
+) -> list[CardRoleScoreRead]:
+    sorted_scores = sorted(role_scores, key=lambda item: item.score, reverse=True)
+
+    updated: list[CardRoleScoreRead] = []
+
+    for index, role_score in enumerate(sorted_scores):
+        if index == 0:
+            centrality = "primary"
+        elif index == 1:
+            centrality = "secondary"
+        else:
+            centrality = "tertiary"
+
+        updated.append(role_score.model_copy(update={"centrality": centrality}))
+
+    return updated
 
 async def evaluate_oracle_ids(
     db: Session,
@@ -392,15 +537,8 @@ async def evaluate_oracle_ids(
     if not deck.goal.strip():
         raise ValueError("Deck must have a Goal / North Star before cards can be evaluated")
     unique_ids = list(dict.fromkeys(oracle_ids))
-    stored = db.scalars(
-        select(CardRoleEvaluation).where(
-            CardRoleEvaluation.deck_id == deck.id,
-            CardRoleEvaluation.deck_revision == deck.revision,
-            CardRoleEvaluation.evaluator_version == EVALUATOR_VERSION,
-            CardRoleEvaluation.oracle_id.in_(unique_ids),
-        )
-    )
-    cached = {item.oracle_id: _read(item, cached=True) for item in stored}
+    context_keys = {oracle_id: _context_key(deck, oracle_id) for oracle_id in unique_ids}
+    cached = {item.oracle_id: item for item in read_cached_oracle_ids(db, deck, unique_ids)}
     missing = [oracle_id for oracle_id in unique_ids if oracle_id not in cached]
     contexts = _card_contexts(db, deck, missing)
     unresolved = [oracle_id for oracle_id in missing if oracle_id not in contexts]
@@ -447,36 +585,64 @@ async def evaluate_oracle_ids(
 
     async def evaluate_one(oracle_id: str) -> CardRoleEvaluationRead:
         nonlocal completed
+
         llmaaj = await evaluate(oracle_id)
-        scores = [
+        is_land = _is_land_card_context(contexts[oracle_id])
+
+        raw_scores = [
             score
             for role in CardRole
-            if (score := _role_score_from_llmaaj(role, llmaaj)) is not None
+            if (score := _role_score_from_llmaaj(role, llmaaj, is_land=is_land))
+            is not None
         ]
-        roles = [_role_json(score) for score in scores]
-        role_scores = [CardRoleScoreRead.model_validate(role, strict=False).score for role in roles]
-        overall_score = max(role_scores, default=0)
-        overall_comment = llmaaj.overall_summary if scores else "No material role identified."
+
+        raw_roles = [_role_json(score) for score in raw_scores]
+
+        role_scores = [
+            CardRoleScoreRead.model_validate(role, strict=False)
+            for role in raw_roles
+        ]
+
+        ranked_role_scores = _assign_role_centralities(role_scores)
+
+        roles = [
+            role_score.model_dump(mode="json")
+            for role_score in ranked_role_scores
+        ]
+
+        overall_score = _calculate_overall_score(ranked_role_scores)
+
+        overall_comment = (
+            llmaaj.overall_summary
+            if ranked_role_scores
+            else "No material role identified."
+        )
+
         evaluation = CardRoleEvaluation(
             deck_id=deck.id,
             deck_revision=deck.revision,
+            context_key=context_keys[oracle_id],
             evaluator_version=EVALUATOR_VERSION,
             oracle_id=oracle_id,
             overall_score=overall_score,
             overall_comment=overall_comment,
             roles=roles,
         )
+
         async with persist_lock:
             db.add(evaluation)
             db.commit()
+
             result = _read(evaluation, cached=False)
             cached[oracle_id] = result
             completed += 1
+
         if result_callback is not None:
             await result_callback(result)
-        await report_progress()
-        return result
 
+        await report_progress()
+
+        return result
     heartbeat = (
         asyncio.create_task(progress_heartbeat()) if progress is not None and missing else None
     )

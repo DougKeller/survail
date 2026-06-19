@@ -64,6 +64,7 @@ const cardset = {
   card_name: card.name,
   set_code: card.set,
   collector_number: card.collector_number,
+  core: false,
   tags: [],
   scryfall: card,
 };
@@ -163,6 +164,7 @@ const cardScore = {
 };
 
 const scores = [secondCardScore, cardScore];
+const cachedScores = [secondCardScore];
 
 async function fulfillJson(route: Route, body: object): Promise<void> {
   await route.fulfill({
@@ -205,6 +207,10 @@ async function mockApi(page: Page): Promise<void> {
       await fulfillJson(route, deck);
     } else if (url.pathname === "/decks/deck-1/validation") {
       await fulfillJson(route, { valid: true, card_count: 100, errors: [] });
+    } else if (
+      url.pathname === "/decks/deck-1/card-evaluations/current/cached"
+    ) {
+      await fulfillJson(route, cachedScores);
     } else if (
       url.pathname === "/decks/deck-1/card-evaluations/current/stream"
     ) {
@@ -249,6 +255,15 @@ async function mockApi(page: Page): Promise<void> {
           })
           .filter((score): score is typeof cardScore => score !== null),
       );
+    } else if (url.pathname === "/decks/deck-1/cardsets/cardset-1/core") {
+      await fulfillJson(route, {
+        ...deck,
+        cardsets: [
+          { ...cardset, core: true },
+          secondCardset,
+          commanderCardset,
+        ],
+      });
     } else if (url.pathname === "/decks/deck-1/operations") {
       await fulfillJson(route, []);
     } else if (url.pathname === "/decks/deck-1/generate-description") {
@@ -491,7 +506,7 @@ test("valid deck uses an accessible icon-only indicator", async ({ page }) => {
   await expect(validation).not.toContainText("Valid");
 });
 
-test("search defaults to the deck format and drawer dismisses with Escape", async ({
+test("search auto-runs with deck format and drawer dismisses with Escape", async ({
   page,
 }) => {
   let searchQuery = "";
@@ -507,11 +522,10 @@ test("search defaults to the deck format and drawer dismisses with Escape", asyn
   await page.goto("/decks/deck-1");
   const search = page.getByRole("textbox", { name: "Card search" });
   await search.fill("arcane");
-  await search.press("Enter");
 
   await expect(
     page.getByRole("dialog", { name: "Search results" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 3000 });
   expect(searchQuery).toBe("arcane legal:commander");
   await page.keyboard.press("Escape");
   await expect(
@@ -615,6 +629,27 @@ test("card grid consolidates duplicate cards and opens shared card details", asy
   await expect(dialog).toContainText("Market prices");
 });
 
+test("cards can be starred as core pieces from hover actions", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Grid" }).click();
+
+  const arcaneCard = page
+    .getByRole("button", { name: "View details for Arcane Signet" })
+    .locator("xpath=../..");
+  await arcaneCard.hover();
+  await page
+    .getByRole("button", { name: "Star Arcane Signet as a core card" })
+    .click();
+
+  await expect(page.getByText("Starred Arcane Signet as a core card")).toBeVisible();
+  await page.getByRole("button", { name: "Scores" }).click();
+  await expect(page.locator(".evaluation-summary")).toContainText(
+    "1 starred core card",
+  );
+});
+
 test("text view uses responsive columns for card groups", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Text" }).click();
@@ -640,15 +675,18 @@ test("text view uses responsive columns for card groups", async ({ page }) => {
 test("scores are presented in a dedicated sortable view", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
-  await page.getByRole("button", { name: "Evaluate cards" }).click();
 
   const scoresView = page.locator(".scores-view");
   await expect(scoresView).toBeVisible();
-  await expect(scoresView).toContainText("2/2");
+  await expect(scoresView).toContainText("1/2");
   await expect(scoresView.locator(".score-table-row")).toHaveCount(2);
   await expect(
     scoresView.getByRole("button", { name: /Overall/ }),
   ).toBeVisible();
+  await expect(scoresView.locator(".score-table-row").nth(1)).toContainText(
+    "Arcane Signet",
+  );
+  await expect(scoresView.locator(".score-table-row").nth(1)).toContainText("-");
 });
 
 test("card evaluation clearly requires a Goal or North Star", async ({
@@ -666,7 +704,10 @@ test("card evaluation clearly requires a Goal or North Star", async ({
   await expect(
     page.getByRole("button", { name: "Evaluate cards" }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Add goal" }).click();
+  await page
+    .locator(".evaluation-goal-required")
+    .getByRole("button", { name: "Add goal" })
+    .dispatchEvent("click");
   await expect(page.getByRole("dialog", { name: "Edit deck" })).toBeVisible();
 });
 
@@ -674,6 +715,14 @@ test("card scores only load after manual evaluation and cards sort by role score
   page,
 }) => {
   let evaluationRequests = 0;
+  let cachedRequests = 0;
+  await page.route(
+    "http://localhost:8000/decks/deck-1/card-evaluations/current/cached",
+    async (route) => {
+      cachedRequests += 1;
+      await fulfillJson(route, cachedScores);
+    },
+  );
   await page.route(
     "http://localhost:8000/decks/deck-1/card-evaluations/current/stream",
     async (route) => {
@@ -719,9 +768,19 @@ test("card scores only load after manual evaluation and cards sort by role score
   await page.goto("/decks/deck-1");
 
   await page.getByRole("button", { name: "Scores" }).click();
-  await expect(page.locator(".score-table-row")).toHaveCount(0);
+  await expect(page.locator(".score-table-row")).toHaveCount(2);
+  await expect.poll(() => cachedRequests).toBe(1);
   await expect.poll(() => evaluationRequests).toBe(0);
-  await page.getByRole("button", { name: "Evaluate cards" }).click();
+  await expect(page.locator(".score-table-row").nth(0)).toContainText(
+    "Sol Ring",
+  );
+  await expect(page.locator(".score-table-row").nth(1)).toContainText(
+    "Arcane Signet",
+  );
+  await page
+    .locator(".scores-view")
+    .getByRole("button", { name: "Evaluate cards" })
+    .dispatchEvent("click");
   await expect(page.locator(".score-table-row")).toHaveCount(2);
   await expect.poll(() => evaluationRequests).toBe(1);
   await expect(page.locator(".score-table-row")).toContainText([
@@ -789,9 +848,12 @@ test("completed card evaluations remain visible when a later evaluation fails", 
   );
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
-  await page.getByRole("button", { name: "Evaluate cards" }).click();
+  await page
+    .locator(".scores-view")
+    .getByRole("button", { name: "Evaluate cards" })
+    .dispatchEvent("click");
 
-  await expect(page.locator(".score-table-row")).toHaveCount(1);
+  await expect(page.locator(".score-table-row")).toHaveCount(2);
   await expect(page.getByRole("main")).toContainText(
     "Rate limit retries exhausted",
   );

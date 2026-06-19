@@ -4,7 +4,6 @@ import type { NavigateFunction } from "react-router-dom";
 import { ApiError } from "../../core/http/client";
 import type { ScryfallCard } from "../../modules/cards/contracts";
 import type {
-  CardFinish,
   CardSet,
   Deck,
   DeckOperation,
@@ -13,7 +12,12 @@ import type {
 } from "../../modules/decks/contracts";
 import type { ImportPreferences } from "../../modules/imports/contracts";
 import { api } from "../api";
-import { bulkEditChanges, decklistText, messageFor } from "../deckPrimitives";
+import {
+  bulkEditChanges,
+  decklistText,
+  messageFor,
+  preferredFinish,
+} from "../deckPrimitives";
 import { useDeckMetadataActions } from "./useDeckMetadataActions";
 
 export function useDeckActions({
@@ -34,7 +38,6 @@ export function useDeckActions({
   setDeck,
   setError,
   setOperations,
-  setPrintingCardset,
   setResults,
   setShowBulkEdit,
   setShowSearchResults,
@@ -60,7 +63,6 @@ export function useDeckActions({
   ) => void;
   setError: (value: string | null) => void;
   setOperations: (value: DeckOperation[]) => void;
-  setPrintingCardset: (value: CardSet | null) => void;
   setResults: (value: ScryfallCard[]) => void;
   setShowBulkEdit: (value: boolean) => void;
   setShowSearchResults: (value: boolean) => void;
@@ -121,7 +123,6 @@ export function useDeckActions({
     id,
     loadDeck,
     navigate,
-    printingPreferences,
     query,
     setAnnouncement,
     setBusy,
@@ -170,35 +171,41 @@ export function useDeckActions({
     );
   };
 
-  const changePrinting = (
-    cardset: CardSet,
-    printing: ScryfallCard,
-    finish: CardFinish,
-  ): void => {
+  const toggleCoreCard = (cardset: CardSet): void => {
+    if (deck === null || busy) return;
+    setBusy(true);
+    setError(null);
+    void (async () => {
+      try {
+        const nextCore = !cardset.core;
+        const nextDeck = await api.setCardCore(deck.id, cardset.id, nextCore);
+        setDeck(nextDeck);
+        setValidation(await api.validation(deck.id));
+        setAnnouncement(
+          `${nextCore ? "Starred" : "Unstarred"} ${cardset.card_name} as a core card`,
+        );
+      } catch (reason) {
+        setError(
+          reason instanceof Error
+            ? messageFor(reason)
+            : "Could not update core card",
+        );
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
+  const addSearchResult = (card: ScryfallCard): void => {
     applyChanges(
       [
         {
-          printing_id: cardset.printing_id,
-          quantity_delta: -cardset.quantity,
-          zone: cardset.zone,
-          finish: cardset.finish,
-        },
-        {
-          printing_id: printing.id,
-          quantity_delta: cardset.quantity,
-          zone: cardset.zone,
-          finish,
-          tags: cardset.tags,
+          printing_id: card.id,
+          quantity_delta: 1,
+          zone: "mainboard",
+          finish: preferredFinish(card, "nonfoil"),
         },
       ],
-      `Change ${cardset.card_name} printing`,
-    );
-    setPrintingCardset(null);
-  };
-
-  const addSearchResult = (card: ScryfallCard, finish: CardFinish): void => {
-    applyChanges(
-      [{ printing_id: card.id, quantity_delta: 1, zone: "mainboard", finish }],
       `Add ${card.name}`,
     );
   };
@@ -209,11 +216,7 @@ export function useDeckActions({
     setBulkEditErrors([]);
     setError(null);
     try {
-      const preview = await api.importMoxfield(
-        bulkDecklist,
-        printingPreferences,
-        true,
-      );
+      const preview = await api.importMoxfield(bulkDecklist, printingPreferences);
       if (preview.errors.length > 0) {
         setBulkEditErrors(
           preview.errors.map(
@@ -260,10 +263,10 @@ export function useDeckActions({
   return {
     addSearchResult,
     applyBulkEdit,
-    changePrinting,
     changeQuantity,
     markAsCommander,
     openBulkEdit,
+    toggleCoreCard,
     ...metadataActions,
   };
 }

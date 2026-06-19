@@ -15,6 +15,7 @@ from survail.core.schemas import (
     ScryfallCardSnapshot,
 )
 from survail.core.types import JsonObject
+from survail.modules.decks.service.cardsets import DeckCoreCardLimitError, set_cardset_core
 from survail.modules.decks.service.validate import validate_deck
 
 
@@ -439,4 +440,41 @@ def test_deck_goal_schema_is_strict_and_legacy_rubric_is_rejected() -> None:
     with pytest.raises(ValidationError):
         DeckUpdate.model_validate(
             {"rubric": [{"description": "Adds interaction", "example": "Counters a spell"}]}
+        )
+
+
+def test_core_cards_are_limited_to_fifteen() -> None:
+    owner = uuid.uuid4()
+    actor = type("Actor", (), {"id": owner})()
+    deck = type("DeckRecord", (), {})()
+    deck.id = uuid.uuid4()
+    deck.owner_id = owner
+    deck.cardsets = []
+    for _index in range(15):
+        cardset = type("CardsetRecord", (), {})()
+        cardset.id = uuid.uuid4()
+        cardset.core = True
+        deck.cardsets.append(cardset)
+    target = type("CardsetRecord", (), {})()
+    target.id = uuid.uuid4()
+    target.core = False
+    deck.cardsets.append(target)
+
+    class FakeDb:
+        committed = False
+
+        def scalar(self, statement: object) -> object:
+            del statement
+            return deck
+
+        def commit(self) -> None:
+            self.committed = True
+
+    with pytest.raises(DeckCoreCardLimitError, match="at most 15"):
+        set_cardset_core(
+            FakeDb(),  # type: ignore[arg-type]
+            deck.id,
+            target.id,
+            actor,  # type: ignore[arg-type]
+            core=True,
         )

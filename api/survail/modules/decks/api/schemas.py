@@ -19,6 +19,7 @@ class CardSetRead(StrictModel):
     card_name: str
     set_code: str
     collector_number: str
+    core: bool
     tags: list[str]
     scryfall: ScryfallCardSnapshot
 

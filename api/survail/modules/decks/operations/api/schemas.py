@@ -79,3 +79,7 @@ class DeckOperationResult(StrictModel):
     operation: DeckOperationRead
     deck: DeckRead
     validation: DeckValidationRead
+
+
+class CardSetCoreUpdate(StrictModel):
+    core: bool

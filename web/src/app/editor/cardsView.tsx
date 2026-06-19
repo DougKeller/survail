@@ -1,75 +1,155 @@
-import type React from "react";
-
+/* eslint-disable max-lines */
 import {
-  MaterialIcon,
-  titleize,
-  VisualCardGroups,
-  zoneLabel,
-  zonesFor,
-} from "../deckPrimitives";
-import { groupedCards } from "../deck/grouping";
-import type {
-  DeckDisplayPreferences,
-  GroupBy,
-  SortBy,
-} from "../deck/constants";
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+} from "react";
+
 import type {
   CardSet,
   Deck,
   PriceProvider,
 } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
+import { SearchDrawer } from "./searchDrawer";
+import type {
+  DeckDisplayPreferences,
+  GroupBy,
+  SortBy,
+} from "../deck/constants";
+import { groupedCards } from "../deck/grouping";
+import {
+  CoreCardToggle,
+  MaterialIcon,
+  titleize,
+  VisualCardGroups,
+  zoneLabel,
+  zonesFor,
+} from "../deckPrimitives";
+import { InlineCardText } from "../../modules/cards/ui/cardPresentation";
 
 export function DeckCardsView({
+  addSearchResult,
   applyQuantityChange,
   busy,
   deck,
   displayPreferences,
   markCommander,
-  openPrinting,
   openSearch,
   priceProvider,
+  results,
   scores,
   searchForm,
+  searchInputRef,
+  setShowSearchResults,
   setDisplayPreferences,
   setQuery,
+  showSearchResults,
+  toggleCoreCard,
 }: {
+  addSearchResult: (card: CardSet["scryfall"]) => void;
   applyQuantityChange: (card: CardSet, quantityDelta: number) => void;
   busy: boolean;
   deck: Deck;
   displayPreferences: DeckDisplayPreferences;
   markCommander: (card: CardSet) => void;
-  openPrinting: (card: CardSet) => void;
-  openSearch: (event: React.SyntheticEvent<HTMLFormElement>) => Promise<void>;
+  openSearch: () => Promise<void>;
   priceProvider: PriceProvider;
+  results: CardSet["scryfall"][];
   scores: ReadonlyMap<string, CardRoleEvaluation>;
   searchForm: string;
-  setDisplayPreferences: React.Dispatch<
-    React.SetStateAction<DeckDisplayPreferences>
-  >;
+  searchInputRef: RefObject<HTMLInputElement | null>;
+  setShowSearchResults: (value: boolean) => void;
+  setDisplayPreferences: Dispatch<SetStateAction<DeckDisplayPreferences>>;
   setQuery: (value: string) => void;
+  showSearchResults: boolean;
+  toggleCoreCard: (card: CardSet) => void;
 }) {
   const { groupBy, sortBy, view } = displayPreferences;
+  const [organizeOpen, setOrganizeOpen] = useState(false);
+  const organizeRef = useRef<HTMLDetailsElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!organizeOpen) return;
+    function handlePointerDown(event: PointerEvent): void {
+      if (
+        organizeRef.current !== null &&
+        event.target instanceof Node &&
+        !organizeRef.current.contains(event.target)
+      ) {
+        setOrganizeOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [organizeOpen]);
+
+  useEffect(() => {
+    if (!showSearchResults) return;
+    function handlePointerDown(event: PointerEvent): void {
+      if (
+        searchContainerRef.current !== null &&
+        event.target instanceof Node &&
+        !searchContainerRef.current.contains(event.target)
+      ) {
+        setShowSearchResults(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") setShowSearchResults(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [setShowSearchResults, showSearchResults]);
 
   return (
     <>
       <div aria-label="Card display controls" className="deck-toolbar">
-        <form
-          className="card-search"
-          onSubmit={(event) => void openSearch(event)}
-        >
-          <input
-            aria-label="Card search"
-            onChange={(event) => {
-              setQuery(event.target.value);
+        <div className="card-search-wrap" ref={searchContainerRef}>
+          <form
+            className="card-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void openSearch();
             }}
-            placeholder="Search cards"
-            value={searchForm}
-          />
-          <button aria-label="Search" className="icon-action" title="Search">
-            <MaterialIcon name="search" />
-          </button>
-        </form>
+          >
+            <input
+              aria-label="Card search"
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+              placeholder="Search cards"
+              ref={searchInputRef}
+              value={searchForm}
+            />
+            <button
+              aria-label="Search"
+              className="icon-action"
+              title="Search"
+              type="submit"
+            >
+              <MaterialIcon name="search" />
+            </button>
+          </form>
+          {showSearchResults && (
+            <SearchDrawer
+              addResult={addSearchResult}
+              busy={busy}
+              results={results}
+              searchDrawerRef={searchContainerRef}
+            />
+          )}
+        </div>
         <div aria-label="Card view" className="view-selector">
           {(["stacks", "grid", "text"] as const).map((deckView) => (
             <button
@@ -87,7 +167,14 @@ export function DeckCardsView({
             </button>
           ))}
         </div>
-        <details className="organize-menu">
+        <details
+          className="organize-menu"
+          onToggle={(event) => {
+            setOrganizeOpen(event.currentTarget.open);
+          }}
+          open={organizeOpen}
+          ref={organizeRef}
+        >
           <summary className="secondary-button">
             <MaterialIcon name="tune" /> Organize
           </summary>
@@ -122,6 +209,7 @@ export function DeckCardsView({
                 value={sortBy}
               >
                 <option value="alphabetical">Alphabetical</option>
+                <option value="starred">Starred</option>
                 <option value="mana-value">Mana Value</option>
                 <option value="price">Price</option>
                 <option value="score">Role Score</option>
@@ -158,7 +246,12 @@ export function DeckCardsView({
                     <div className="card-grid">
                       {group.cards.map((card) => (
                         <article className="card-row" key={card.id}>
-                          <strong>{card.card_name}</strong>
+                          <strong className="text-card-name">
+                            <InlineCardText
+                              cards={[card]}
+                              text={`[[${card.card_name}]]`}
+                            />
+                          </strong>
                           <div className="inline-quantity">
                             <button
                               aria-label={`Remove one ${card.card_name}`}
@@ -167,6 +260,7 @@ export function DeckCardsView({
                                 applyQuantityChange(card, -1);
                               }}
                               title="Remove one"
+                              type="button"
                             >
                               <MaterialIcon name="remove" />
                             </button>
@@ -178,9 +272,18 @@ export function DeckCardsView({
                                 applyQuantityChange(card, 1);
                               }}
                               title="Add one"
+                              type="button"
                             >
                               <MaterialIcon name="add" />
                             </button>
+                            <CoreCardToggle
+                              active={card.core}
+                              disabled={busy}
+                              label={card.card_name}
+                              onClick={() => {
+                                toggleCoreCard(card);
+                              }}
+                            />
                           </div>
                         </article>
                       ))}
@@ -198,12 +301,12 @@ export function DeckCardsView({
                 format={deck.format}
                 groupBy={groupBy}
                 markCommander={markCommander}
-                openPrinting={openPrinting}
                 removeCard={(card) => {
                   applyQuantityChange(card, -1);
                 }}
                 scores={scores}
                 sortBy={sortBy}
+                toggleCoreCard={toggleCoreCard}
                 view={view}
               />
             )}

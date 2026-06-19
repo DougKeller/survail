@@ -65,7 +65,6 @@ class ImportService:
             payload.decklist,
             self._catalog,
             preserve_tags=payload.preserve_tags,
-            preserve_printings=payload.preserve_printings,
             printing_preferences=payload.printing_preferences,
             default_zone=payload.default_zone,
         )

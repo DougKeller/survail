@@ -30,6 +30,7 @@ export interface CardSet {
   card_name: string;
   set_code: string;
   collector_number: string;
+  core: boolean;
   tags: string[];
   scryfall: ScryfallCard;
 }

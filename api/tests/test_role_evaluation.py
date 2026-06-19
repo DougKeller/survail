@@ -18,6 +18,7 @@ from survail.modules.decks.evaluations.service.evaluator import (
     StructuredAnswer,
     StructuredApplicableRole,
     StructuredLLMaaJ,
+    _context_key,
     _retry_delay,
     evaluate_oracle_ids,
 )
@@ -115,12 +116,13 @@ def _cardset(oracle_id: str) -> CardSet:
         card_name=oracle_id,
         set_code="tst",
         collector_number="1",
+        core=False,
         tags=[],
         scryfall=card.model_dump(mode="json"),
     )
 
 
-def test_role_evaluations_derive_numeric_scores_and_cache_by_revision() -> None:
+def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
     deck = Deck(
         id=uuid.uuid4(),
         owner_id=uuid.uuid4(),
@@ -135,7 +137,8 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_revision() -> None:
     cached = CardRoleEvaluation(
         deck_id=deck.id,
         deck_revision=3,
-        evaluator_version="roles-v3",
+        context_key=_context_key(deck, "0"),
+        evaluator_version="roles-v5",
         oracle_id="0",
         overall_score=80,
         overall_comment="Cached comment.",
@@ -173,6 +176,30 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_revision() -> None:
     assert progress[0][:2] == (1, 10)
     assert progress[-1][0] == 10
     assert progress[-1][2] == 0
+
+
+def test_context_key_stays_stable_across_revision_only_changes() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Deck",
+        format=DeckFormat.COMMANDER,
+        description="",
+        goal="Control the board and accumulate cards.",
+        metadata_json={"kind": "commander", "commander_oracle_ids": []},
+        revision=3,
+    )
+    commander = _cardset("commander")
+    commander.zone = CardZone.COMMANDER
+    core = _cardset("core")
+    core.core = True
+    subject = _cardset("subject")
+    deck.cardsets = [commander, core, subject]
+
+    first = _context_key(deck, subject.oracle_id)
+    deck.revision = 4
+
+    assert _context_key(deck, subject.oracle_id) == first
 
 
 def test_structured_role_outputs_include_role_description_but_not_per_answer_prose() -> None:

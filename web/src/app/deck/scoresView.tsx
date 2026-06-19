@@ -1,5 +1,5 @@
+/* eslint-disable max-lines */
 import { useState } from "react";
-
 import {
   ClickableCardImage,
   InlineCardText,
@@ -9,11 +9,12 @@ import type {
   CardEvaluationProgress,
   CardRoleEvaluation,
 } from "../../modules/decks/evaluations/contracts";
-
 import { CARD_ROLE_ORDER } from "./constants";
+import { CoreCardToggle } from "./coreCardToggle";
 import {
   createDeckScoreContext,
   rankScores,
+  scoreContextDescription,
   type ScoreSortDirection,
   type ScoreSortKey,
   updateHoverPreview,
@@ -28,6 +29,7 @@ export function DeckScoresView({
   scoreCards,
   progress,
   editGoal,
+  toggleCoreCard,
 }: {
   deck: Deck;
   scores: ReadonlyMap<string, CardRoleEvaluation>;
@@ -35,6 +37,7 @@ export function DeckScoresView({
   scoreCards: () => void;
   progress: CardEvaluationProgress | null;
   editGoal: () => void;
+  toggleCoreCard: (oracleId: string) => void;
 }) {
   const [scoreSort, setScoreSort] = useState<{
     key: ScoreSortKey;
@@ -43,12 +46,10 @@ export function DeckScoresView({
     key: "overall",
     direction: "desc",
   });
-  const [hoveredScore, setHoveredScore] = useState<ReturnType<
-    typeof updateHoverPreview
-  > | null>(null);
-  const { uniqueCards, cardNames, cardsByOracleId, roleScore } =
-    createDeckScoreContext(deck);
-  const rankedScores = rankScores(scores, cardNames, scoreSort, roleScore);
+  const [hoveredScore, setHoveredScore] =
+    useState<ReturnType<typeof updateHoverPreview> | null>(null);
+  const { uniqueCards, roleScore, rows } = createDeckScoreContext(deck);
+  const rankedScores = rankScores(rows(scores), scoreSort, roleScore);
 
   function setSort(key: ScoreSortKey): void {
     setScoreSort((current) =>
@@ -104,8 +105,8 @@ export function DeckScoresView({
         </div>
         {progress === null ? (
           <p className="muted">
-            Cards are tagged by role, judged against role-specific qualitative
-            rubrics, and scored deterministically from those answers.
+            Cards are tagged by role and judged against{" "}
+            {scoreContextDescription(deck)} using role-specific qualitative rubrics.
           </p>
         ) : (
           <p className="muted" role="status">
@@ -141,6 +142,17 @@ export function DeckScoresView({
                     <button
                       className="score-sort-button"
                       onClick={() => {
+                        setSort("starred");
+                      }}
+                      type="button"
+                    >
+                      {sortLabel("Starred", "starred")}
+                    </button>
+                  </th>
+                  <th>
+                    <button
+                      className="score-sort-button"
+                      onClick={() => {
                         setSort("overall");
                       }}
                       type="button"
@@ -164,44 +176,55 @@ export function DeckScoresView({
                 </tr>
               </thead>
               <tbody>
-                {rankedScores.map((score) => {
+                {rankedScores.map((row) => {
                   const roleMap = new Map(
-                    score.roles.map((role) => [role.role, role]),
+                    row.evaluation?.roles.map((role) => [role.role, role]) ?? [],
                   );
-                  const card = cardsByOracleId.get(score.oracle_id);
-                  const name =
-                    cardNames.get(score.oracle_id) ?? score.oracle_id;
                   return (
                     <tr
                       className="score-table-row"
-                      key={score.oracle_id}
+                      key={row.oracleId}
                       onMouseEnter={(event) => {
+                        if (row.evaluation === null) return;
                         setHoveredScore(
-                          updateHoverPreview(event, score, card, name),
+                          updateHoverPreview(event, row.evaluation, row.card, row.name),
                         );
                       }}
                       onMouseLeave={() => {
                         setHoveredScore(null);
                       }}
                       onMouseMove={(event) => {
+                        if (row.evaluation === null) return;
                         setHoveredScore(
-                          updateHoverPreview(event, score, card, name),
+                          updateHoverPreview(event, row.evaluation, row.card, row.name),
                         );
                       }}
                     >
                       <th scope="row">
                         <div className="score-table-card">
-                          {card !== undefined && (
+                          {row.card !== undefined && (
                             <ClickableCardImage
-                              card={card}
+                              card={row.card}
                               className="score-table-image"
                             />
                           )}
-                          <span>{name}</span>
+                          <span>{row.name}</span>
                         </div>
                       </th>
+                      <td className="score-table-starred">
+                        <CoreCardToggle
+                          active={row.card?.core === true}
+                          disabled={row.card === undefined}
+                          label={row.name}
+                          onClick={() => {
+                            toggleCoreCard(row.oracleId);
+                          }}
+                        />
+                      </td>
                       <td className="score-table-overall">
-                        {score.overall_score}
+                        {row.evaluation?.overall_score ?? (
+                          <span className="score-table-empty">-</span>
+                        )}
                       </td>
                       {CARD_ROLE_ORDER.map((role) => {
                         const roleResult = roleMap.get(role);

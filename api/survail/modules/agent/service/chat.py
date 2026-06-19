@@ -274,10 +274,50 @@ def _deck_details_payload(deck: Deck) -> dict[str, object]:
                 "quantity": card.quantity,
                 "zone": card.zone.value,
                 "printing_id": card.printing_id,
+                "core": card.core,
             }
             for card in deck.cardsets
         ],
     }
+
+
+def _attached_owned_deck_with_cards(
+    db: Session, owner_id: uuid.UUID, deck_id: uuid.UUID
+) -> Deck | None:
+    return db.scalar(
+        select(Deck)
+        .options(selectinload(Deck.cardsets))
+        .where(Deck.id == deck_id, Deck.owner_id == owner_id)
+    )
+
+
+def _assert_agent_changes_do_not_touch_core_cards(
+    db: Session,
+    owner_id: uuid.UUID,
+    deck_id: uuid.UUID,
+    changes: list[DeckOperationChangeCreate],
+) -> None:
+    deck = _attached_owned_deck_with_cards(db, owner_id, deck_id)
+    if deck is None:
+        raise DeckOperationError("Deck not found")
+    core_cardsets = [cardset for cardset in deck.cardsets if cardset.core]
+    if not core_cardsets:
+        return
+    locked_by_identity = {
+        (cardset.printing_id, cardset.finish, cardset.zone): cardset for cardset in core_cardsets
+    }
+    locked_oracle_ids = {cardset.oracle_id for cardset in core_cardsets}
+    catalog = CatalogRepository(db)
+    for change in changes:
+        if (change.printing_id, change.finish, change.zone) in locked_by_identity:
+            raise DeckOperationError(
+                "Agent may not edit starred core cards. Ask the user to unstar the card first."
+            )
+        printing = catalog.get_printing(change.printing_id)
+        if printing is not None and printing.oracle_id in locked_oracle_ids:
+            raise DeckOperationError(
+                "Agent may not edit starred core cards. Ask the user to unstar the card first."
+            )
 
 
 def _deck_fundamentals_payload(deck: Deck) -> dict[str, object]:
@@ -773,6 +813,12 @@ async def apply_proposed_operation(
                 )
             )
         try:
+            _assert_agent_changes_do_not_touch_core_cards(
+                db,
+                context.context.owner_id,
+                proposal.deck_id,
+                changes,
+            )
             operation, _ = apply_deck_operation(
                 db,
                 proposal.deck_id,
@@ -954,6 +1000,9 @@ def build_agent() -> Agent[DeckAgentContext]:
             "subset of the deck color identity. Never recommend off-identity cards or off-identity "
             "basic lands. If color identity is unknown, establish it before making "
             "recommendations. "
+            "Cards marked as core are locked. Never propose adding, removing, moving, or "
+            "changing a starred core card. If a core card needs to change, tell the user "
+            "to unstar it first. "
             "Never claim a deck change happened unless apply_proposed_operation succeeds. "
             "A proposed operation has not changed the deck. Only an apply_proposed_operation "
             "result with applied=true confirms a change. If applied=false, clearly state that "

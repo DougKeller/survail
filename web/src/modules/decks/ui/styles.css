@@ -1072,8 +1072,36 @@ main {
   gap: 0.55rem;
   min-width: 160px;
 }
+.core-card-toggle {
+  display: inline-grid;
+  width: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-outline);
+  background: transparent;
+}
+.core-card-toggle.active {
+  color: var(--md-sys-color-tertiary);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-tertiary-container) 65%,
+    transparent
+  );
+}
+.core-card-toggle:disabled {
+  opacity: 0.45;
+}
+.core-card-toggle .material-symbols-outlined {
+  font-size: 1rem;
+}
 .score-table-card span {
   font-weight: 700;
+}
+.score-table-starred,
+.score-table-overall {
+  text-align: center;
 }
 .score-table-image,
 .score-table-image img {
@@ -1082,7 +1110,6 @@ main {
   border-radius: var(--md-sys-shape-corner-small);
 }
 .score-table-overall {
-  text-align: center;
   font-weight: 800;
 }
 .score-table-empty {
@@ -1407,6 +1434,17 @@ main {
   color: var(--md-sys-color-on-secondary-container);
   background: var(--md-sys-color-secondary-container);
 }
+.card-quick-actions .core-card-toggle {
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-secondary-container);
+}
+.card-quick-actions .core-card-toggle.active {
+  color: var(--md-sys-color-on-tertiary-container);
+  background: var(--md-sys-color-tertiary-container);
+}
 .grid-card:hover .card-quick-actions,
 .stacked-card:hover .card-quick-actions,
 .card-quick-actions:focus-within {
@@ -1599,29 +1637,27 @@ main {
   min-height: 0;
   overflow: auto;
 }
+.card-search-wrap {
+  position: relative;
+}
 .search-drawer {
-  position: fixed;
+  position: absolute;
   z-index: 11;
-  right: 1.25rem;
-  bottom: 6.5rem;
-  left: 1.25rem;
-  width: min(1320px, calc(100% - 2.5rem));
-  max-height: min(62vh, 650px);
-  margin: auto;
-  padding: 1rem;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  width: min(720px, 100%);
+  max-height: min(58vh, 520px);
+  padding: 0.85rem;
   overflow: auto;
   border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-extra-large);
+  border-radius: var(--md-sys-shape-corner-large);
   background: color-mix(
     in srgb,
     var(--md-sys-color-surface-container-high) 92%,
     transparent
   );
   box-shadow: 0 8px 32px color-mix(in srgb, black 48%, transparent);
-  backdrop-filter: blur(24px);
-}
-.search-drawer:focus-visible {
-  outline-offset: -3px;
+  backdrop-filter: blur(16px);
 }
 .agent-drawer {
   position: sticky;
@@ -1880,16 +1916,67 @@ main {
     transform: scale(0.72);
   }
 }
-.search-drawer .page-heading {
-  margin-bottom: 0.75rem;
-}
 .search-drawer-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
   gap: 0.65rem;
 }
 .search-drawer .search-result {
+  position: relative;
   min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: transparent;
+}
+.search-drawer-empty {
+  margin: 0;
+}
+.search-result .clickable-card-image {
+  display: block;
+}
+.search-image {
+  width: 100%;
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+.search-result::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, black 55%, transparent),
+    transparent 45%
+  );
+  opacity: 0;
+  content: "";
+  pointer-events: none;
+  transition: opacity var(--md-sys-motion-standard);
+}
+.search-result-add {
+  position: absolute;
+  right: 0.45rem;
+  bottom: 0.45rem;
+  left: 0.45rem;
+  min-height: 34px;
+  opacity: 0;
+  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-secondary-container);
+  transition: opacity var(--md-sys-motion-standard);
+}
+.search-result:hover::after,
+.search-result:focus-within::after,
+.search-result:hover .search-result-add,
+.search-result:focus-within .search-result-add {
+  opacity: 1;
+}
+.text-card-name .inline-card-reference-trigger {
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.text-card-name .inline-card-reference {
+  display: inline;
 }
 .printing-grid {
   display: grid;
@@ -2019,10 +2106,7 @@ main {
     min-width: calc(100% - 150px);
   }
   .search-drawer {
-    right: 0.5rem;
-    bottom: 8.5rem;
-    left: 0.5rem;
-    width: calc(100% - 1rem);
+    width: min(calc(100vw - 2rem), 100%);
   }
   .card-grid {
     grid-template-columns: 1fr;

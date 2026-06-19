@@ -1,8 +1,7 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
-
-@dataclass(frozen=True)
-class StructuredDeckDescription:
+class StructuredDeckDescription(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
     overview: str
     early_game: str
     midgame: str

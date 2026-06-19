@@ -1,28 +1,9 @@
 import type { ScryfallCard } from "../cards/contracts";
 import type { CardFinish, CardZone, DeckFormat } from "../decks/contracts";
 
-type FramePreference = "any" | "1993" | "1997" | "2003" | "2015" | "future";
-
-export type ImportPreferenceKind =
-  | "cheapest"
-  | "original_printing"
-  | "non_universes_beyond"
-  | "frame"
-  | "foil"
-  | "nonfoil";
-
 export interface ImportPreferences {
   preserveTags: boolean;
-  rules: ImportPreferenceRule[];
 }
-
-export type ImportPreferenceRule =
-  | { kind: "cheapest"; bufferPercent: number }
-  | { kind: "frame"; frame: Exclude<FramePreference, "any"> }
-  | { kind: "original_printing" }
-  | { kind: "non_universes_beyond" }
-  | { kind: "foil" }
-  | { kind: "nonfoil" };
 
 interface ImportedCardSet {
   quantity: number;

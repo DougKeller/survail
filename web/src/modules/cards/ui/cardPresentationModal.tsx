@@ -77,7 +77,7 @@ export function CardDetailsModal({
       return;
     }
     const cached = deckEvaluation.scores.get(oracleId(source));
-    if (cached?.deck_revision === deckEvaluation.deckRevision) {
+    if (cached !== undefined) {
       setEvaluation(cached);
       setEvaluationError(null);
       setLoadingEvaluation(false);

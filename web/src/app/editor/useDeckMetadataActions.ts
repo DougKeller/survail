@@ -1,4 +1,4 @@
-import type { SyntheticEvent } from "react";
+import { useCallback, useRef, type SyntheticEvent } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
 import { ApiError } from "../../core/http/client";
@@ -8,7 +8,6 @@ import type {
   DeckOperation,
   Validation,
 } from "../../modules/decks/contracts";
-import type { ImportPreferences } from "../../modules/imports/contracts";
 import { api } from "../api";
 import { messageFor, queryForDeckFormat } from "../deckPrimitives";
 
@@ -20,7 +19,6 @@ export function useDeckMetadataActions({
   id,
   loadDeck,
   navigate,
-  printingPreferences,
   query,
   setAnnouncement,
   setBusy,
@@ -39,7 +37,6 @@ export function useDeckMetadataActions({
   id: string;
   loadDeck: () => Promise<void>;
   navigate: NavigateFunction;
-  printingPreferences: ImportPreferences;
   query: string;
   setAnnouncement: (value: string) => void;
   setBusy: (value: boolean) => void;
@@ -53,26 +50,37 @@ export function useDeckMetadataActions({
   setValidation: (value: Validation | null) => void;
   title: string;
 }) {
-  async function handleSearch(
-    event: SyntheticEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
+  const latestSearchRequest = useRef(0);
+
+  const handleSearch = useCallback(async (): Promise<void> => {
     if (deck === null) return;
+    const nextQuery = query.trim();
+    const requestId = latestSearchRequest.current + 1;
+    latestSearchRequest.current = requestId;
+    if (nextQuery === "") {
+      setResults([]);
+      setShowSearchResults(false);
+      return;
+    }
     setError(null);
     try {
-      const cards = (
-        await api.search(
-          queryForDeckFormat(query, deck.format),
-          printingPreferences,
-        )
-      ).cards;
+      const cards = (await api.search(queryForDeckFormat(nextQuery, deck.format))).cards;
+      if (latestSearchRequest.current !== requestId) return;
       setResults(cards);
       setShowSearchResults(true);
       setAnnouncement(`${String(cards.length)} cards found`);
     } catch (reason) {
+      if (latestSearchRequest.current !== requestId) return;
       setError(reason instanceof Error ? messageFor(reason) : "Request failed");
     }
-  }
+  }, [
+    deck,
+    query,
+    setAnnouncement,
+    setError,
+    setResults,
+    setShowSearchResults,
+  ]);
 
   async function handleSaveDetails(
     event: SyntheticEvent<HTMLFormElement>,

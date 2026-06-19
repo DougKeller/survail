@@ -23,12 +23,29 @@ export function useDeckScoring({
   const [scoring, setScoring] = useState(false);
   const [evaluationProgress, setEvaluationProgress] =
     useState<CardEvaluationProgress | null>(null);
+  const [cachedScoresLoadedFor, setCachedScoresLoadedFor] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (deck === null) return;
     setScores(new Map());
     setEvaluationProgress(null);
+    setCachedScoresLoadedFor(null);
   }, [deck]);
+
+  async function loadCachedScores(): Promise<void> {
+    if (deck === null || cachedScoresLoadedFor === deck.id) return;
+    try {
+      const loadedScores = await api.cachedDeckEvaluation(deck.id);
+      setScores(new Map(loadedScores.map((score) => [score.oracle_id, score])));
+      setCachedScoresLoadedFor(deck.id);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not load cached scores",
+      );
+    }
+  }
 
   async function evaluateCurrentDeck(): Promise<void> {
     if (deck === null || scoring) return;
@@ -68,6 +85,7 @@ export function useDeckScoring({
   return {
     evaluationProgress,
     evaluateCurrentDeck,
+    loadCachedScores,
     scoring,
     scores,
   };

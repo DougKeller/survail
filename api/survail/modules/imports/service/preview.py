@@ -146,9 +146,6 @@ def import_extracted_decklist(
             )
             continue
         selection, finish = preferred_printing(selections, printing_preferences or [])
-        requested_finish = CardFinish.FOIL if card.foil else CardFinish.NONFOIL
-        if requested_finish.value in selection.card.finishes:
-            finish = requested_finish
         printing = selection.card
         resolved.append(
             ImportedCardSet(
@@ -235,14 +232,8 @@ def _resolve_card(
     selections = catalog.printings(card.name)
     if not selections:
         return None, _issue(card, "unresolved_card", f"Could not resolve {card.name}")
-    supplied = _supplied_printing(card, selections) if preserve_printings else None
-    if supplied is None:
-        selection, finish = preferred_printing(selections, printing_preferences)
-        reason: PrintingSelectionReason = "ranked_preferences"
-    else:
-        selection = supplied
-        finish = _supplied_finish(card, selection)
-        reason = "supplied_printing"
+    selection, finish = preferred_printing(selections, printing_preferences)
+    reason: PrintingSelectionReason = "ranked_preferences"
     printing = selection.card
     return (
         ImportedCardSet(
@@ -301,30 +292,5 @@ def _optional_group(match: re.Match[str], name: str, *, lower: bool = False) -> 
 
 def _issue(card: ParsedMoxfieldCard, code: str, message: str) -> MoxfieldImportIssue:
     return MoxfieldImportIssue(card.line_number, card.raw_line, code, message)
-
-
-def _supplied_printing(
-    card: ParsedMoxfieldCard, selections: list[PrintingSelection]
-) -> PrintingSelection | None:
-    if card.set_code is None or card.collector_number is None:
-        return None
-    return next(
-        (
-            selection
-            for selection in selections
-            if selection.card.set.casefold() == card.set_code.casefold()
-            and selection.card.collector_number.casefold() == card.collector_number.casefold()
-        ),
-        None,
-    )
-
-
-def _supplied_finish(card: ParsedMoxfieldCard, selection: PrintingSelection) -> CardFinish:
-    preferred = CardFinish.FOIL if card.foil else CardFinish.NONFOIL
-    if preferred.value in selection.card.finishes:
-        return preferred
-    return CardFinish(selection.card.finishes[0])
-
-
 def _normalized_name(name: str) -> str:
     return name.casefold().replace(" // ", " / ")

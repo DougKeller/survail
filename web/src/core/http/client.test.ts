@@ -1,15 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { streamEvents } from "../../modules/agent/api/conversations";
-import {
-  metadataFor,
-  printingPreferences,
-} from "../../modules/imports/api/preferences";
+import { metadataFor } from "../../modules/imports/api/preferences";
 
 import { ApiError, errorMessage, request } from "./client";
 
 import type { AgentUiEvent } from "../../modules/agent/contracts";
-import type { ImportPreferences } from "../../modules/imports/contracts";
 
 function jsonResponse(
   body: boolean | null | number | object | string,
@@ -91,16 +87,7 @@ describe("request", () => {
 });
 
 describe("api helpers", () => {
-  it("builds format metadata and printing preferences", () => {
-    const preferences: ImportPreferences = {
-      preserveTags: false,
-      rules: [
-        { kind: "cheapest", bufferPercent: 10 },
-        { kind: "frame", frame: "2015" },
-        { kind: "foil" },
-      ],
-    };
-
+  it("builds format metadata", () => {
     expect(metadataFor("commander")).toEqual({
       kind: "commander",
       commander_oracle_ids: [],
@@ -109,11 +96,6 @@ describe("api helpers", () => {
       kind: "brawl",
       commander_oracle_id: "",
     });
-    expect(printingPreferences(preferences)).toEqual([
-      { kind: "cheapest", buffer_percent: 10 },
-      { kind: "frame", frame: "2015" },
-      { kind: "foil" },
-    ]);
   });
 });
 

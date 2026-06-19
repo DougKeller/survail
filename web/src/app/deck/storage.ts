@@ -1,8 +1,5 @@
 import type { PriceProvider } from "../../modules/decks/contracts";
-import type {
-  ImportPreferenceRule,
-  ImportPreferences,
-} from "../../modules/imports/contracts";
+import type { ImportPreferences } from "../../modules/imports/contracts";
 
 import {
   DEFAULT_IMPORT_PREFERENCES,
@@ -20,43 +17,13 @@ export function storedPriceProvider(): PriceProvider {
   return stored !== null && isPriceProvider(stored) ? stored : "tcgplayer";
 }
 
-function isImportPreferenceRule(value: object): value is ImportPreferenceRule {
-  if (!("kind" in value) || typeof value.kind !== "string") return false;
-  if (value.kind === "cheapest") {
-    return "bufferPercent" in value && typeof value.bufferPercent === "number";
-  }
-  if (value.kind === "frame") {
-    return (
-      "frame" in value &&
-      ["1993", "1997", "2003", "2015", "future"].includes(String(value.frame))
-    );
-  }
-  return [
-    "original_printing",
-    "non_universes_beyond",
-    "foil",
-    "nonfoil",
-  ].includes(value.kind);
-}
-
 export function storedImportPreferences(): ImportPreferences {
   const stored = localStorage.getItem("survail.import-preferences");
   if (stored === null) return DEFAULT_IMPORT_PREFERENCES;
   try {
-    const parsed = JSON.parse(stored) as {
-      preserveTags?: boolean;
-      rules?: object[];
-    };
-    if (
-      typeof parsed.preserveTags !== "boolean" ||
-      !Array.isArray(parsed.rules) ||
-      parsed.rules.length !== 6 ||
-      !parsed.rules.every(isImportPreferenceRule) ||
-      new Set(parsed.rules.map((rule) => rule.kind)).size !== 6
-    ) {
-      return DEFAULT_IMPORT_PREFERENCES;
-    }
-    return { preserveTags: parsed.preserveTags, rules: parsed.rules };
+    const parsed = JSON.parse(stored) as { preserveTags?: boolean };
+    if (typeof parsed.preserveTags !== "boolean") return DEFAULT_IMPORT_PREFERENCES;
+    return { preserveTags: parsed.preserveTags };
   } catch {
     return DEFAULT_IMPORT_PREFERENCES;
   }
@@ -83,7 +50,8 @@ export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
       (sortBy !== "alphabetical" &&
         sortBy !== "mana-value" &&
         sortBy !== "price" &&
-        sortBy !== "score")
+        sortBy !== "score" &&
+        sortBy !== "starred")
     ) {
       return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
     }

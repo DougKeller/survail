@@ -8,14 +8,11 @@ import { DeckCardsView } from "../editor/cardsView";
 import { DeckHeader } from "../editor/deckHeader";
 import { EditDeckModal } from "../editor/editDeckModal";
 import { HistoryModal } from "../editor/historyModal";
-import { SearchDrawer } from "../editor/searchDrawer";
 import { useDeckAdvisor } from "../editor/useDeckAdvisor";
 import { useDeckEditor } from "../editor/useDeckEditor";
 import {
   DeckInfoView,
   DeckScoresView,
-  PrintingPicker,
-  useDismissibleSurface,
   useModalBehavior,
 } from "../deckPrimitives";
 
@@ -48,13 +45,6 @@ export function EditorScreen() {
       editor.setShowBulkEdit(false);
     },
   );
-  const searchDrawerRef = useDismissibleSurface<HTMLElement>(
-    editor.showSearchResults,
-    () => {
-      editor.setShowSearchResults(false);
-    },
-  );
-
   useEffect(() => {
     if (
       editor.editorView === "info" &&
@@ -69,6 +59,11 @@ export function EditorScreen() {
     editor.deck?.revision,
     editor.editorView,
   ]);
+
+  useEffect(() => {
+    if (editor.editorView !== "scores") return;
+    void editor.loadCachedScores();
+  }, [editor.editorView, editor.loadCachedScores]);
 
   if (editor.deck === null) return <main>{editor.error ?? "Loading…"}</main>;
 
@@ -121,18 +116,31 @@ export function EditorScreen() {
           />
           {editor.editorView === "cards" && (
             <DeckCardsView
+              addSearchResult={(card) => {
+                editor.addSearchResult(card);
+                editor.setShowSearchResults(false);
+                editor.setResults([]);
+                editor.setQuery("");
+                requestAnimationFrame(() => {
+                  editor.searchInputRef.current?.focus();
+                });
+              }}
               applyQuantityChange={editor.changeQuantity}
               busy={editor.busy}
               deck={editor.deck}
               displayPreferences={editor.displayPreferences}
               markCommander={editor.markAsCommander}
-              openPrinting={editor.setPrintingCardset}
               openSearch={editor.handleSearch}
               priceProvider={editor.priceProvider}
+              results={editor.results}
               scores={editor.scores}
               searchForm={editor.query}
+              searchInputRef={editor.searchInputRef}
               setDisplayPreferences={editor.setDisplayPreferences}
               setQuery={editor.setQuery}
+              setShowSearchResults={editor.setShowSearchResults}
+              showSearchResults={editor.showSearchResults}
+              toggleCoreCard={editor.toggleCoreCard}
             />
           )}
           {editor.editorView === "info" && (
@@ -158,22 +166,15 @@ export function EditorScreen() {
               scoreCards={() => void editor.evaluateCurrentDeck()}
               scores={editor.scores}
               scoring={editor.scoring}
+              toggleCoreCard={(oracleId) => {
+                const card = editor.deck?.cardsets.find(
+                  (item) => item.oracle_id === oracleId,
+                );
+                if (card !== undefined) editor.toggleCoreCard(card);
+              }}
             />
           )}
         </section>
-        {editor.showSearchResults && (
-          <SearchDrawer
-            addResult={(card, finish) => {
-              editor.addSearchResult(card, finish);
-            }}
-            busy={editor.busy}
-            close={() => {
-              editor.setShowSearchResults(false);
-            }}
-            results={editor.results}
-            searchDrawerRef={searchDrawerRef}
-          />
-        )}
         {advisor.showAgent && (
           <div
             aria-label="Resize deck advisor"
@@ -256,19 +257,6 @@ export function EditorScreen() {
             dialogRef={historyDialogRef}
             handleRevert={editor.handleRevert}
             operations={editor.operations}
-          />
-        )}
-        {editor.printingCardset !== null && (
-          <PrintingPicker
-            cardset={editor.printingCardset}
-            close={() => {
-              editor.setPrintingCardset(null);
-            }}
-            select={(printing, finish) => {
-              const currentCardset = editor.printingCardset;
-              if (currentCardset === null) return;
-              editor.changePrinting(currentCardset, printing, finish);
-            }}
           />
         )}
       </main>

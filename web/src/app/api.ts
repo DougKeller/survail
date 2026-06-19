@@ -18,8 +18,10 @@ import {
   applyOperation,
   operations,
   revertOperation,
+  setCardCore,
 } from "../modules/decks/api/operations";
 import {
+  cachedDeckEvaluation,
   evaluateCard,
   evaluateCards,
   evaluateCurrentDeck,
@@ -47,7 +49,9 @@ export const api = {
   applyOperation,
   operations,
   revertOperation,
+  setCardCore,
   validation,
+  cachedDeckEvaluation,
   evaluateCard,
   evaluateCurrentDeck,
   streamCurrentDeckEvaluation,

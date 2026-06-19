@@ -9,7 +9,9 @@ from survail.modules.decks.api.router import (
     _operation_read,
     _validation_read,
 )
+from survail.modules.decks.api.schemas import DeckRead
 from survail.modules.decks.operations.api.schemas import (
+    CardSetCoreUpdate,
     DeckOperationCreate,
     DeckOperationRead,
     DeckOperationResult,
@@ -19,6 +21,11 @@ from survail.modules.decks.operations.service.apply import (
     DeckOperationConflictError,
     DeckOperationError,
     apply_deck_operation,
+)
+from survail.modules.decks.service.cardsets import (
+    DeckCardSetNotFoundError,
+    DeckCoreCardLimitError,
+    set_cardset_core,
 )
 from survail.modules.decks.service.manage import (
     DeckNotFoundError,
@@ -86,3 +93,20 @@ def revert_operation(
     except (DeckNotFoundError, DeckOperationNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return apply_operation(deck_id, revert_payload, db, user)
+
+
+@router.patch("/{deck_id}/cardsets/{cardset_id}/core", response_model=DeckRead)
+def update_cardset_core(
+    deck_id: uuid.UUID,
+    cardset_id: uuid.UUID,
+    payload: CardSetCoreUpdate,
+    db: DbSession,
+    user: CurrentUser,
+) -> DeckRead:
+    try:
+        deck = set_cardset_core(db, deck_id, cardset_id, user, core=payload.core)
+    except DeckCardSetNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DeckCoreCardLimitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _deck_read(deck)

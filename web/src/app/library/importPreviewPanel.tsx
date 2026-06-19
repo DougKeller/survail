@@ -27,7 +27,7 @@ export function ImportPreviewPanel({
       <div className="import-preview-scroll">
         {preview === null && (
           <p className="muted">
-            Preview the import to review selected printings.
+            Preview the import to review resolved cards.
           </p>
         )}
         {preview !== null && preview.errors.length > 0 && (

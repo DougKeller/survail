@@ -6,18 +6,53 @@ import type {
   CardRoleEvaluation,
 } from "../../modules/decks/evaluations/contracts";
 
-export type ScoreSortKey = "card" | "overall" | CardRole;
+export type ScoreSortKey = "card" | "overall" | "starred" | CardRole;
 export type ScoreSortDirection = "asc" | "desc";
+export interface ScoreRow {
+  oracleId: string;
+  name: string;
+  card: CardSet | undefined;
+  evaluation: CardRoleEvaluation | null;
+}
+
+export function scoreContextDescription(deck: Deck): string {
+  const coreCount = new Set(
+    deck.cardsets
+      .filter((card) => card.core && card.zone !== "commander")
+      .map((card) => card.oracle_id),
+  ).size;
+  return [
+    "the deck's Goal / North Star",
+    deck.cardsets.some((card) => card.zone === "commander")
+      ? "the commander"
+      : null,
+    coreCount > 0
+      ? `${String(coreCount)} starred core card${coreCount === 1 ? "" : "s"}`
+      : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(", ");
+}
 
 export function createDeckScoreContext(deck: Deck) {
+  const uniqueOracleIds = [...new Set(deck.cardsets.map((card) => card.oracle_id))];
+  const cardNames = new Map(
+    deck.cardsets.map((card) => [card.oracle_id, card.card_name]),
+  );
+  const cardsByOracleId = new Map(
+    deck.cardsets.map((card) => [card.oracle_id, card]),
+  );
   return {
-    uniqueCards: new Set(deck.cardsets.map((card) => card.oracle_id)).size,
-    cardNames: new Map(
-      deck.cardsets.map((card) => [card.oracle_id, card.card_name]),
-    ),
-    cardsByOracleId: new Map(
-      deck.cardsets.map((card) => [card.oracle_id, card]),
-    ),
+    uniqueCards: uniqueOracleIds.length,
+    cardNames,
+    cardsByOracleId,
+    rows: (scores: ReadonlyMap<string, CardRoleEvaluation>): ScoreRow[] =>
+      uniqueOracleIds.map((oracleId) => ({
+        oracleId,
+        name: cardNames.get(oracleId) ?? oracleId,
+        card: cardsByOracleId.get(oracleId),
+        evaluation: scores.get(oracleId) ?? null,
+      })),
     roleScore: (
       evaluation: CardRoleEvaluation,
       role: CardRole,
@@ -27,8 +62,7 @@ export function createDeckScoreContext(deck: Deck) {
 }
 
 export function rankScores(
-  scores: ReadonlyMap<string, CardRoleEvaluation>,
-  cardNames: ReadonlyMap<string, string>,
+  rows: readonly ScoreRow[],
   sort: { key: ScoreSortKey; direction: ScoreSortDirection },
   roleScore: (evaluation: CardRoleEvaluation, role: CardRole) => number | null,
 ) {
@@ -46,19 +80,30 @@ export function rankScores(
       ? left.localeCompare(right)
       : right.localeCompare(left);
 
-  return [...scores.values()].sort((left, right) => {
-    const leftName = cardNames.get(left.oracle_id) ?? left.oracle_id;
-    const rightName = cardNames.get(right.oracle_id) ?? right.oracle_id;
+  return [...rows].sort((left, right) => {
+    if (left.evaluation === null && right.evaluation === null) {
+      return left.name.localeCompare(right.name);
+    }
+    if (left.evaluation === null) return 1;
+    if (right.evaluation === null) return -1;
     const primary =
       sort.key === "card"
-        ? compareStrings(leftName, rightName)
+        ? compareStrings(left.name, right.name)
+        : sort.key === "starred"
+          ? compareOptionalNumbers(
+              left.card?.core === true ? 1 : 0,
+              right.card?.core === true ? 1 : 0,
+            )
         : sort.key === "overall"
-          ? compareOptionalNumbers(left.overall_score, right.overall_score)
+          ? compareOptionalNumbers(
+              left.evaluation.overall_score,
+              right.evaluation.overall_score,
+            )
           : compareOptionalNumbers(
-              roleScore(left, sort.key),
-              roleScore(right, sort.key),
+              roleScore(left.evaluation, sort.key),
+              roleScore(right.evaluation, sort.key),
             );
-    return primary || leftName.localeCompare(rightName);
+    return primary || left.name.localeCompare(right.name);
   });
 }
 

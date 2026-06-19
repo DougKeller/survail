@@ -1,7 +1,5 @@
 import { request } from "../../../core/http/client";
 
-import { printingPreferences } from "./preferences";
-
 import type {
   CreateMoxfieldDeckInput,
   ImportPreferences,
@@ -12,15 +10,12 @@ import type {
 export function importMoxfield(
   decklist: string,
   preferences: ImportPreferences,
-  preservePrintings = false,
 ): Promise<MoxfieldImportPreview> {
   return request<MoxfieldImportPreview>("/imports/moxfield", {
     method: "POST",
     body: JSON.stringify({
       decklist,
       preserve_tags: preferences.preserveTags,
-      preserve_printings: preservePrintings,
-      printing_preferences: printingPreferences(preferences),
     }),
   });
 }
@@ -39,7 +34,6 @@ export function createMoxfieldDeck({
       description: "",
       decklist,
       preserve_tags: preferences.preserveTags,
-      printing_preferences: printingPreferences(preferences),
     }),
   });
 }

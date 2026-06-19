@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
 import { api } from "../api";
@@ -11,7 +11,6 @@ import {
 
 import type { ScryfallCard } from "../../modules/cards/contracts";
 import type {
-  CardSet,
   Deck,
   DeckOperation,
   Validation,
@@ -23,6 +22,7 @@ import { useDeckScoring } from "./useDeckScoring";
 
 export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const priceProvider = useContext(PriceProviderContext);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [deck, setDeck] = useState<Deck | null>(null);
   const [validation, setValidation] = useState<Validation | null>(null);
   const [operations, setOperations] = useState<DeckOperation[]>([]);
@@ -33,7 +33,6 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
-  const [printingCardset, setPrintingCardset] = useState<CardSet | null>(null);
   const [displayPreferences, setDisplayPreferences] =
     useState<DeckDisplayPreferences>(storedDeckDisplayPreferences);
   const [editorView, setEditorView] = useState<EditorView>("cards");
@@ -75,12 +74,16 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     );
   }, [displayPreferences]);
 
-  const { evaluationProgress, evaluateCurrentDeck, scoring, scores } =
-    useDeckScoring({ deck, setAnnouncement, setError });
+  const {
+    evaluationProgress,
+    evaluateCurrentDeck,
+    loadCachedScores,
+    scoring,
+    scores,
+  } = useDeckScoring({ deck, setAnnouncement, setError });
   const {
     addSearchResult,
     applyBulkEdit,
-    changePrinting,
     changeQuantity,
     handleDelete,
     handleGenerateDescription,
@@ -89,6 +92,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     handleSearch,
     markAsCommander,
     openBulkEdit,
+    toggleCoreCard,
   } = useDeckActions({
     bulkDecklist,
     busy,
@@ -107,13 +111,27 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     setDeck,
     setError,
     setOperations,
-    setPrintingCardset,
     setResults,
     setShowBulkEdit,
     setShowSearchResults,
     setValidation,
     title,
   });
+
+  useEffect(() => {
+    if (editorView !== "cards") return;
+    if (query.trim() === "") {
+      setResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      void handleSearch();
+    }, 1000);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [editorView, handleSearch, query]);
 
   return {
     addSearchResult,
@@ -122,7 +140,6 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     busy,
     bulkDecklist,
     bulkEditErrors,
-    changePrinting,
     changeQuantity,
     deck,
     description,
@@ -131,22 +148,23 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     error,
     evaluationProgress,
     evaluateCurrentDeck,
-    goal,
     handleDelete,
     handleGenerateDescription,
     handleRevert,
     handleSaveDetails,
     handleSearch,
+    loadCachedScores,
     loadDeck,
+    goal,
     markAsCommander,
     openBulkEdit,
     operations,
     priceProvider,
-    printingCardset,
     query,
     results,
     scoring,
     scores,
+    searchInputRef,
     setAnnouncement,
     setBulkDecklist,
     setDeck,
@@ -155,7 +173,6 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     setEditorView,
     setError,
     setGoal,
-    setPrintingCardset,
     setQuery,
     setResults,
     setShowBulkEdit,
@@ -168,6 +185,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     showHistory,
     showSearchResults,
     title,
+    toggleCoreCard,
     validation,
   };
 }

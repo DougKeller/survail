@@ -24,6 +24,12 @@ export function evaluateCurrentDeck(
   );
 }
 
+export function cachedDeckEvaluation(
+  deckId: string,
+): Promise<CardRoleEvaluation[]> {
+  return request<CardRoleEvaluation[]>(`/decks/${deckId}/card-evaluations/current/cached`);
+}
+
 export async function streamCurrentDeckEvaluation(
   deckId: string,
   onProgress: (progress: CardEvaluationProgress) => void,

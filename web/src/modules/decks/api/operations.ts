@@ -1,6 +1,7 @@
 import { request } from "../../../core/http/client";
 
 import type {
+  Deck,
   DeckOperation,
   DeckOperationChangeInput,
   DeckOperationResult,
@@ -48,4 +49,15 @@ export function revertOperation(
       }),
     },
   );
+}
+
+export function setCardCore(
+  deckId: string,
+  cardsetId: string,
+  core: boolean,
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/core`, {
+    method: "PATCH",
+    body: JSON.stringify({ core }),
+  });
 }

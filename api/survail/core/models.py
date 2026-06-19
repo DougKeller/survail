@@ -165,6 +165,7 @@ class CardSet(TimestampMixin, Base):
     card_name: Mapped[str] = mapped_column(String(200), index=True)
     set_code: Mapped[str] = mapped_column(String(10))
     collector_number: Mapped[str] = mapped_column(String(32))
+    core: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     scryfall: Mapped[JsonObject] = mapped_column(JSON)
 
@@ -341,10 +342,9 @@ class CardRoleEvaluation(TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint(
             "deck_id",
-            "deck_revision",
-            "oracle_id",
+            "context_key",
             "evaluator_version",
-            name="uq_card_role_evaluation_revision_oracle_version",
+            name="uq_card_role_evaluation_context_version",
         ),
     )
 
@@ -353,6 +353,7 @@ class CardRoleEvaluation(TimestampMixin, Base):
         ForeignKey("decks.id", ondelete="CASCADE"), index=True
     )
     deck_revision: Mapped[int] = mapped_column(Integer, index=True)
+    context_key: Mapped[str] = mapped_column(String(64), index=True)
     evaluator_version: Mapped[str] = mapped_column(String(40), index=True)
     oracle_id: Mapped[str] = mapped_column(String(40), index=True)
     overall_score: Mapped[int] = mapped_column(Integer)

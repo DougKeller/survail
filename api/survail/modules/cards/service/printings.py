@@ -2,7 +2,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from survail.core.models import CardFinish, CatalogCard
-from survail.core.schemas import ImportPrintingPreference, ScryfallCardSnapshot
+from survail.core.schemas import (
+    ImportPrintingPreference,
+    NonfoilPreference,
+    OriginalPrintingPreference,
+    ScryfallCardSnapshot,
+)
 
 
 @dataclass(frozen=True)
@@ -62,7 +67,12 @@ def preferred_printing(
     ]
     if not candidates:
         raise ValueError("Printing selections do not contain a supported finish")
-    for preference in preferences:
+    effective_preferences: list[ImportPrintingPreference] = [
+        OriginalPrintingPreference(kind="original_printing"),
+        NonfoilPreference(kind="nonfoil"),
+        *preferences,
+    ]
+    for preference in effective_preferences:
         candidates = _apply_preference(candidates, preference)
     return min(
         candidates,

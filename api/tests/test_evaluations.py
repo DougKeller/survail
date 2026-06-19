@@ -111,3 +111,34 @@ def test_card_evaluation_does_not_expose_another_users_deck() -> None:
         )
 
     assert exc_info.value.status_code == 404
+
+
+def test_cached_current_scores_allow_blank_goal_and_return_existing_scores(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner_id = uuid.uuid4()
+    deck = _deck(owner_id, goal=" ")
+    user = User(id=owner_id, discord_id="1", username="owner")
+    expected = CardRoleEvaluationRead(
+        oracle_id="oracle-1",
+        deck_revision=7,
+        evaluator_version="roles-v5",
+        overall_score=75,
+        overall_comment="This card advances the deck's plan.",
+        roles=[],
+        cached=True,
+    )
+
+    monkeypatch.setattr(
+        evaluation_service,
+        "read_cached_oracle_ids",
+        lambda db, subject, oracle_ids: [expected],  # type: ignore[arg-type]
+    )
+
+    result = evaluations.cached_current_deck_evaluations(
+        deck.id,
+        cast("Session", FakeDb(deck)),
+        user,
+    )
+
+    assert asyncio.run(result) == [expected]

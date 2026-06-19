@@ -21,6 +21,7 @@ from survail.core.models import (
     DeckAgentEvent,
     DeckFormat,
     DeckGuidanceProposal,
+    DeckOperationProposal,
     User,
 )
 from survail.core.schemas import ScryfallCardSnapshot
@@ -79,6 +80,7 @@ def _cardset(card: ScryfallCardSnapshot, zone: CardZone) -> CardSet:
         card_name=card.name,
         set_code=card.set,
         collector_number=card.collector_number,
+        core=False,
         tags=[],
         scryfall=card.model_dump(mode="json"),
     )
@@ -127,6 +129,7 @@ def test_deck_agent_instructions_support_incremental_color_identity_safe_changes
     assert "never apply them without human approval" in instructions
     assert "intrinsic and strategic roles" in instructions
     assert "qualitative rubric answers" in instructions
+    assert "Cards marked as core are locked." in instructions
     assert "Use search_legal_cards for card discovery" in instructions
     assert "Scryfall search syntax" in instructions
     assert 'o:"rules text"' in instructions
@@ -447,6 +450,100 @@ def test_operation_failure_result_explicitly_says_deck_was_not_changed(
     assert result["current_revision"] == 8
     assert result["validation"] == deck_validation_summary(subject)
     assert "deck was not changed" in cast("str", result["message"])
+
+
+def test_agent_cannot_apply_changes_to_starred_core_cards(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    deck = _deck()
+    deck.revision = 8
+    core_card = _cardset(_snapshot("Arcane Signet", "arcane-signet", []), CardZone.MAINBOARD)
+    core_card.core = True
+    deck.cardsets = [core_card]
+    user = User(id=deck.owner_id, discord_id="1", username="owner")
+    proposal = DeckOperationProposal(
+        id=uuid.uuid4(),
+        run_id=uuid.uuid4(),
+        conversation_id=uuid.uuid4(),
+        deck_id=deck.id,
+        owner_id=deck.owner_id,
+        expected_revision=deck.revision,
+        reason="Try to cut the signet",
+        changes={
+            "items": [
+                {
+                    "printing_id": core_card.printing_id,
+                    "quantity_delta": -1,
+                    "zone": core_card.zone.value,
+                    "finish": core_card.finish.value,
+                }
+            ]
+        },
+        status="pending",
+    )
+
+    class FakeSession:
+        scalar_calls = 0
+        commits = 0
+        rollbacks = 0
+
+        def __enter__(self) -> "FakeSession":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            del args
+
+        def scalar(self, statement: object) -> object:
+            del statement
+            self.scalar_calls += 1
+            return proposal if self.scalar_calls == 1 else deck
+
+        def get(self, model: type[object], identifier: uuid.UUID) -> object | None:
+            del model
+            return user if identifier == deck.owner_id else None
+
+        def commit(self) -> None:
+            self.commits += 1
+
+        def rollback(self) -> None:
+            self.rollbacks += 1
+
+    class FakeSink:
+        async def emit(self, event_type: str, payload: object) -> None:
+            del event_type, payload
+
+    def fail_apply(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise AssertionError("core-card guard should fail before apply_deck_operation")
+
+    monkeypatch.setattr(agent_service, "SessionLocal", FakeSession)
+    monkeypatch.setattr(agent_service, "_owned_deck", lambda owner_id, deck_id: deck)
+    monkeypatch.setattr(agent_service, "apply_deck_operation", fail_apply)
+    context = DeckAgentContext(
+        deck.owner_id,
+        deck.id,
+        proposal.conversation_id,
+        proposal.run_id,
+        cast("AgentEventSink", FakeSink()),
+    )
+
+    async def invoke() -> object:
+        return await agent_service.apply_proposed_operation.on_invoke_tool(
+            ToolContext(
+                context,
+                tool_name="apply_proposed_operation",
+                tool_call_id="tool-call-core",
+                tool_arguments=json.dumps({"proposal_id": str(proposal.id)}),
+            ),
+            json.dumps({"proposal_id": str(proposal.id)}),
+        )
+
+    result = asyncio.run(invoke())
+    payload = json.loads(cast("str", result))
+
+    assert payload["applied"] is False
+    assert "Agent may not edit starred core cards" in payload["message"]
+    assert proposal.status == "stale"
 
 
 def test_cohesive_context_marks_revision_as_stale_after_mutation() -> None:

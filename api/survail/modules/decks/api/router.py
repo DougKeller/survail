@@ -134,6 +134,7 @@ def _cardset_read(cardset: CardSet) -> CardSetRead:
         card_name=cardset.card_name,
         set_code=cardset.set_code,
         collector_number=cardset.collector_number,
+        core=bool(cardset.core),
         tags=cardset.tags,
         scryfall=ScryfallCardSnapshot.model_validate(cardset.scryfall, strict=False),
     )

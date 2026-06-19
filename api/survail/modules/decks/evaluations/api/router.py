@@ -55,6 +55,16 @@ async def evaluate_current_deck(
         raise _temporary_openai_error(exc) from exc
 
 
+@router.get("/current/cached", response_model=list[CardRoleEvaluationRead])
+async def cached_current_deck_evaluations(
+    deck_id: uuid.UUID, db: DbSession, user: CurrentUser
+) -> list[CardRoleEvaluationRead]:
+    try:
+        return EvaluationService(db).cached_current(user, deck_id)
+    except EvaluationDeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.post("/current/stream")
 async def stream_current_deck_evaluation(
     deck_id: uuid.UUID, db: DbSession, user: CurrentUser

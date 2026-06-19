@@ -136,6 +136,12 @@ export function groupedCards(
             left.card_name.localeCompare(right.card_name)
           );
         }
+        if (sortBy === "starred") {
+          return (
+            Number(right.core) - Number(left.core) ||
+            left.card_name.localeCompare(right.card_name)
+          );
+        }
         return left.card_name.localeCompare(right.card_name);
       }),
       quantity: groupCards.reduce((total, card) => total + card.quantity, 0),
