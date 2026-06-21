@@ -5,26 +5,11 @@ from pydantic import Field, field_validator
 from survail.core.schemas import StrictModel
 
 
-class QualitativeAnswerRead(StrictModel):
-    criterion_id: str
-    rating: Literal["very_low", "low", "neutral", "high", "very_high"]
-    score: int = Field(ge=0, le=100)
-
-
 class CardRoleScoreRead(StrictModel):
-    role: Literal[
-        "land",
-        "mana_ramp",
-        "card_advantage",
-        "removal",
-        "board_wipe",
-        "enabler",
-        "enhancer",
-        "payoff",
-    ]
+    role: str = Field(min_length=1, max_length=64)
     score: int = Field(ge=0, le=100)
     description: str
-    answers: list[QualitativeAnswerRead]
+    answers: dict[str, Literal["very_low", "low", "neutral", "high", "very_high"]]
 
 
 class CardRoleEvaluationRead(StrictModel):

@@ -78,6 +78,7 @@ def cardset(
         card_name=name,
         set_code="tst",
         collector_number="1",
+        note="Hold this for the commander turn." if oracle_id == "counterspell" else None,
         tags=[],
         scryfall=snapshot(
             name,
@@ -177,6 +178,8 @@ def test_description_context_includes_format_commander_and_card_details() -> Non
     assert "Type: Legendary Creature - Merfolk Wizard" in context
     assert "Whenever you cast an instant or sorcery spell" in context
     assert "[Mainboard] 1x Counterspell" in context
+    assert "Cardset Notes:" in context
+    assert "- Mainboard: Hold this for the commander turn." in context
     assert "Ignored title" not in context
     assert "Ignored existing description" not in context
 

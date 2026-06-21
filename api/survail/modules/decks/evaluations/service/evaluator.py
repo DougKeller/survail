@@ -8,25 +8,39 @@ import re
 import time
 from collections.abc import Awaitable, Callable, Sequence
 from enum import StrEnum
-from typing import Literal, Protocol, TypeVar
+from typing import Any, Literal, Protocol
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, RateLimitError
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, create_model
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from survail.core.models import CardRoleEvaluation, CardSet, Deck
+from survail.core.schemas import ScryfallCardSnapshot
 from survail.core.types import JsonObject, json_object
 from survail.modules.cards.repository.cards import CatalogRepository
+from survail.modules.decks.service.analytics import (
+    COLOR_LABELS,
+    color_pip_counts,
+    format_mana_value,
+    mana_curve_counts,
+    mana_curve_sort_key,
+    scoped_cardsets,
+)
+from survail.modules.decks.service.context import (
+    format_cardset_group_for_llm,
+    oracle_text_for_llm,
+    power_toughness_for_llm,
+    snapshot_from_cardsets,
+)
 from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead, CardRoleScoreRead
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v5"
+EVALUATOR_VERSION = "roles-v7"
 MAX_ATTEMPTS = 8
 MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
 ROLE_JUDGE_MAX_TEXT_LENGTH = 600
-MAX_CLASSIFICATION_OUTPUT_TOKENS = 200
 MAX_ROLE_JUDGE_OUTPUT_TOKENS = 1000
 OVERALL_SCORE_WEIGHTING_EXPONENT = 2.5
 logger = logging.getLogger(__name__)
@@ -46,17 +60,6 @@ class EvaluationProgress(BaseModel):
     eta_seconds: float | None
 
 
-class CardRole(StrEnum):
-    LAND = "land"
-    MANA_RAMP = "mana_ramp"
-    CARD_ADVANTAGE = "card_advantage"
-    REMOVAL = "removal"
-    BOARD_WIPE = "board_wipe"
-    ENABLER = "enabler"
-    ENHANCER = "enhancer"
-    PAYOFF = "payoff"
-
-
 class QualitativeRating(StrEnum):
     VERY_LOW = "very_low"
     LOW = "low"
@@ -73,105 +76,175 @@ RATING_SCORES: dict[QualitativeRating, int] = {
     QualitativeRating.VERY_HIGH: 100,
 }
 
-ROLE_RUBRICS: dict[CardRole, tuple[tuple[str, str], ...]] = {
-    CardRole.LAND: (
-        ("mana_reliability", "How reliably does it produce colors this deck needs?"),
-        ("tempo_cost", "How little tempo or opportunity cost does it impose?"),
-        ("utility", "How valuable is its utility in this specific deck?"),
-        ("deck_need", "How much does the current mana base need this land's contribution?"),
-    ),
-    CardRole.MANA_RAMP: (
-        ("speed", "How early and efficiently does it accelerate mana?"),
-        ("reliability", "How reliably does it produce useful mana for this deck?"),
-        ("resilience", "How resilient and reusable is the acceleration?"),
-        ("deck_need", "How much does the current deck need this ramp contribution?"),
-    ),
-    CardRole.CARD_ADVANTAGE: (
-        ("efficiency", "How efficiently does it produce selection or card advantage?"),
-        ("reliability", "How reliably can this deck satisfy its conditions?"),
-        ("quality", "How relevant and usable are the cards or resources it provides?"),
-        ("deck_need", "How much does the current deck need this card-advantage contribution?"),
-    ),
-    CardRole.REMOVAL: (
-        ("efficiency", "How mana-efficient and easy to deploy is this answer?"),
-        ("coverage", "How broad and relevant is the range of threats it answers?"),
-        ("conditionality", "How unconditional and permanent is the answer?"),
-        ("deck_need", "How much does this improve the deck's current interaction mix?"),
-    ),
-    CardRole.BOARD_WIPE: (
-        ("efficiency", "How efficiently can it reset the relevant board?"),
-        ("asymmetry", "How well does it preserve or advance this deck's own plan?"),
-        ("coverage", "How well does it answer the permanent types this deck struggles with?"),
-        ("deck_need", "How appropriate is another wipe for the current list?"),
-    ),
-    CardRole.ENABLER: (
-        ("directness", "How directly does it get the deck's core engine moving?"),
-        ("reliability", "How reliably can the current deck use this enabling effect?"),
-        ("versatility", "How many relevant lines or cards does it enable?"),
-        ("deck_need", "How much does the current deck need this enabler?"),
-    ),
-    CardRole.ENHANCER: (
-        ("scaling", "How strongly does it scale the deck's existing engine or payoffs?"),
-        ("coverage", "How many relevant cards or lines receive its benefit?"),
-        ("reliability", "How reliably does it improve an active game plan?"),
-        ("deck_need", "How much does the current deck need this enhancer?"),
-    ),
-    CardRole.PAYOFF: (
-        ("impact", "How strongly does it reward the deck for executing its plan?"),
-        ("attainability", "How reliably can the current deck turn it on?"),
-        ("conversion", "How well does it convert setup into advantage or a win?"),
-        ("deck_need", "How much does the current deck need this payoff?"),
-    ),
+ROLE_RUBRICS: dict[str, dict[str, str]] = {
+    "land": {
+        "mana_reliability": (
+            "How reliably does it produce the colors this deck's commander, core cards, and "
+            "strategy require?"
+        ),
+        "tempo_efficiency": (
+            "How little tempo loss does it impose through entering tapped, sequencing "
+            "constraints, activation costs, or conditional mana?"
+        ),
+        "utility": "How valuable is its non-mana utility to this deck's plan or common game states?",
+        "opportunity_cost": (
+            "How reasonable is its slot cost compared with a basic land, stronger fixing land, "
+            "or more broadly useful utility land?"
+        ),
+        "resilience": "How durable or difficult to disrupt is its mana or utility contribution?",
+    },
+    "mana_ramp": {
+        "speed": "How early does it accelerate the deck's mana development?",
+        "efficiency": (
+            "How favorable is the mana, card, and tempo investment compared with the "
+            "acceleration gained?"
+        ),
+        "fixing": "How well does it produce, find, or enable the colors this deck needs?",
+        "reliability": (
+            "How consistently can this deck use the ramp effect under normal gameplay conditions?"
+        ),
+        "synergy": (
+            "How meaningfully does the ramp effect interact with the commander, core cards, "
+            "card types, zones, or mechanics this deck already wants?"
+        ),
+    },
+    "card_advantage": {
+        "efficiency": "How efficiently does it generate extra cards, resources, or repeatable access?",
+        "reliability": (
+            "How consistently can this deck satisfy the conditions required to gain value from it?"
+        ),
+        "card_quality": "How relevant, selectable, or usable are the cards or resources it provides?",
+        "repeatability": "How often can the deck benefit from the effect across a typical game?",
+        "floor": (
+            "How useful is the card when the deck's ideal engine or synergy pieces are not assembled?"
+        ),
+    },
+    "selection_tutor": {
+        "access": "How directly does it find, filter toward, or select the cards this deck wants?",
+        "efficiency": (
+            "How favorable is the mana, timing, and card investment for the access provided?"
+        ),
+        "range": "How broad and relevant is the set of cards it can find or select?",
+        "setup_value": (
+            "How well does it assemble the deck's key engines, answers, payoffs, or missing "
+            "resources?"
+        ),
+        "timing": (
+            "How well does the effect fit the stage of the game when this deck wants card "
+            "selection or tutoring?"
+        ),
+    },
+    "interaction": {
+        "efficiency": "How mana-efficient and easy to deploy is this answer?",
+        "coverage": "How broad and relevant is the range of threats it answers?",
+        "permanence": "How cleanly and durably does it answer the threat?",
+        "timing": "How well can it be used at the moment this deck needs interaction?",
+        "flexibility": (
+            "How useful is the card across different matchups, board states, or threat profiles?"
+        ),
+    },
+    "board_control": {
+        "reset_power": "How effectively does it reset, contain, or rebalance the relevant board state?",
+        "asymmetry": "How well does it preserve, spare, or advance this deck's own plan?",
+        "coverage": (
+            "How well does it answer the permanent types or board states this deck is likely to "
+            "struggle with?"
+        ),
+        "recoverability": "How well can this deck rebuild, recur, or benefit after the effect resolves?",
+        "timing": (
+            "How well does the effect line up with the stage of the game when this deck wants a "
+            "reset or containment tool?"
+        ),
+    },
+    "protection": {
+        "coverage": (
+            "How many relevant threats, removal types, disruption types, or failure modes does it "
+            "protect against?"
+        ),
+        "efficiency": (
+            "How easy is it to hold up, deploy, or sequence without disrupting the deck's plan?"
+        ),
+        "reliability": (
+            "How consistently does it protect the cards, engines, or board states that matter?"
+        ),
+        "secondary_value": "How useful is the card when protection is not immediately needed?",
+        "scope": (
+            "How well does it protect the right amount of the deck's plan, from a single key "
+            "piece to the full board?"
+        ),
+    },
+    "engine_enabler": {
+        "directness": "How directly does it create, fuel, or unlock the deck's core engine?",
+        "reliability": "How consistently can this deck access and use the enabling effect?",
+        "synergy_density": "How many important cards, zones, mechanics, or lines does it enable?",
+        "timing": "How well does it come online before or as the deck wants to start its engine?",
+    },
+    "engine_support": {
+        "amplification": (
+            "How strongly does it increase the output, efficiency, resilience, or consistency of "
+            "the deck's engine?"
+        ),
+        "coverage": (
+            "How many relevant engine pieces, triggers, loops, or repeated actions does it improve?"
+        ),
+        "reliability": (
+            "How consistently does it improve an engine that this deck can realistically assemble?"
+        ),
+        "floor": "How useful is it when the main engine is only partially assembled?",
+    },
+    "payoff": {
+        "reward_size": "How large is the reward when the deck executes its core plan?",
+        "decisiveness": (
+            "How strongly does it convert engine activity into a win, inevitability, lethal "
+            "pressure, or overwhelming advantage?"
+        ),
+        "attainability": "How reliably can this deck turn the payoff on?",
+        "conversion": (
+            "How efficiently does it convert setup into damage, board presence, cards, mana, "
+            "disruption, or another decisive resource?"
+        ),
+    },
 }
-
-
-class StructuredTagging(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-    tags: list[CardRole]
-
-
-class StructuredAnswer(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-    criterion_id: str
-    rating: QualitativeRating
+ROLE_NAMES = tuple(ROLE_RUBRICS)
+StructuredRoleAnswers = {
+    role: create_model(  # type: ignore[call-overload]
+        f"{role.title().replace('_', '')}RoleAnswers",
+        __config__=ConfigDict(extra="forbid", strict=True),
+        **{criterion_id: (QualitativeRating, ...) for criterion_id in rubric},
+    )
+    for role, rubric in ROLE_RUBRICS.items()
+}
+StructuredApplicableRoles = {
+    role: create_model(  # type: ignore[call-overload]
+        f"{role.title().replace('_', '')}ApplicableRole",
+        __config__=ConfigDict(extra="forbid", strict=True),
+        description=(str, Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)),
+        answers=(StructuredRoleAnswers[role], ...),
+    )
+    for role in ROLE_NAMES
+}
 
 
 class StructuredRoleScore(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    role: CardRole
+    role: str
     description: str = Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)
-    answers: list[StructuredAnswer]
-
-
-class StructuredApplicableRole(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-    description: str = Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)
-    answers: list[StructuredAnswer]
+    answers: dict[str, QualitativeRating]
 
 
 NotApplicableRole = Literal["N/A"]
-
-
-class StructuredLLMaaJ(BaseModel):
-    model_config = ConfigDict(extra="forbid", strict=True)
-    land: StructuredApplicableRole | NotApplicableRole
-    mana_ramp: StructuredApplicableRole | NotApplicableRole
-    card_advantage: StructuredApplicableRole | NotApplicableRole
-    removal: StructuredApplicableRole | NotApplicableRole
-    board_wipe: StructuredApplicableRole | NotApplicableRole
-    enabler: StructuredApplicableRole | NotApplicableRole
-    enhancer: StructuredApplicableRole | NotApplicableRole
-    payoff: StructuredApplicableRole | NotApplicableRole
-    overall_summary: str = Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)
-
-
-StructuredResult = TypeVar(
-    "StructuredResult", StructuredTagging, StructuredRoleScore, StructuredLLMaaJ
+StructuredLLMaaJ = create_model(  # type: ignore[call-overload]
+    "StructuredLLMaaJ",
+    __config__=ConfigDict(extra="forbid", strict=True),
+    **{
+        role: (StructuredApplicableRoles[role] | NotApplicableRole, ...)
+        for role in ROLE_NAMES
+    },
+    overall_summary=(str, Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)),
 )
 
-
 class RoleEvaluator(Protocol):
-    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> StructuredLLMaaJ: ...
+    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> BaseModel: ...
 
 
 class OpenAIRoleEvaluator:
@@ -190,27 +263,27 @@ class OpenAIRoleEvaluator:
         self._sleep = sleep
         self._random_value = random_value
 
-    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> StructuredLLMaaJ:
+    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> BaseModel:
         rubric_payload = {
-            role.value: dict(rubric)
+            role: dict(rubric)
             for role, rubric in ROLE_RUBRICS.items()
         }
+        role_list = ", ".join(ROLE_NAMES)
         result = await self._parse_with_retry(
             model=self._model,
             instructions=(
                 "Return one combined LLMaaJ object for this card in this specific deck. Evaluate "
-                "all eight roles: land, mana_ramp, card_advantage, removal, board_wipe, enabler, "
-                "enhancer, and payoff. For each role the card does not materially fulfill, return "
-                'exactly "N/A". For each applicable role, return exactly one concise sentence '
-                "describing how well the card fulfills that role and why, plus qualitative ratings "
-                "for every criterion in that role's rubric using only: very_low, low, neutral, "
-                f"high, or very_high. Aim for about {ROLE_JUDGE_TARGET_WORDS} per applicable role "
-                "description. Do not calculate numbers. Copy criterion IDs exactly and preserve "
-                "their rubric order. Only mark land as applicable when the card's type line "
-                "explicitly includes Land. Treat incidental or negligible functionality as "
-                "inapplicable. "
-                "Then return exactly one concise overall_summary sentence based only on the role "
-                "evaluations, emphasizing the strongest contribution and any important limitation."
+                f"all configured roles: {role_list}. For each role the card does not materially "
+                'fulfill, return exactly "N/A". For each applicable role, return exactly one '
+                "concise sentence describing how well the card fulfills that role and why, plus an "
+                '"answers" object whose keys exactly match that role\'s rubric criterion IDs and '
+                "whose values are qualitative ratings using only: very_low, low, neutral, high, "
+                f"or very_high. Aim for about {ROLE_JUDGE_TARGET_WORDS} per applicable role "
+                "description. Do not calculate numbers. Only mark land as applicable when the "
+                "card's type line explicitly includes Land. Treat incidental or negligible "
+                "functionality as inapplicable. Then return exactly one concise overall_summary "
+                "sentence based only on the role evaluations, emphasizing the strongest "
+                "contribution and any important limitation."
             ),
             input_text=(
                 f"{_evaluation_input(deck, oracle_id, card_context)}\n\n"
@@ -229,9 +302,9 @@ class OpenAIRoleEvaluator:
         model: str,
         instructions: str,
         input_text: str,
-        text_format: type[StructuredResult],
+        text_format: type[BaseModel],
         max_output_tokens: int,
-    ) -> StructuredResult:
+    ) -> BaseModel:
         for attempt in range(MAX_ATTEMPTS):
             try:
                 response = await self._client.responses.parse(
@@ -296,60 +369,59 @@ def _retry_delay(error: Exception, attempt: int, random_value: float) -> float:
 
 
 def _evaluation_input(deck: Deck, oracle_id: str, card_context: str) -> str:
-    context_cards = _strategic_context_cardsets(deck, oracle_id)
+    payload = _scoring_context_payload(deck, oracle_id, card_context)
     sections = [
-        "Goal / North Star:",
-        deck.goal,
+        "North Star:",
+        payload["goal"],
         "",
-        "Scoring context cards:",
+        "Commander:",
+        payload["commander"],
+        "",
+        "Full Decklist:",
+        payload["full_decklist"],
+        "",
+        "Current Mana Curve:",
+        payload["mana_curve"],
+        "",
+        "Current Color-Pip Distribution:",
+        payload["color_pip_distribution"],
+        "",
+        "Card under evaluation:",
+        payload["card_under_evaluation"],
     ]
-    if context_cards:
-        sections.extend(_context_cardset_lines(context_cards))
-    else:
-        sections.append("No commander or starred core cards are currently selected.")
-    sections.extend(["", f"Card under evaluation ({oracle_id}):", card_context])
     return "\n".join(sections)
 
 
-def _context_key(deck: Deck, oracle_id: str) -> str:
-    payload = {
-        "goal": " ".join(deck.goal.split()),
-        "format": deck.format.value,
-        "commanders": sorted(
-            {cardset.oracle_id for cardset in deck.cardsets if cardset.zone.value == "commander"}
+def _scoring_context_payload(deck: Deck, oracle_id: str, card_context: str) -> dict[str, Any]:
+    return {
+        "goal": deck.goal,
+        "commander": _card_group_section(_commander_cardsets(deck, oracle_id)),
+        "full_decklist": _card_group_section(
+            scoped_cardsets(deck, exclude_oracle_id=oracle_id, core_only=True)
         ),
-        "core": sorted(
-            {
-                cardset.oracle_id
-                for cardset in deck.cardsets
-                if cardset.core and cardset.zone.value != "commander"
-            }
-        ),
-        "oracle_id": oracle_id,
+        "mana_curve": _mana_curve_section(deck, oracle_id),
+        "color_pip_distribution": _color_pip_section(deck, oracle_id),
+        "card_under_evaluation": card_context,
+        "role_rubrics": ROLE_RUBRICS,
+        "evaluator_version": EVALUATOR_VERSION,
     }
+
+
+def _context_key(deck: Deck, oracle_id: str, card_context: str) -> str:
+    payload = _scoring_context_payload(deck, oracle_id, card_context)
+    payload["goal"] = " ".join(str(payload["goal"]).split())
     return hashlib.sha256(
         json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     ).hexdigest()
 
 
-def _strategic_context_cardsets(deck: Deck, oracle_id: str) -> list[CardSet]:
+def _commander_cardsets(deck: Deck, oracle_id: str) -> list[CardSet]:
     relevant = [
         cardset
         for cardset in deck.cardsets
-        if (
-            cardset.zone.value == "commander"
-            or (cardset.core and cardset.zone.value != "commander")
-        )
-        and cardset.oracle_id != oracle_id
+        if cardset.zone.value == "commander" and cardset.oracle_id != oracle_id
     ]
     return sorted(relevant, key=lambda cardset: (cardset.zone.value, cardset.card_name, cardset.id))
-
-
-def _context_cardset_lines(cardsets: Sequence[CardSet]) -> list[str]:
-    return [
-        _deck_card_context([cardset])
-        for cardset in cardsets
-    ]
 
 
 def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluationRead:
@@ -366,12 +438,16 @@ def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluation
 
 
 def read_cached_oracle_ids(
-    db: Session, deck: Deck, oracle_ids: Sequence[str]
+    db: Session, deck: Deck, oracle_ids: Sequence[str], contexts: dict[str, str]
 ) -> list[CardRoleEvaluationRead]:
     unique_ids = list(dict.fromkeys(oracle_ids))
     if not deck.goal.strip():
         return []
-    context_keys = {oracle_id: _context_key(deck, oracle_id) for oracle_id in unique_ids}
+    context_keys = {
+        oracle_id: _context_key(deck, oracle_id, contexts[oracle_id])
+        for oracle_id in unique_ids
+        if oracle_id in contexts
+    }
     stored = db.scalars(
         select(CardRoleEvaluation).where(
             CardRoleEvaluation.deck_id == deck.id,
@@ -392,86 +468,131 @@ def _card_contexts(db: Session, deck: Deck, oracle_ids: Sequence[str]) -> dict[s
     for oracle_id in oracle_ids:
         cardsets = [cardset for cardset in deck.cardsets if cardset.oracle_id == oracle_id]
         if cardsets:
-            contexts[oracle_id] = _deck_card_context(cardsets)
+            contexts[oracle_id] = _card_brief(cardsets)
             continue
         printings = CatalogRepository(db).printing_records_by_oracle(oracle_id)
         if printings:
-            contexts[oracle_id] = json.dumps(printings[0].snapshot, indent=2)
+            contexts[oracle_id] = _catalog_card_brief(printings[0].snapshot)
     return contexts
 
 
-def _deck_card_context(cardsets: Sequence[CardSet]) -> str:
-    return json.dumps(
+def _card_group_section(cardsets: Sequence[CardSet]) -> str:
+    grouped = _group_cardsets(cardsets)
+    if not grouped:
+        return "None"
+    return "\n\n".join(_card_brief(group) for group in grouped)
+
+
+def _group_cardsets(cardsets: Sequence[CardSet]) -> list[list[CardSet]]:
+    grouped: dict[str, list[CardSet]] = {}
+    for cardset in cardsets:
+        grouped.setdefault(cardset.oracle_id, []).append(cardset)
+    ordered = sorted(
+        grouped.values(),
+        key=lambda items: (items[0].zone.value, items[0].card_name, items[0].id),
+    )
+    return ordered
+
+
+def _card_brief(cardsets: Sequence[CardSet]) -> str:
+    return format_cardset_group_for_llm(cardsets)
+
+
+def _catalog_card_brief(snapshot_payload: JsonObject) -> str:
+    snapshot = ScryfallCardSnapshot.model_validate(snapshot_payload, strict=False)
+    return _snapshot_brief(snapshot, quantity=0)
+
+
+def _snapshot_from_cardsets(cardsets: Sequence[CardSet]) -> ScryfallCardSnapshot | None:
+    return snapshot_from_cardsets(cardsets)
+
+
+def _snapshot_brief(snapshot: ScryfallCardSnapshot, *, quantity: int) -> str:
+    return "\n".join(
         [
-            {
-                "quantity": item.quantity,
-                "zone": item.zone.value,
-                "core": item.core,
-                "card": item.scryfall,
-            }
-            for item in cardsets
-        ],
-        indent=2,
+            f"Name: {snapshot.name}",
+            f"Quantity: {quantity}",
+            "Zone Summary:",
+            "- None",
+            f"Cost: {snapshot.mana_cost or 'None'}",
+            f"Type: {snapshot.type_line}",
+            f"Power/Toughness: {power_toughness_for_llm(snapshot)}",
+            f"Oracle Text: {oracle_text_for_llm(snapshot)}",
+            "Cardset Notes:",
+            "- None",
+        ]
+    )
+
+
+def _mana_curve_section(deck: Deck, oracle_id: str) -> str:
+    curve = mana_curve_counts(deck, exclude_oracle_id=oracle_id, core_only=True)
+    if not curve:
+        return "None"
+    return "\n".join(
+        f"- {cost}: {curve[cost]}"
+        for cost in sorted(curve, key=mana_curve_sort_key)
+    )
+
+
+def _color_pip_section(deck: Deck, oracle_id: str) -> str:
+    pip_counts = color_pip_counts(deck, exclude_oracle_id=oracle_id, core_only=True)
+    populated = [(color, count) for color, count in pip_counts.items() if count > 0]
+    if not populated:
+        return "None"
+    return "\n".join(
+        f"- {COLOR_LABELS.get(color, color)} ({color}): {count}"
+        for color, count in populated
     )
 
 
 def _is_land_card_context(card_context: str) -> bool:
-    with contextlib.suppress(json.JSONDecodeError, KeyError, IndexError, TypeError):
-        payload = json.loads(card_context)
-        if isinstance(payload, list):
-            type_line = payload[0]["card"]["type_line"]
-        else:
-            type_line = payload["type_line"]
-        return isinstance(type_line, str) and "Land" in type_line
+    match = re.search(r"^Type: (.+)$", card_context, re.MULTILINE)
+    if match is not None:
+        return "Land" in match.group(1)
     return False
 
 
 def _role_json(result: StructuredRoleScore) -> JsonObject:
-    numeric_scores = [RATING_SCORES[answer.rating] for answer in result.answers]
-    answers = [
-        json_object(
-            {
-                "criterion_id": answer.criterion_id,
-                "rating": answer.rating.value,
-                "score": RATING_SCORES[answer.rating],
-            }
-        )
-        for answer in result.answers
-    ]
+    numeric_scores = [RATING_SCORES[rating] for rating in result.answers.values()]
     return json_object(
         {
-            "role": result.role.value,
+            "role": result.role,
             "score": round(sum(numeric_scores) / len(numeric_scores)),
             "description": result.description,
-            "answers": answers,
+            "answers": json_object(
+                {
+                    criterion_id: rating.value
+                    for criterion_id, rating in result.answers.items()
+                }
+            ),
         }
     )
 
 
 def _role_score_from_llmaaj(
-    role: CardRole, evaluation: StructuredLLMaaJ, *, is_land: bool
+    role: str, evaluation: BaseModel, *, is_land: bool
 ) -> StructuredRoleScore | None:
-    role_value = getattr(evaluation, role.value)
-    if role == CardRole.LAND and not is_land:
+    role_value = getattr(evaluation, role)
+    if role == "land" and not is_land:
         return None
     if role_value == "N/A":
         return None
     return StructuredRoleScore(
         role=role,
         description=role_value.description,
-        answers=role_value.answers,
-    )
+        answers=role_value.answers.model_dump(),
+    )  # type: ignore[arg-type]
 
 
-def _validate_llmaaj(evaluation: StructuredLLMaaJ) -> None:
-    for role in CardRole:
-        role_value = getattr(evaluation, role.value)
+def _validate_llmaaj(evaluation: BaseModel) -> None:
+    for role in ROLE_NAMES:
+        role_value = getattr(evaluation, role)
         if role_value == "N/A":
             continue
-        expected = [criterion_id for criterion_id, _ in ROLE_RUBRICS[role]]
-        actual = [answer.criterion_id for answer in role_value.answers]
+        expected = list(ROLE_RUBRICS[role])
+        actual = list(role_value.answers.model_dump())
         if actual != expected:
-            raise ValueError(f"OpenAI returned answers that do not match the {role.value} rubric")
+            raise ValueError(f"OpenAI returned answers that do not match the {role} rubric")
 
 def _calculate_overall_score(role_scores: list[CardRoleScoreRead]) -> int:
     if not role_scores:
@@ -516,13 +637,17 @@ async def evaluate_oracle_ids(
     if not deck.goal.strip():
         raise ValueError("Deck must have a Goal / North Star before cards can be evaluated")
     unique_ids = list(dict.fromkeys(oracle_ids))
-    context_keys = {oracle_id: _context_key(deck, oracle_id) for oracle_id in unique_ids}
-    cached = {item.oracle_id: item for item in read_cached_oracle_ids(db, deck, unique_ids)}
-    missing = [oracle_id for oracle_id in unique_ids if oracle_id not in cached]
-    contexts = _card_contexts(db, deck, missing)
-    unresolved = [oracle_id for oracle_id in missing if oracle_id not in contexts]
+    contexts = _card_contexts(db, deck, unique_ids)
+    unresolved = [oracle_id for oracle_id in unique_ids if oracle_id not in contexts]
     if unresolved:
         raise ValueError(f"Oracle IDs not found: {', '.join(unresolved)}")
+    context_keys = {
+        oracle_id: _context_key(deck, oracle_id, contexts[oracle_id]) for oracle_id in unique_ids
+    }
+    cached = {
+        item.oracle_id: item for item in read_cached_oracle_ids(db, deck, unique_ids, contexts)
+    }
+    missing = [oracle_id for oracle_id in unique_ids if oracle_id not in cached]
     if missing and evaluator is None:
         raise ValueError("OPENAI_API_KEY is required")
     started_at = time.monotonic()
@@ -557,7 +682,7 @@ async def evaluate_oracle_ids(
             await asyncio.sleep(2)
             await report_progress()
 
-    async def evaluate(oracle_id: str) -> StructuredLLMaaJ:
+    async def evaluate(oracle_id: str) -> BaseModel:
         assert evaluator is not None
         async with semaphore:
             return await evaluator.evaluate(deck, oracle_id, contexts[oracle_id])
@@ -570,7 +695,7 @@ async def evaluate_oracle_ids(
 
         raw_scores = [
             score
-            for role in CardRole
+            for role in ROLE_NAMES
             if (score := _role_score_from_llmaaj(role, llmaaj, is_land=is_land))
             is not None
         ]

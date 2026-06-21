@@ -13,9 +13,11 @@ export function AgentDrawer({
   agentMessage,
   busy,
   close,
+  decideOperationProposal,
   deck,
   decideGuidanceProposal,
   guidanceDecisions,
+  operationProposalDecisions,
   handleAgentComposerKeyDown,
   latestUserMessageId,
   latestUserMessageRef,
@@ -29,6 +31,11 @@ export function AgentDrawer({
   agentMessage: string;
   busy: boolean;
   close: () => void;
+  decideOperationProposal: (
+    proposalId: string,
+    expectedRevision: number,
+    decision: "approve" | "reject",
+  ) => Promise<void>;
   deck: Deck;
   decideGuidanceProposal: (
     proposalId: string,
@@ -36,6 +43,7 @@ export function AgentDrawer({
     decision: "approve" | "reject",
   ) => Promise<void>;
   guidanceDecisions: Record<string, "approved" | "rejected">;
+  operationProposalDecisions: Record<string, "approved" | "rejected">;
   handleAgentComposerKeyDown: (
     event: React.KeyboardEvent<HTMLTextAreaElement>,
   ) => void;
@@ -65,9 +73,11 @@ export function AgentDrawer({
           agentBusy={agentBusy}
           agentEvents={agentEvents}
           busy={busy}
+          decideOperationProposal={decideOperationProposal}
           deck={deck}
           decideGuidanceProposal={decideGuidanceProposal}
           guidanceDecisions={guidanceDecisions}
+          operationProposalDecisions={operationProposalDecisions}
           latestUserMessageId={latestUserMessageId}
           latestUserMessageRef={latestUserMessageRef}
           submitAgentMessage={submitAgentMessage}

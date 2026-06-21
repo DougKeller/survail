@@ -57,6 +57,8 @@ class ScryfallCardSnapshot(StrictModel):
     colors: list[str] = Field(default_factory=list)
     color_identity: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
+    power: str | None = None
+    toughness: str | None = None
     legalities: dict[str, str]
     set: str
     set_name: str
@@ -108,6 +110,7 @@ class DeckOperationChangeCreate(StrictModel):
     zone: CardZone = Field(default=CardZone.MAINBOARD, strict=False)
     finish: CardFinish = Field(default=CardFinish.NONFOIL, strict=False)
     tags: list[str] | None = Field(default=None, max_length=50)
+    note: str | None = Field(default=None, max_length=2000)
 
     @field_validator("quantity_delta")
     @classmethod
@@ -125,6 +128,13 @@ class DeckOperationChangeCreate(StrictModel):
         if any(not tag or len(tag) > 100 for tag in cleaned):
             raise ValueError("tags must be non-blank and at most 100 characters")
         return list(dict.fromkeys(cleaned))
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip()
 
 
 class DeckOperationCreate(StrictModel):
@@ -289,26 +299,44 @@ class GeneratedDeckDescriptionContentRead(StrictModel):
     lategame: str
 
 
-class QualitativeAnswerRead(StrictModel):
-    criterion_id: str
-    rating: Literal["very_low", "low", "neutral", "high", "very_high"]
-    score: int = Field(ge=0, le=100)
+class AnalyticsBucketRead(StrictModel):
+    key: str
+    label: str
+    quantity: int = Field(ge=0)
+    percentage: float = Field(ge=0, le=100)
+
+
+class MissingRoleEvaluationCardRead(StrictModel):
+    oracle_id: str
+    card_name: str
+
+
+class RoleDistributionRead(StrictModel):
+    available: bool
+    complete: bool
+    evaluated_cards: int = Field(ge=0)
+    total_cards: int = Field(ge=0)
+    unevaluated_cards: int = Field(ge=0)
+    message: str | None = None
+    buckets: list[AnalyticsBucketRead]
+    missing_cards: list[MissingRoleEvaluationCardRead]
+
+
+class DeckAnalyticsRead(StrictModel):
+    total_cards: int = Field(ge=0)
+    unique_cards: int = Field(ge=0)
+    nonland_cards: int = Field(ge=0)
+    mana_curve: list[AnalyticsBucketRead]
+    color_distribution: list[AnalyticsBucketRead]
+    type_distribution: list[AnalyticsBucketRead]
+    role_distribution: RoleDistributionRead
 
 
 class CardRoleScoreRead(StrictModel):
-    role: Literal[
-        "land",
-        "mana_ramp",
-        "card_advantage",
-        "removal",
-        "board_wipe",
-        "enabler",
-        "enhancer",
-        "payoff",
-    ]
+    role: str = Field(min_length=1, max_length=64)
     score: int = Field(ge=0, le=100)
     description: str
-    answers: list[QualitativeAnswerRead]
+    answers: dict[str, Literal["very_low", "low", "neutral", "high", "very_high"]]
 
 
 class CardRoleEvaluationRead(StrictModel):
@@ -345,6 +373,30 @@ class DeckGuidanceProposalRead(StrictModel):
 
 
 class DeckGuidanceProposalDecision(StrictModel):
+    expected_revision: int = Field(ge=0)
+
+
+class DeckOperationProposalChangeRead(StrictModel):
+    printing_id: str
+    quantity_delta: int
+    zone: CardZone
+    finish: CardFinish
+    tags: list[str] | None = None
+
+
+class DeckOperationProposalRead(StrictModel):
+    id: uuid.UUID
+    deck_id: uuid.UUID
+    expected_revision: int
+    reason: str
+    status: str
+    operation_id: uuid.UUID | None
+    changes: list[DeckOperationProposalChangeRead]
+    created_at: datetime
+    updated_at: datetime
+
+
+class DeckOperationProposalDecision(StrictModel):
     expected_revision: int = Field(ge=0)
 
 

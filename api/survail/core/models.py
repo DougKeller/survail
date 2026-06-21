@@ -166,6 +166,7 @@ class CardSet(TimestampMixin, Base):
     set_code: Mapped[str] = mapped_column(String(10))
     collector_number: Mapped[str] = mapped_column(String(32))
     core: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    note: Mapped[str | None] = mapped_column(String(2000))
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     scryfall: Mapped[JsonObject] = mapped_column(JSON)
 

@@ -4,6 +4,10 @@ import type { ImportPreferences } from "../../modules/imports/contracts";
 import {
   DEFAULT_IMPORT_PREFERENCES,
   type DeckDisplayPreferences,
+  type DeckView,
+  type EditorView,
+  type GroupBy,
+  type SortBy,
 } from "./constants";
 
 export function isPriceProvider(value: string): value is PriceProvider {
@@ -32,7 +36,7 @@ export function storedImportPreferences(): ImportPreferences {
 export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
   const stored = localStorage.getItem("survail.deck-display-preferences");
   if (stored === null) {
-    return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
+    return defaultDeckDisplayPreferences();
   }
   try {
     const parsed = JSON.parse(stored) as {
@@ -53,10 +57,67 @@ export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
         sortBy !== "score" &&
         sortBy !== "starred")
     ) {
-      return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
+      return defaultDeckDisplayPreferences();
     }
     return { view, groupBy, sortBy };
   } catch {
-    return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
+    return defaultDeckDisplayPreferences();
   }
+}
+
+export function defaultDeckDisplayPreferences(): DeckDisplayPreferences {
+  return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
+}
+
+export function isEditorView(value: string): value is EditorView {
+  return (
+    value === "cards" ||
+    value === "scores" ||
+    value === "charts" ||
+    value === "info"
+  );
+}
+
+export function isDeckView(value: string): value is DeckView {
+  return value === "stacks" || value === "grid" || value === "text";
+}
+
+export function isGroupBy(value: string): value is GroupBy {
+  return (
+    value === "type" ||
+    value === "color" ||
+    value === "mana-value" ||
+    value === "role"
+  );
+}
+
+export function isSortBy(value: string): value is SortBy {
+  return (
+    value === "alphabetical" ||
+    value === "mana-value" ||
+    value === "price" ||
+    value === "score" ||
+    value === "starred"
+  );
+}
+
+export function editorViewFromSearchParams(
+  searchParams: URLSearchParams,
+): EditorView {
+  const view = searchParams.get("tab");
+  return view !== null && isEditorView(view) ? view : "cards";
+}
+
+export function deckDisplayPreferencesFromSearchParams(
+  searchParams: URLSearchParams,
+  fallback: DeckDisplayPreferences,
+): DeckDisplayPreferences {
+  const view = searchParams.get("view");
+  const groupBy = searchParams.get("group");
+  const sortBy = searchParams.get("sort");
+  return {
+    view: view !== null && isDeckView(view) ? view : fallback.view,
+    groupBy: groupBy !== null && isGroupBy(groupBy) ? groupBy : fallback.groupBy,
+    sortBy: sortBy !== null && isSortBy(sortBy) ? sortBy : fallback.sortBy,
+  };
 }

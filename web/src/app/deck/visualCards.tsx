@@ -1,8 +1,16 @@
 import { useContext } from "react";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
-import type { CardSet, DeckFormat } from "../../modules/decks/contracts";
+import type {
+  CardSet,
+  CardZone,
+  DeckFormat,
+} from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
+import {
+  canMoveToCommanderZone,
+  moveZoneOptionsFor,
+} from "./cardZones";
 import { CoreCardToggle } from "./coreCardToggle";
 import {
   type DeckView,
@@ -11,25 +19,7 @@ import {
   type SortBy,
 } from "./constants";
 import { groupedCards } from "./grouping";
-import { MaterialIcon } from "./text";
-
-function commanderEligible(
-  card: CardSet["scryfall"],
-  format: DeckFormat,
-): boolean {
-  if (format !== "commander" && format !== "brawl") return false;
-  const explicitlyEligible =
-    card.oracle_text?.toLowerCase().includes("can be your commander") === true;
-  const legendary = card.type_line.includes("Legendary");
-  const creature = card.type_line.includes("Creature");
-  const planeswalker = card.type_line.includes("Planeswalker");
-  const background = card.type_line.includes("Background");
-  return (
-    explicitlyEligible ||
-    background ||
-    (legendary && (creature || (format === "brawl" && planeswalker)))
-  );
-}
+import { MaterialIcon, zoneLabel } from "./text";
 
 function DeckCardImage({
   cardset,
@@ -46,17 +36,23 @@ function DeckCardImage({
 function ImageCard(props: {
   card: CardSet;
   add: () => void;
+  editNote: () => void;
   remove: () => void;
+  move: (zone: CardZone) => void;
   markCommander: (() => void) | null;
   toggleCore: () => void;
   disabled: boolean;
   stacked: boolean;
   index: number;
   score: CardRoleEvaluation | null;
+  format: DeckFormat;
 }) {
   const {
     card,
     add,
+    editNote,
+    format,
+    move,
     remove,
     markCommander,
     toggleCore,
@@ -65,6 +61,7 @@ function ImageCard(props: {
     index,
     score,
   } = props;
+  const moveOptions = moveZoneOptionsFor(card, format);
   return (
     <div
       className={stacked ? "stacked-card" : "grid-card"}
@@ -102,6 +99,14 @@ function ImageCard(props: {
           onClick={toggleCore}
         />
         <button
+          aria-label={`${card.note.trim() === "" ? "Add" : "Edit"} note for ${card.card_name}`}
+          disabled={disabled}
+          onClick={editNote}
+          type="button"
+        >
+          <MaterialIcon name="edit_note" />
+        </button>
+        <button
           aria-label={`Remove one ${card.card_name}`}
           disabled={disabled}
           onClick={remove}
@@ -117,6 +122,25 @@ function ImageCard(props: {
         >
           <MaterialIcon name="add" />
         </button>
+        {moveOptions.length > 0 && (
+          <select
+            aria-label={`Move ${card.card_name} to another zone`}
+            defaultValue=""
+            disabled={disabled}
+            onChange={(event) => {
+              const zone = event.target.value;
+              event.target.value = "";
+              if (zone !== "") move(zone as CardZone);
+            }}
+          >
+            <option value="">Move</option>
+            {moveOptions.map((zone) => (
+              <option key={zone} value={zone}>
+                {zoneLabel(zone)}
+              </option>
+            ))}
+          </select>
+        )}
         {markCommander !== null && (
           <button
             aria-label={`Mark ${card.card_name} as commander`}
@@ -139,7 +163,9 @@ export function VisualCardGroups(props: {
   sortBy: SortBy;
   format: DeckFormat;
   addCard: (card: CardSet) => void;
+  moveCardToZone: (card: CardSet, zone: CardZone) => void;
   removeCard: (card: CardSet) => void;
+  editCardNote: (card: CardSet) => void;
   markCommander: (card: CardSet) => void;
   toggleCoreCard: (card: CardSet) => void;
   busy: boolean;
@@ -152,6 +178,8 @@ export function VisualCardGroups(props: {
     sortBy,
     format,
     addCard,
+    editCardNote,
+    moveCardToZone,
     removeCard,
     markCommander,
     toggleCoreCard,
@@ -164,7 +192,8 @@ export function VisualCardGroups(props: {
       {groupedCards(cards, groupBy, sortBy, provider, scores).map((group) => (
         <section className="visual-group" key={group.label}>
           <h3>
-            {group.label} <small>{group.quantity}</small>
+            <span className="group-title-text">{group.label}</span>{" "}
+            <small>{group.quantity}</small>
           </h3>
           <div
             className={view === "stacks" ? "card-stacks" : "visual-card-grid"}
@@ -179,16 +208,23 @@ export function VisualCardGroups(props: {
                     }}
                     card={card}
                     disabled={busy}
+                    editNote={() => {
+                      editCardNote(card);
+                    }}
+                    format={format}
                     index={index}
                     key={`${card.id}-${String(index)}`}
                     markCommander={
                       card.zone !== "commander" &&
-                      commanderEligible(card.scryfall, format)
+                      canMoveToCommanderZone(card.scryfall, format)
                         ? () => {
                             markCommander(card);
                           }
                         : null
                     }
+                    move={(zone) => {
+                      moveCardToZone(card, zone);
+                    }}
                     remove={() => {
                       removeCard(card);
                     }}

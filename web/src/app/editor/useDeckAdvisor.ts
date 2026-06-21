@@ -25,7 +25,10 @@ export function useDeckAdvisor({
   setAnnouncement: (value: string) => void;
   setError: (value: string | null) => void;
 }) {
-  const [showAgent, setShowAgent] = useState(true);
+  const [showAgent, setShowAgent] = useState(() => {
+    const stored = localStorage.getItem("survail.advisor-open");
+    return stored === null ? true : stored === "true";
+  });
   const [advisorWidth, setAdvisorWidth] = useState(() => {
     const stored = Number.parseInt(
       localStorage.getItem("survail.advisor-width") ?? "",
@@ -40,11 +43,18 @@ export function useDeckAdvisor({
   const [guidanceDecisions, setGuidanceDecisions] = useState<
     Record<string, "approved" | "rejected">
   >({});
+  const [operationProposalDecisions, setOperationProposalDecisions] = useState<
+    Record<string, "approved" | "rejected">
+  >({});
   const [latestUserMessageId, setLatestUserMessageId] = useState<string | null>(
     null,
   );
   const agentEventsRef = useRef<HTMLDivElement>(null);
   const latestUserMessageRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem("survail.advisor-open", String(showAgent));
+  }, [showAgent]);
 
   useEffect(() => {
     localStorage.setItem("survail.advisor-width", String(advisorWidth));
@@ -97,23 +107,41 @@ export function useDeckAdvisor({
     setAdvisorWidth(400);
   }
 
-  const refreshDeckAfterAgentOperation = async (): Promise<void> => {
+  function receiveAgentEvent(event: AgentUiEvent): void {
+    setAgentEvents((current) => [...current, event]);
+  }
+
+  async function decideOperationProposal(
+    proposalId: string,
+    expectedRevision: number,
+    decision: "approve" | "reject",
+  ): Promise<void> {
+    if (busy) return;
+    setError(null);
     try {
-      await loadDeck();
-      setAnnouncement("Deck updated by the deck advisor");
+      const result = await api.decideOperationProposal(
+        deckId,
+        proposalId,
+        expectedRevision,
+        decision,
+      );
+      setOperationProposalDecisions((current) => ({
+        ...current,
+        [proposalId]: decision === "approve" ? "approved" : "rejected",
+      }));
+      if ("deck" in result) {
+        await loadDeck();
+        setAnnouncement("Deck updated from advisor proposal");
+      } else {
+        setAnnouncement("Advisor proposal rejected");
+      }
     } catch (reason) {
       setError(
         reason instanceof Error
           ? messageFor(reason)
-          : "Could not refresh the updated deck",
+          : "Could not decide deck-change proposal",
       );
     }
-  };
-
-  function receiveAgentEvent(event: AgentUiEvent): void {
-    setAgentEvents((current) => [...current, event]);
-    if (event.type === "operation_applied")
-      void refreshDeckAfterAgentOperation();
   }
 
   async function decideGuidanceProposal(
@@ -224,6 +252,8 @@ export function useDeckAdvisor({
     agentMessage,
     beginAdvisorResize,
     decideGuidanceProposal,
+    decideOperationProposal,
+    operationProposalDecisions,
     guidanceDecisions,
     handleAgentComposerKeyDown,
     latestUserMessageId,

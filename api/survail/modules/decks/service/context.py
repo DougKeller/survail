@@ -1,7 +1,8 @@
 import json
+from collections.abc import Sequence
 
 from survail.core.models import CardSet, Deck
-from survail.core.schemas import CardFace, ScryfallCardSnapshot
+from survail.core.schemas import ScryfallCardSnapshot
 from survail.modules.decks.service.formats import FormatRules, strategy_for
 from survail.modules.decks.service.validate import deck_validation_summary
 
@@ -50,27 +51,93 @@ def _size_rule(rules: FormatRules) -> str:
 
 
 def _cardset_context(cardset: CardSet) -> str:
-    card = ScryfallCardSnapshot.model_validate(cardset.scryfall, strict=False)
-    header = f"\n[{cardset.zone.value.title()}] {cardset.quantity}x {card.name}"
-    if card.card_faces:
-        details = "\n\n".join(_face_context(face) for face in card.card_faces)
-        return f"{header}\n{details}"
+    snapshot = snapshot_from_cardsets([cardset])
+    header = f"\n[{cardset.zone.value.title()}] {cardset.quantity}x {snapshot.name if snapshot else cardset.card_name}"
+    details = format_cardset_group_for_llm([cardset]).splitlines()[2:]
+    return "\n".join([header, *details])
+
+
+def format_cardset_group_for_llm(cardsets: Sequence[CardSet]) -> str:
+    snapshot = snapshot_from_cardsets(cardsets)
+    if snapshot is None:
+        return "\n".join(
+            [
+                "Name: Unknown",
+                "Quantity: 0",
+                "Zone Summary: None",
+                "Cost: None",
+                "Type: Unknown",
+                "Power/Toughness: None",
+                "Oracle Text: None",
+                "Cardset Notes: None",
+            ]
+        )
+    placements = [
+        _cardset_placement_line(cardset)
+        for cardset in sorted(cardsets, key=lambda item: (item.zone.value, item.card_name, item.id))
+    ]
+    notes = [
+        _cardset_note_line(cardset)
+        for cardset in sorted(cardsets, key=lambda item: (item.zone.value, item.card_name, item.id))
+        if (cardset.note or "").strip()
+    ]
     return "\n".join(
         [
-            header,
-            f"Mana cost: {card.mana_cost or 'None'}",
-            f"Type: {card.type_line}",
-            f"Oracle text: {(card.oracle_text or 'None').strip()}",
+            f"Name: {snapshot.name}",
+            f"Quantity: {sum(cardset.quantity for cardset in cardsets)}",
+            "Zone Summary:",
+            *(placements or ["- None"]),
+            f"Cost: {snapshot.mana_cost or 'None'}",
+            f"Type: {snapshot.type_line}",
+            f"Power/Toughness: {power_toughness_for_llm(snapshot)}",
+            f"Oracle Text: {oracle_text_for_llm(snapshot)}",
+            "Cardset Notes:",
+            *(notes or ["- None"]),
         ]
     )
 
 
-def _face_context(face: CardFace) -> str:
-    return "\n".join(
-        [
-            f"Face: {face.name}",
-            f"Mana cost: {face.mana_cost or 'None'}",
-            f"Type: {face.type_line}",
-            f"Oracle text: {(face.oracle_text or 'None').strip()}",
-        ]
-    )
+def snapshot_from_cardsets(cardsets: Sequence[CardSet]) -> ScryfallCardSnapshot | None:
+    if not cardsets:
+        return None
+    return ScryfallCardSnapshot.model_validate(cardsets[0].scryfall, strict=False)
+
+
+def power_toughness_for_llm(snapshot: ScryfallCardSnapshot) -> str:
+    if "Creature" in snapshot.type_line and snapshot.power and snapshot.toughness:
+        return f"{snapshot.power}/{snapshot.toughness}"
+    face_stats = [
+        f"{face.name}: {face.power}/{face.toughness}"
+        for face in snapshot.card_faces
+        if "Creature" in face.type_line and face.power and face.toughness
+    ]
+    return "; ".join(face_stats) if face_stats else "None"
+
+
+def oracle_text_for_llm(snapshot: ScryfallCardSnapshot) -> str:
+    if snapshot.oracle_text and snapshot.oracle_text.strip():
+        return snapshot.oracle_text.strip()
+    face_text = [
+        "\n".join(
+            [
+                f"{face.name} ({face.type_line})",
+                (face.oracle_text or "None").strip() or "None",
+            ]
+        )
+        for face in snapshot.card_faces
+    ]
+    return "\n\n".join(face_text) if face_text else "None"
+
+
+def _cardset_placement_line(cardset: CardSet) -> str:
+    qualifiers: list[str] = []
+    if cardset.core:
+        qualifiers.append("core")
+    if cardset.tags:
+        qualifiers.append(f"tags: {', '.join(cardset.tags)}")
+    suffix = f" ({'; '.join(qualifiers)})" if qualifiers else ""
+    return f"- {cardset.zone.value.title()}: {cardset.quantity}x{suffix}"
+
+
+def _cardset_note_line(cardset: CardSet) -> str:
+    return f"- {cardset.zone.value.title()}: {cardset.note.strip()}"

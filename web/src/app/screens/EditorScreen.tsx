@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { CardPresentationProvider } from "../../modules/cards/ui/cardPresentation";
 import { AgentDrawer } from "../editor/agentDrawer";
 import { BulkEditModal } from "../editor/bulkEditModal";
+import { CardNoteModal } from "../editor/cardNoteModal";
 import { DeckCardsView } from "../editor/cardsView";
 import { DeckHeader } from "../editor/deckHeader";
 import { EditDeckModal } from "../editor/editDeckModal";
@@ -11,6 +12,7 @@ import { HistoryModal } from "../editor/historyModal";
 import { useDeckAdvisor } from "../editor/useDeckAdvisor";
 import { useDeckEditor } from "../editor/useDeckEditor";
 import {
+  DeckChartsView,
   DeckInfoView,
   DeckScoresView,
   useModalBehavior,
@@ -27,6 +29,7 @@ export function EditorScreen() {
     setAnnouncement: editor.setAnnouncement,
     setError: editor.setError,
   });
+  const activeCardNote = editor.activeCardNote;
   const editDeckDialogRef = useModalBehavior<HTMLFormElement>(
     editor.showEditDeck,
     () => {
@@ -43,6 +46,12 @@ export function EditorScreen() {
     editor.showBulkEdit,
     () => {
       editor.setShowBulkEdit(false);
+    },
+  );
+  const cardNoteDialogRef = useModalBehavior<HTMLFormElement>(
+    editor.activeCardNote !== null,
+    () => {
+      editor.setActiveCardNote(null);
     },
   );
   useEffect(() => {
@@ -116,8 +125,8 @@ export function EditorScreen() {
           />
           {editor.editorView === "cards" && (
             <DeckCardsView
-              addSearchResult={(card) => {
-                editor.addSearchResult(card);
+              addSearchResult={(card, zone) => {
+                editor.addSearchResult(card, zone);
                 editor.setShowSearchResults(false);
                 editor.setResults([]);
                 editor.setQuery("");
@@ -130,6 +139,7 @@ export function EditorScreen() {
               deck={editor.deck}
               displayPreferences={editor.displayPreferences}
               markCommander={editor.markAsCommander}
+              moveCardToZone={editor.moveCardToZone}
               openSearch={editor.handleSearch}
               priceProvider={editor.priceProvider}
               results={editor.results}
@@ -140,6 +150,9 @@ export function EditorScreen() {
               setQuery={editor.setQuery}
               setShowSearchResults={editor.setShowSearchResults}
               showSearchResults={editor.showSearchResults}
+              editCardNote={(card) => {
+                editor.setActiveCardNote(card);
+              }}
               toggleCoreCard={editor.toggleCoreCard}
             />
           )}
@@ -156,6 +169,16 @@ export function EditorScreen() {
               validation={editor.validation}
             />
           )}
+          {editor.editorView === "charts" && (
+            <DeckChartsView
+              analytics={editor.analytics}
+              error={editor.analyticsError}
+              loading={editor.analyticsLoading}
+              refresh={() => {
+                void editor.loadAnalytics();
+              }}
+            />
+          )}
           {editor.editorView === "scores" && (
             <DeckScoresView
               deck={editor.deck}
@@ -163,6 +186,8 @@ export function EditorScreen() {
                 editor.setShowEditDeck(true);
               }}
               progress={editor.evaluationProgress}
+              refreshCardScore={(oracleId) => void editor.evaluateCard(oracleId)}
+              refreshingOracleIds={editor.refreshingOracleIds}
               scoreCards={() => void editor.evaluateCurrentDeck()}
               scores={editor.scores}
               scoring={editor.scoring}
@@ -202,9 +227,11 @@ export function EditorScreen() {
             close={() => {
               advisor.setShowAgent(false);
             }}
+            decideOperationProposal={advisor.decideOperationProposal}
             deck={editor.deck}
             decideGuidanceProposal={advisor.decideGuidanceProposal}
             guidanceDecisions={advisor.guidanceDecisions}
+            operationProposalDecisions={advisor.operationProposalDecisions}
             handleAgentComposerKeyDown={advisor.handleAgentComposerKeyDown}
             latestUserMessageId={advisor.latestUserMessageId}
             latestUserMessageRef={advisor.latestUserMessageRef}
@@ -224,6 +251,20 @@ export function EditorScreen() {
               editor.setShowBulkEdit(false);
             }}
             setBulkDecklist={editor.setBulkDecklist}
+          />
+        )}
+        {activeCardNote !== null && (
+          <CardNoteModal
+            busy={editor.busy}
+            cardset={activeCardNote}
+            close={() => {
+              editor.setActiveCardNote(null);
+            }}
+            dialogRef={cardNoteDialogRef}
+            save={(note) => {
+              editor.updateCardNote(activeCardNote, note);
+              editor.setActiveCardNote(null);
+            }}
           />
         )}
         {editor.showEditDeck && (

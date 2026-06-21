@@ -21,12 +21,12 @@ export function DeckHeader({
 }: {
   deckTitle: string;
   deckFormat: string;
-  editorView: "cards" | "scores" | "info";
+  editorView: "cards" | "scores" | "charts" | "info";
   onDelete: () => Promise<void>;
   onEdit: () => void;
   onOpenBulkEdit: () => void;
   onOpenHistory: () => void;
-  onSelectView: (view: "cards" | "scores" | "info") => void;
+  onSelectView: (view: "cards" | "scores" | "charts" | "info") => void;
   showAgent: boolean;
   toggleAgent: () => void;
   validation: Validation | null;
@@ -98,7 +98,7 @@ export function DeckHeader({
         </details>
       </div>
       <nav aria-label="Deck views" className="editor-tabs">
-        {(["cards", "scores", "info"] as const).map((view) => (
+        {(["cards", "scores", "charts", "info"] as const).map((view) => (
           <button
             aria-current={editorView === view ? "page" : undefined}
             className={editorView === view ? "active" : ""}

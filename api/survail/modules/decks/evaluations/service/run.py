@@ -9,6 +9,7 @@ from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead
 from survail.modules.decks.evaluations.service.evaluator import (
     EvaluationProgress,
     OpenAIRoleEvaluator,
+    _card_contexts,
     evaluate_oracle_ids,
     read_cached_oracle_ids,
 )
@@ -57,7 +58,8 @@ class EvaluationService:
     def cached_current(self, user: User, deck_id: uuid.UUID) -> list[CardRoleEvaluationRead]:
         deck = self._owned_deck_allowing_blank_goal(user, deck_id)
         oracle_ids = list(dict.fromkeys(cardset.oracle_id for cardset in deck.cardsets))
-        return read_cached_oracle_ids(self._db, deck, oracle_ids)
+        contexts = _card_contexts(self._db, deck, oracle_ids)
+        return read_cached_oracle_ids(self._db, deck, oracle_ids, contexts)
 
     async def one(self, user: User, deck_id: uuid.UUID, oracle_id: str) -> CardRoleEvaluationRead:
         return (await self.selected(user, deck_id, [oracle_id]))[0]

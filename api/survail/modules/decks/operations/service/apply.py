@@ -68,6 +68,7 @@ def apply_deck_operation(
 
     deltas: dict[CardSetIdentity, int] = defaultdict(int)
     requested_tags: dict[CardSetIdentity, list[str]] = {}
+    requested_notes: dict[CardSetIdentity, str] = {}
     for change in payload.changes:
         identity = (change.printing_id, change.finish, change.zone)
         deltas[identity] += change.quantity_delta
@@ -76,6 +77,11 @@ def apply_deck_operation(
             if existing_tags is not None and existing_tags != change.tags:
                 raise DeckOperationError("Operation contains conflicting tags for one cardset")
             requested_tags[identity] = change.tags
+        if change.note is not None:
+            existing_note = requested_notes.get(identity)
+            if existing_note is not None and existing_note != change.note:
+                raise DeckOperationError("Operation contains conflicting notes for one cardset")
+            requested_notes[identity] = change.note
     deltas = {identity: delta for identity, delta in deltas.items() if delta != 0}
     if not deltas:
         raise DeckOperationError("Operation has no net changes")
@@ -84,7 +90,7 @@ def apply_deck_operation(
         (cardset.printing_id, cardset.finish, cardset.zone): cardset for cardset in deck.cardsets
     }
     catalog = CatalogRepository(db)
-    _replace_incompatible_commanders(deck, deltas, requested_tags, catalog)
+    _replace_incompatible_commanders(deck, deltas, requested_tags, requested_notes, catalog)
 
     operation = DeckOperation(
         deck_id=deck.id,
@@ -101,8 +107,10 @@ def apply_deck_operation(
         cardset = existing_cardsets.get(identity)
         before = cardset.quantity if cardset is not None else 0
         tags_before = list(cardset.tags) if cardset is not None else []
+        note_before = (cardset.note or "") if cardset is not None else ""
         after = before + delta
         tags_after = [] if after == 0 else requested_tags.get(identity, tags_before)
+        note_after = "" if after == 0 else requested_notes.get(identity, note_before)
         if after < 0:
             raise DeckOperationError(
                 f"Operation would make {printing_id}/{finish.value}/{zone.value} negative"
@@ -125,6 +133,7 @@ def apply_deck_operation(
                 card_name=card.name,
                 set_code=card.set,
                 collector_number=card.collector_number,
+                note=note_after or None,
                 tags=tags_after,
                 scryfall=card.model_dump(mode="json"),
             )
@@ -137,6 +146,7 @@ def apply_deck_operation(
         else:
             cardset.quantity = after
             cardset.tags = tags_after
+            cardset.note = note_after or None
 
         operation.changes.append(
             DeckOperationChange(
@@ -166,6 +176,7 @@ def _replace_incompatible_commanders(
     deck: Deck,
     deltas: dict[CardSetIdentity, int],
     requested_tags: dict[CardSetIdentity, list[str]],
+    requested_notes: dict[CardSetIdentity, str],
     catalog: PrintingCatalog,
 ) -> None:
     incoming = []
@@ -199,6 +210,8 @@ def _replace_incompatible_commanders(
         deltas[mainboard_identity] = deltas.get(mainboard_identity, 0) + existing.quantity
         if mainboard_identity not in existing_identities:
             requested_tags.setdefault(mainboard_identity, list(existing.tags))
+            if existing.note:
+                requested_notes.setdefault(mainboard_identity, existing.note)
 
 
 def _locked_deck(db: Session, deck_id: uuid.UUID, owner_id: uuid.UUID) -> Deck:

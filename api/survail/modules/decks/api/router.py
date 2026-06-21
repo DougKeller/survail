@@ -11,19 +11,38 @@ from survail.core.schemas import DeckMetadata, ScryfallCardSnapshot
 from survail.integrations.cache import get_cache
 from survail.integrations.openai.descriptions import OpenAIDeckDescriptionGenerator
 from survail.modules.decks.api.schemas import (
+    AnalyticsBucketRead,
     CardSetRead,
+    DeckAnalyticsRead,
     DeckCreate,
     DeckRead,
     DeckUpdate,
     DeckValidationRead,
     GeneratedDeckDescriptionContentRead,
     GeneratedDeckDescriptionRead,
+    MissingRoleEvaluationCardRead,
+    RoleDistributionRead,
     ValidationErrorRead,
 )
+from survail.modules.decks.evaluations.service.run import EvaluationService
 from survail.modules.decks.contracts import CloneDeckRequest
 from survail.modules.decks.operations.contracts import (
     DeckOperationChangeRead,
     DeckOperationRead,
+)
+from survail.modules.decks.service.analytics import (
+    CARD_TYPE_LABELS,
+    COLOR_LABELS,
+    color_pip_counts,
+    mana_curve_counts,
+    mana_curve_sort_key,
+    nonland_total_cards,
+    percentage_buckets,
+    role_distribution_counts,
+    scoped_card_name_map,
+    scoped_unique_oracle_ids,
+    total_cards,
+    type_distribution_counts,
 )
 from survail.modules.decks.service.describe import (
     current_generated_description,
@@ -135,6 +154,7 @@ def _cardset_read(cardset: CardSet) -> CardSetRead:
         set_code=cardset.set_code,
         collector_number=cardset.collector_number,
         core=bool(cardset.core),
+        note=cardset.note or "",
         tags=cardset.tags,
         scryfall=ScryfallCardSnapshot.model_validate(cardset.scryfall, strict=False),
     )
@@ -214,6 +234,75 @@ def _validation_read(deck: Deck) -> DeckValidationRead:
     )
 
 
+def _analytics_read(deck: Deck, user: User, db: DbSession) -> DeckAnalyticsRead:
+    scoped_oracle_ids = scoped_unique_oracle_ids(deck)
+    cached_evaluations = EvaluationService(db).cached_current(user, deck.id)
+    role_counts = role_distribution_counts(deck, cached_evaluations)
+    mana_curve = mana_curve_counts(deck)
+    color_distribution = color_pip_counts(deck)
+    type_distribution = type_distribution_counts(deck)
+    total_nonland_cards = nonland_total_cards(deck)
+    evaluated_ids = {evaluation.oracle_id for evaluation in cached_evaluations}
+    missing_ids = [oracle_id for oracle_id in scoped_oracle_ids if oracle_id not in evaluated_ids]
+    card_names = scoped_card_name_map(deck)
+    if not deck.goal.strip():
+        role_message = "Set a Goal / North Star to evaluate cards and populate role distribution."
+        role_available = False
+    elif missing_ids:
+        role_message = (
+            "Role distribution only includes cards with current cached evaluations. "
+            "Run card evaluation to complete it."
+        )
+        role_available = True
+    else:
+        role_message = None
+        role_available = True
+    return DeckAnalyticsRead(
+        total_cards=total_cards(deck),
+        unique_cards=len(scoped_oracle_ids),
+        nonland_cards=total_nonland_cards,
+        mana_curve=[
+            AnalyticsBucketRead.model_validate(bucket, strict=False)
+            for bucket in percentage_buckets(
+                mana_curve,
+                order=sorted(mana_curve, key=mana_curve_sort_key),
+                denominator=total_nonland_cards,
+            )
+        ],
+        color_distribution=[
+            AnalyticsBucketRead.model_validate(bucket, strict=False)
+            for bucket in percentage_buckets(
+                color_distribution,
+                labels=COLOR_LABELS,
+                order=tuple(COLOR_LABELS),
+            )
+        ],
+        type_distribution=[
+            AnalyticsBucketRead.model_validate(bucket, strict=False)
+            for bucket in percentage_buckets(
+                type_distribution,
+                order=(*CARD_TYPE_LABELS, "Other"),
+            )
+        ],
+        role_distribution=RoleDistributionRead(
+            available=role_available,
+            complete=deck.goal.strip() != "" and not missing_ids,
+            evaluated_cards=len(evaluated_ids),
+            total_cards=len(scoped_oracle_ids),
+            unevaluated_cards=len(missing_ids),
+            message=role_message,
+            buckets=[
+                AnalyticsBucketRead.model_validate(bucket, strict=False)
+                for bucket in percentage_buckets(role_counts)
+            ],
+            missing_cards=[
+                MissingRoleEvaluationCardRead(oracle_id=oracle_id, card_name=card_names[oracle_id])
+                for oracle_id in missing_ids
+            ],
+        ),
+    )
+
+
 @router.get("", response_model=list[DeckRead])
 def list_decks(db: DbSession, user: CurrentUser) -> list[DeckRead]:
     return [_deck_read(deck) for deck in DeckService(db).list_owned(user)]
@@ -273,6 +362,16 @@ def validation(
 ) -> DeckValidationRead:
     deck = _owned_deck(db, user, deck_id)
     return _validation_read(deck)
+
+
+@router.get("/{deck_id}/analytics", response_model=DeckAnalyticsRead)
+def analytics(
+    deck_id: uuid.UUID,
+    db: DbSession,
+    user: CurrentUser,
+) -> DeckAnalyticsRead:
+    deck = _owned_deck(db, user, deck_id)
+    return _analytics_read(deck, user, db)
 
 
 @router.post("/{deck_id}/generate-description", response_model=GeneratedDeckDescriptionRead)

@@ -6,6 +6,7 @@ import type {
   DeckOperationChangeInput,
   DeckOperationResult,
 } from "../contracts";
+import type { DeckOperationProposalDecisionResult } from "../operations/contracts";
 
 export function applyOperation(
   deckId: string,
@@ -60,4 +61,30 @@ export function setCardCore(
     method: "PATCH",
     body: JSON.stringify({ core }),
   });
+}
+
+export function setCardNote(
+  deckId: string,
+  cardsetId: string,
+  note: string,
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/note`, {
+    method: "PATCH",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export function decideOperationProposal(
+  deckId: string,
+  proposalId: string,
+  revision: number,
+  decision: "approve" | "reject",
+): Promise<DeckOperationProposalDecisionResult> {
+  return request<DeckOperationProposalDecisionResult>(
+    `/decks/${deckId}/operation-proposals/${proposalId}/${decision}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ expected_revision: revision }),
+    },
+  );
 }

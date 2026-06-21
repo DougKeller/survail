@@ -6,7 +6,11 @@ from datetime import datetime
 from pydantic import Field, field_validator
 
 from survail.core.models import CardFinish, CardZone
-from survail.core.schemas import StrictModel
+from survail.core.schemas import (
+    DeckOperationProposalDecision,
+    DeckOperationProposalRead,
+    StrictModel,
+)
 from survail.modules.decks.contracts import DeckRead, DeckValidationRead
 
 
@@ -16,6 +20,7 @@ class DeckOperationChangeCreate(StrictModel):
     zone: CardZone = Field(default=CardZone.MAINBOARD, strict=False)
     finish: CardFinish = Field(default=CardFinish.NONFOIL, strict=False)
     tags: list[str] | None = Field(default=None, max_length=50)
+    note: str | None = Field(default=None, max_length=2000)
 
     @field_validator("quantity_delta")
     @classmethod
@@ -33,6 +38,13 @@ class DeckOperationChangeCreate(StrictModel):
         if any(not tag or len(tag) > 100 for tag in cleaned):
             raise ValueError("tags must be non-blank and at most 100 characters")
         return list(dict.fromkeys(cleaned))
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip()
 
 
 class DeckOperationCreate(StrictModel):
@@ -83,3 +95,26 @@ class DeckOperationResult(StrictModel):
 
 class CardSetCoreUpdate(StrictModel):
     core: bool
+
+
+class CardSetNoteUpdate(StrictModel):
+    note: str = Field(default="", max_length=2000)
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value: str) -> str:
+        return value.strip()
+
+
+__all__ = [
+    "CardSetCoreUpdate",
+    "CardSetNoteUpdate",
+    "DeckOperationChangeCreate",
+    "DeckOperationChangeRead",
+    "DeckOperationCreate",
+    "DeckOperationProposalDecision",
+    "DeckOperationProposalRead",
+    "DeckOperationRead",
+    "DeckOperationResult",
+    "DeckOperationRevertCreate",
+]

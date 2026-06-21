@@ -128,11 +128,11 @@ export function CardAnalysisPanel({
             </header>
             <p>{role.description}</p>
             <ul>
-              {role.answers.map((answer) => (
-                <li key={answer.criterion_id}>
-                  <strong>{titleize(answer.criterion_id)}</strong>
+              {Object.entries(role.answers).map(([criterion, rating]) => (
+                <li key={criterion}>
+                  <strong>{titleize(criterion)}</strong>
                   <span>
-                    {titleize(answer.rating)} · {answer.score}
+                    {titleize(rating)}
                   </span>
                 </li>
               ))}

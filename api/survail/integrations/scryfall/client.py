@@ -79,6 +79,8 @@ class UpstreamCard(BaseModel):
     colors: list[str] = Field(default_factory=list)
     color_identity: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
+    power: str | None = None
+    toughness: str | None = None
     legalities: dict[str, str]
     set: str
     set_name: str

@@ -15,7 +15,11 @@ from survail.core.schemas import (
     ScryfallCardSnapshot,
 )
 from survail.core.types import JsonObject
-from survail.modules.decks.service.cardsets import DeckCoreCardLimitError, set_cardset_core
+from survail.modules.decks.service.cardsets import (
+    DeckCoreCardLimitError,
+    set_cardset_core,
+    set_cardset_note,
+)
 from survail.modules.decks.service.validate import validate_deck
 
 
@@ -202,6 +206,16 @@ def test_operation_tags_are_cleaned_deduplicated_and_default_to_omitted() -> Non
 
     assert tagged.tags == ["Ramp", "Removal"]
     assert untagged.tags is None
+
+
+def test_operation_note_is_trimmed() -> None:
+    change = DeckOperationChangeCreate(
+        printing_id="printing",
+        quantity_delta=1,
+        note="  save for combo turn  ",
+    )
+
+    assert change.note == "save for combo turn"
 
 
 def test_considering_cards_do_not_affect_validation() -> None:
@@ -478,3 +492,37 @@ def test_core_cards_are_limited_to_fifteen() -> None:
             actor,  # type: ignore[arg-type]
             core=True,
         )
+
+
+def test_cardset_notes_are_trimmed_and_persisted() -> None:
+    owner = uuid.uuid4()
+    actor = type("Actor", (), {"id": owner})()
+    deck = type("DeckRecord", (), {})()
+    deck.id = uuid.uuid4()
+    deck.owner_id = owner
+    deck.updated_at = None
+    cardset = type("CardsetRecord", (), {})()
+    cardset.id = uuid.uuid4()
+    cardset.note = None
+    deck.cardsets = [cardset]
+
+    class FakeDb:
+        committed = False
+
+        def scalar(self, statement: object) -> object:
+            del statement
+            return deck
+
+        def commit(self) -> None:
+            self.committed = True
+
+    result = set_cardset_note(
+        FakeDb(),  # type: ignore[arg-type]
+        deck.id,
+        cardset.id,
+        actor,  # type: ignore[arg-type]
+        note="  keep for post-wipe rebuild  ",
+    )
+
+    assert result is deck
+    assert cardset.note == "keep for post-wipe rebuild"

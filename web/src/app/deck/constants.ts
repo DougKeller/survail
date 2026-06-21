@@ -5,7 +5,6 @@ import type {
   DeckFormat,
   PriceProvider,
 } from "../../modules/decks/contracts";
-import type { CardRole } from "../../modules/decks/evaluations/contracts";
 import type { ImportPreferences } from "../../modules/imports/contracts";
 
 export const DECK_FORMATS: readonly DeckFormat[] = [
@@ -32,14 +31,16 @@ const COMMANDER_ZONES: readonly CardZone[] = [
   "considering",
 ];
 
-export const CARD_ROLE_ORDER: readonly CardRole[] = [
+export const PREFERRED_CARD_ROLE_ORDER: readonly string[] = [
   "land",
   "mana_ramp",
   "card_advantage",
-  "removal",
-  "board_wipe",
-  "enabler",
-  "enhancer",
+  "selection_tutor",
+  "interaction",
+  "board_control",
+  "protection",
+  "engine_enabler",
+  "engine_support",
   "payoff",
 ];
 
@@ -50,7 +51,7 @@ export const DEFAULT_IMPORT_PREFERENCES: ImportPreferences = {
 export const PriceProviderContext = createContext<PriceProvider>("tcgplayer");
 
 export type DeckView = "stacks" | "grid" | "text";
-export type EditorView = "cards" | "scores" | "info";
+export type EditorView = "cards" | "scores" | "charts" | "info";
 export type GroupBy = "type" | "color" | "mana-value" | "role";
 export type SortBy =
   | "alphabetical"
@@ -69,4 +70,10 @@ export function zonesFor(format: DeckFormat): readonly CardZone[] {
   return format === "commander" || format === "brawl"
     ? COMMANDER_ZONES
     : CONSTRUCTED_ZONES;
+}
+
+export function searchAddZonesFor(format: DeckFormat): readonly CardZone[] {
+  return format === "commander" || format === "brawl"
+    ? ["mainboard", "commander", "considering"]
+    : ["mainboard", "sideboard", "companion", "considering"];
 }

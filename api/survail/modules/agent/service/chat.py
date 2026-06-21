@@ -54,6 +54,7 @@ from survail.modules.decks.operations.contracts import (
     DeckOperationCreate,
 )
 from survail.modules.decks.operations.service.apply import DeckOperationError, apply_deck_operation
+from survail.modules.decks.service.context import format_cardset_group_for_llm
 from survail.modules.decks.service.formats import strategy_for
 from survail.modules.decks.service.validate import deck_validation_summary, validate_deck
 from survail.modules.imports.service.preview import (
@@ -70,7 +71,6 @@ TOOL_ACTIVITY_MESSAGES = {
     "search_legal_cards": "Searching for cards",
     "resolve_import_text": "Resolving the card list",
     "propose_deck_operation": "Preparing proposed changes",
-    "apply_proposed_operation": "Applying deck changes",
     "evaluate_oracle_id": "Evaluating a card",
     "propose_deck_guidance": "Preparing goal guidance",
 }
@@ -79,6 +79,7 @@ CONTEXT_EVENT_TYPES = frozenset(
         "validation_results",
         "deck_summary",
         "card_results",
+        "operation_proposal",
         "operation_applied",
         "guidance_proposal",
         "run_failed",
@@ -275,6 +276,8 @@ def _deck_details_payload(deck: Deck) -> dict[str, object]:
                 "zone": card.zone.value,
                 "printing_id": card.printing_id,
                 "core": card.core,
+                "note": card.note or "",
+                "details": format_cardset_group_for_llm([card]),
             }
             for card in deck.cardsets
         ],
@@ -718,148 +721,22 @@ async def propose_deck_operation(
         "status": "proposed",
         "proposed": True,
         "applied": False,
-        "message": (
-            "The proposal was created but has not changed the deck. Call "
-            "apply_proposed_operation with proposal_id to apply it."
-        ),
+        "message": "The proposal was created for human approval; the deck was not changed.",
         "proposal_id": str(proposal.id),
         "expected_revision": deck.revision,
         "current_revision": deck.revision,
         "reason": reason,
         "changes": enriched,
     }
-    return json.dumps(payload)
-
-
-def _operation_failure_payload(
-    owner_id: uuid.UUID,
-    deck_id: uuid.UUID,
-    proposal_id: str,
-    message: str,
-) -> dict[str, object]:
-    deck = _owned_deck(owner_id, deck_id)
-    return {
-        "status": "failed",
-        "applied": False,
-        "proposal_id": proposal_id,
-        "message": f"{message} The deck was not changed.",
-        "current_revision": deck.revision,
-        "validation": _validation_payload(deck),
-    }
-
-
-@function_tool
-async def apply_proposed_operation(
-    context: RunContextWrapper[DeckAgentContext], proposal_id: str
-) -> str:
-    """Apply a proposal; only applied=true confirms that the deck actually changed."""
-    await _emit_tool_status(
-        context.context,
-        "apply_proposed_operation",
-        "Applying a proposed deck change",
-        f"Attempting to apply proposal {proposal_id} to the current deck revision.",
+    await context.context.sink.emit(
+        "operation_proposal",
+        {
+            "proposal_id": str(proposal.id),
+            "expected_revision": deck.revision,
+            "reason": reason,
+            "changes": enriched,
+        },
     )
-    try:
-        proposal_uuid = uuid.UUID(proposal_id)
-    except ValueError:
-        return json.dumps(
-            _operation_failure_payload(
-                context.context.owner_id,
-                context.context.deck_id,
-                proposal_id,
-                "The proposal ID is invalid.",
-            )
-        )
-    with SessionLocal() as db:
-        proposal = db.scalar(
-            select(DeckOperationProposal).where(
-                DeckOperationProposal.id == proposal_uuid,
-                DeckOperationProposal.deck_id == context.context.deck_id,
-                DeckOperationProposal.owner_id == context.context.owner_id,
-                DeckOperationProposal.status == "pending",
-            )
-        )
-        actor = db.get(User, context.context.owner_id)
-        if proposal is None or actor is None:
-            return json.dumps(
-                _operation_failure_payload(
-                    context.context.owner_id,
-                    context.context.deck_id,
-                    proposal_id,
-                    "No pending proposal owned by this user was found.",
-                )
-            )
-        items = proposal.changes.get("items")
-        if not isinstance(items, list):
-            return json.dumps(
-                _operation_failure_payload(
-                    context.context.owner_id,
-                    context.context.deck_id,
-                    proposal_id,
-                    "The proposal changes are invalid.",
-                )
-            )
-        try:
-            changes = [
-                DeckOperationChangeCreate.model_validate(item, strict=False) for item in items
-            ]
-        except ValueError as exc:
-            return json.dumps(
-                _operation_failure_payload(
-                    context.context.owner_id,
-                    context.context.deck_id,
-                    proposal_id,
-                    f"The proposal changes could not be read: {exc}",
-                )
-            )
-        try:
-            _assert_agent_changes_do_not_touch_core_cards(
-                db,
-                context.context.owner_id,
-                proposal.deck_id,
-                changes,
-            )
-            operation, _ = apply_deck_operation(
-                db,
-                proposal.deck_id,
-                actor,
-                DeckOperationCreate(
-                    client_operation_id=uuid.uuid4(),
-                    expected_revision=proposal.expected_revision,
-                    reason=proposal.reason,
-                    changes=changes,
-                ),
-            )
-        except DeckOperationError as exc:
-            db.rollback()
-            proposal.status = "stale"
-            db.commit()
-            return json.dumps(
-                _operation_failure_payload(
-                    context.context.owner_id,
-                    context.context.deck_id,
-                    proposal_id,
-                    str(exc),
-                )
-            )
-        proposal.status = "applied"
-        proposal.operation_id = operation.id
-        db.commit()
-    deck = _owned_deck(context.context.owner_id, context.context.deck_id)
-    payload = {
-        "status": "applied",
-        "applied": True,
-        "message": (
-            "The deck change was applied successfully. The returned revision, cards, and "
-            "validation are authoritative."
-        ),
-        "proposal_id": proposal_id,
-        "operation_id": str(operation.id),
-        "current_revision": deck.revision,
-        "deck": _deck_details_payload(deck),
-        "validation": _validation_payload(deck),
-    }
-    await context.context.sink.emit("operation_applied", payload)
     return json.dumps(payload)
 
 
@@ -1003,18 +880,13 @@ def build_agent() -> Agent[DeckAgentContext]:
             "Cards marked as core are locked. Never propose adding, removing, moving, or "
             "changing a starred core card. If a core card needs to change, tell the user "
             "to unstar it first. "
-            "Never claim a deck change happened unless apply_proposed_operation succeeds. "
-            "A proposed operation has not changed the deck. Only an apply_proposed_operation "
-            "result with applied=true confirms a change. If applied=false, clearly state that "
-            "nothing changed and use its current_revision and validation before deciding what to "
-            "do next. After applied=true, treat the returned deck and validation as authoritative "
-            "and do not rely on older context. "
-            "Strive to avoid introducing new validation errors. After applying an operation, "
-            "inspect and react to the returned complete validation result, while still allowing "
-            "useful incremental changes to invalid decks. "
-            "Propose concrete changes with propose_deck_operation, then call "
-            "apply_proposed_operation immediately. You are authorized to apply useful deck changes "
-            "without asking for confirmation. Use evaluate_oracle_id before judging a specific "
+            "A proposed operation has not changed the deck. Never claim a deck change happened "
+            "just because a proposal was created. Present proposed deck changes for human review "
+            "and let the user apply or discard them manually. "
+            "Strive to avoid introducing new validation errors when drafting proposals, while "
+            "still allowing useful incremental changes to invalid decks. "
+            "Propose concrete changes with propose_deck_operation. Do not attempt any direct "
+            "deck mutation through tools. Use evaluate_oracle_id before judging a specific "
             "card. The evaluation is cached by current deck revision and oracle ID and reports "
             "intrinsic and strategic roles, qualitative rubric answers, deterministic scores, "
             "and rationales. "
@@ -1027,7 +899,6 @@ def build_agent() -> Agent[DeckAgentContext]:
             search_legal_cards,
             resolve_import_text,
             propose_deck_operation,
-            apply_proposed_operation,
             evaluate_oracle_id,
             propose_deck_guidance,
         ],

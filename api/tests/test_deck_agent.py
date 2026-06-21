@@ -36,7 +36,6 @@ from survail.modules.agent.service.chat import (
     _event_context_summary,
     _initial_context_prompt,
     _matches_color_identity,
-    _operation_failure_payload,
     _requires_scryfall_search,
     build_agent,
     search_legal_cards,
@@ -81,6 +80,7 @@ def _cardset(card: ScryfallCardSnapshot, zone: CardZone) -> CardSet:
         set_code=card.set,
         collector_number=card.collector_number,
         core=False,
+        note=None,
         tags=[],
         scryfall=card.model_dump(mode="json"),
     )
@@ -102,13 +102,11 @@ def _deck(*cardsets: CardSet) -> Deck:
 def test_deck_agent_mutation_tools_do_not_require_approval() -> None:
     tools = {tool.name: tool for tool in build_agent().tools}
     resolve_import = tools["resolve_import_text"]
-    apply_operation = tools["apply_proposed_operation"]
     card_search = tools["search_legal_cards"]
 
     assert isinstance(resolve_import, FunctionTool)
-    assert isinstance(apply_operation, FunctionTool)
     assert resolve_import.needs_approval is False
-    assert apply_operation.needs_approval is False
+    assert "apply_proposed_operation" not in tools
     assert "evaluate_oracle_id" in tools
     assert "semantic_search_cards" not in tools
     assert "search_legal_cards" in tools
@@ -124,8 +122,7 @@ def test_deck_agent_instructions_support_incremental_color_identity_safe_changes
     assert isinstance(instructions, str)
     assert "temporarily invalid" in instructions
     assert "subset of the deck color identity" in instructions
-    assert "without asking for confirmation" in instructions
-    assert "complete validation result" in instructions
+    assert "apply or discard them manually" in instructions
     assert "never apply them without human approval" in instructions
     assert "intrinsic and strategic roles" in instructions
     assert "qualitative rubric answers" in instructions
@@ -134,14 +131,7 @@ def test_deck_agent_instructions_support_incremental_color_identity_safe_changes
     assert "Scryfall search syntax" in instructions
     assert 'o:"rules text"' in instructions
     assert "automatically adds format legality" in instructions
-    assert (
-        "Only an apply_proposed_operation result with applied=true confirms a change"
-        in instructions
-    )
-    assert (
-        "After applied=true, treat the returned deck and validation as authoritative"
-        in instructions
-    )
+    assert "Do not attempt any direct deck mutation through tools." in instructions
 
 
 def test_deck_color_identity_uses_commander_instead_of_other_cards() -> None:
@@ -312,14 +302,14 @@ def test_event_context_preserves_prior_proposals_and_outcomes() -> None:
                 run_id=run_id,
                 conversation_id=conversation_id,
                 sequence=1,
-                event_type="propose_operation",
+                event_type="operation_proposal",
                 payload={"proposal_id": "proposal-1", "reason": "Add interaction"},
             ),
         ]
     )
 
     assert "Relevant actions and results from earlier turns" in context
-    assert context.index("propose_operation") < context.index("operation_applied")
+    assert context.index("operation_proposal") < context.index("operation_applied")
     assert "proposal-1" in context
 
 
@@ -434,118 +424,6 @@ def test_agent_stops_retrying_after_max_attempts(monkeypatch: pytest.MonkeyPatch
     assert attempts == MAX_AGENT_RUN_ATTEMPTS
 
 
-def test_operation_failure_result_explicitly_says_deck_was_not_changed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    subject = _deck()
-    subject.revision = 8
-    monkeypatch.setattr(agent_service, "_owned_deck", lambda owner_id, deck_id: subject)
-
-    result = _operation_failure_payload(
-        subject.owner_id, subject.id, "bad-proposal", "The proposal is stale."
-    )
-
-    assert result["status"] == "failed"
-    assert result["applied"] is False
-    assert result["current_revision"] == 8
-    assert result["validation"] == deck_validation_summary(subject)
-    assert "deck was not changed" in cast("str", result["message"])
-
-
-def test_agent_cannot_apply_changes_to_starred_core_cards(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    deck = _deck()
-    deck.revision = 8
-    core_card = _cardset(_snapshot("Arcane Signet", "arcane-signet", []), CardZone.MAINBOARD)
-    core_card.core = True
-    deck.cardsets = [core_card]
-    user = User(id=deck.owner_id, discord_id="1", username="owner")
-    proposal = DeckOperationProposal(
-        id=uuid.uuid4(),
-        run_id=uuid.uuid4(),
-        conversation_id=uuid.uuid4(),
-        deck_id=deck.id,
-        owner_id=deck.owner_id,
-        expected_revision=deck.revision,
-        reason="Try to cut the signet",
-        changes={
-            "items": [
-                {
-                    "printing_id": core_card.printing_id,
-                    "quantity_delta": -1,
-                    "zone": core_card.zone.value,
-                    "finish": core_card.finish.value,
-                }
-            ]
-        },
-        status="pending",
-    )
-
-    class FakeSession:
-        scalar_calls = 0
-        commits = 0
-        rollbacks = 0
-
-        def __enter__(self) -> "FakeSession":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            del args
-
-        def scalar(self, statement: object) -> object:
-            del statement
-            self.scalar_calls += 1
-            return proposal if self.scalar_calls == 1 else deck
-
-        def get(self, model: type[object], identifier: uuid.UUID) -> object | None:
-            del model
-            return user if identifier == deck.owner_id else None
-
-        def commit(self) -> None:
-            self.commits += 1
-
-        def rollback(self) -> None:
-            self.rollbacks += 1
-
-    class FakeSink:
-        async def emit(self, event_type: str, payload: object) -> None:
-            del event_type, payload
-
-    def fail_apply(*args: object, **kwargs: object) -> None:
-        del args, kwargs
-        raise AssertionError("core-card guard should fail before apply_deck_operation")
-
-    monkeypatch.setattr(agent_service, "SessionLocal", FakeSession)
-    monkeypatch.setattr(agent_service, "_owned_deck", lambda owner_id, deck_id: deck)
-    monkeypatch.setattr(agent_service, "apply_deck_operation", fail_apply)
-    context = DeckAgentContext(
-        deck.owner_id,
-        deck.id,
-        proposal.conversation_id,
-        proposal.run_id,
-        cast("AgentEventSink", FakeSink()),
-    )
-
-    async def invoke() -> object:
-        return await agent_service.apply_proposed_operation.on_invoke_tool(
-            ToolContext(
-                context,
-                tool_name="apply_proposed_operation",
-                tool_call_id="tool-call-core",
-                tool_arguments=json.dumps({"proposal_id": str(proposal.id)}),
-            ),
-            json.dumps({"proposal_id": str(proposal.id)}),
-        )
-
-    result = asyncio.run(invoke())
-    payload = json.loads(cast("str", result))
-
-    assert payload["applied"] is False
-    assert "Agent may not edit starred core cards" in payload["message"]
-    assert proposal.status == "stale"
-
-
 def test_cohesive_context_marks_revision_as_stale_after_mutation() -> None:
     prompt = _cohesive_context_prompt(
         {"title": "Deck", "revision": 3, "cards": []},
@@ -560,6 +438,17 @@ def test_cohesive_context_marks_revision_as_stale_after_mutation() -> None:
     assert "Deck details and cards" in prompt
     assert "Current deck validation results (complete)" in prompt
     assert "Relevant actions and results from earlier turns" in prompt
+
+
+def test_agent_prompt_card_payload_includes_shared_details_and_note() -> None:
+    cardset = _cardset(_snapshot("Counterspell", "counterspell", ["U"]), CardZone.MAINBOARD)
+    cardset.note = "Save for the combo turn."
+
+    prompt = agent_service._agent_prompt(_deck(cardset), "", "Review this card")
+
+    assert '"note":"Save for the combo turn."' in prompt
+    assert "Cardset Notes:" in prompt
+    assert "Save for the combo turn." in prompt
 
 
 def test_initial_context_uses_one_deck_snapshot_and_fetches_events_in_parallel(

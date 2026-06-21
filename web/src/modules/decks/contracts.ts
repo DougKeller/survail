@@ -31,6 +31,7 @@ export interface CardSet {
   set_code: string;
   collector_number: string;
   core: boolean;
+  note: string;
   tags: string[];
   scryfall: ScryfallCard;
 }
@@ -61,6 +62,7 @@ export interface DeckOperationChangeInput {
   zone: CardZone;
   finish: CardFinish;
   tags?: string[];
+  note?: string;
 }
 
 interface DeckOperationChange extends DeckOperationChangeInput {

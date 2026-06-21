@@ -16,6 +16,39 @@ interface CardGroup {
   quantity: number;
 }
 
+function compareCards(
+  left: CardSet,
+  right: CardSet,
+  sortBy: SortBy,
+  provider: PriceProvider,
+  scores: ReadonlyMap<string, CardRoleEvaluation>,
+): number {
+  if (sortBy === "mana-value") {
+    return (
+      (left.scryfall.cmc ?? 0) - (right.scryfall.cmc ?? 0) ||
+      left.card_name.localeCompare(right.card_name)
+    );
+  }
+  if (sortBy === "price") {
+    return (
+      numericPrice(left.scryfall, left.finish, provider) -
+        numericPrice(right.scryfall, right.finish, provider) ||
+      left.card_name.localeCompare(right.card_name)
+    );
+  }
+  if (sortBy === "score") {
+    return (
+      (scores.get(right.oracle_id)?.overall_score ?? -1) -
+        (scores.get(left.oracle_id)?.overall_score ?? -1) ||
+      left.card_name.localeCompare(right.card_name)
+    );
+  }
+  if (sortBy === "starred") {
+    return Number(right.core) - Number(left.core) || left.card_name.localeCompare(right.card_name);
+  }
+  return left.card_name.localeCompare(right.card_name);
+}
+
 function displayPrice(
   card: ScryfallCard,
   finish: CardFinish,
@@ -115,38 +148,22 @@ export function groupedCards(
   return [...groups.entries()]
     .map(([label, groupCards]) => ({
       label,
-      cards: [...groupCards].sort((left, right) => {
-        if (sortBy === "mana-value") {
-          return (
-            (left.scryfall.cmc ?? 0) - (right.scryfall.cmc ?? 0) ||
-            left.card_name.localeCompare(right.card_name)
-          );
-        }
-        if (sortBy === "price") {
-          return (
-            numericPrice(left.scryfall, left.finish, provider) -
-              numericPrice(right.scryfall, right.finish, provider) ||
-            left.card_name.localeCompare(right.card_name)
-          );
-        }
-        if (sortBy === "score") {
-          return (
-            (scores.get(right.oracle_id)?.overall_score ?? -1) -
-              (scores.get(left.oracle_id)?.overall_score ?? -1) ||
-            left.card_name.localeCompare(right.card_name)
-          );
-        }
-        if (sortBy === "starred") {
-          return (
-            Number(right.core) - Number(left.core) ||
-            left.card_name.localeCompare(right.card_name)
-          );
-        }
-        return left.card_name.localeCompare(right.card_name);
-      }),
+      cards: [...groupCards].sort((left, right) =>
+        compareCards(left, right, sortBy, provider, scores),
+      ),
       quantity: groupCards.reduce((total, card) => total + card.quantity, 0),
     }))
     .sort((left, right) => {
+      if (sortBy === "starred") {
+        const firstLeft = left.cards[0];
+        const firstRight = right.cards[0];
+        if (firstLeft !== undefined && firstRight !== undefined) {
+          return (
+            compareCards(firstLeft, firstRight, sortBy, provider, scores) ||
+            left.label.localeCompare(right.label)
+          );
+        }
+      }
       if (groupBy === "mana-value") {
         return (
           Number.parseFloat(left.label.replace("Mana Value ", "")) -

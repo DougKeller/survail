@@ -8,6 +8,7 @@ import type {
   GeneratedDeckDescription,
   Validation,
 } from "../contracts";
+import type { DeckAnalytics } from "../analytics/contracts";
 
 export function decks(): Promise<Deck[]> {
   return request<Deck[]>("/decks");
@@ -49,6 +50,10 @@ export function sample(): Promise<Deck> {
 
 export function validation(deckId: string): Promise<Validation> {
   return request<Validation>(`/decks/${deckId}/validation`);
+}
+
+export function analytics(deckId: string): Promise<DeckAnalytics> {
+  return request<DeckAnalytics>(`/decks/${deckId}/analytics`);
 }
 
 export function generateDescription(

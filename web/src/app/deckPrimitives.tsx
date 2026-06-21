@@ -1,15 +1,24 @@
 export {
   DECK_FORMATS,
   PriceProviderContext,
+  searchAddZonesFor,
   zonesFor,
 } from "./deck/constants";
 export { preferredFinish } from "./deck/grouping";
 export { CoreCardToggle } from "./deck/coreCardToggle";
+export { DeckChartsView } from "./deck/chartsView";
 export { useDismissibleSurface, useModalBehavior } from "./deck/hooks";
 export { DeckInfoView } from "./deck/infoView";
 export { DeckScoresView } from "./deck/scoresView";
 export {
+  deckDisplayPreferencesFromSearchParams,
+  defaultDeckDisplayPreferences,
+  editorViewFromSearchParams,
+  isDeckView,
+  isEditorView,
+  isGroupBy,
   isPriceProvider,
+  isSortBy,
   storedDeckDisplayPreferences,
   storedImportPreferences,
   storedPriceProvider,

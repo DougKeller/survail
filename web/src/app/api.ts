@@ -6,6 +6,7 @@ import { me, logout } from "../modules/auth/api/session";
 import { printings, search } from "../modules/cards/api/search";
 import {
   createDeck,
+  analytics as deckAnalytics,
   deck,
   decks,
   deleteDeck,
@@ -16,9 +17,11 @@ import {
 } from "../modules/decks/api/manage";
 import {
   applyOperation,
+  decideOperationProposal,
   operations,
   revertOperation,
   setCardCore,
+  setCardNote,
 } from "../modules/decks/api/operations";
 import {
   cachedDeckEvaluation,
@@ -47,10 +50,13 @@ export const api = {
   search,
   printings,
   applyOperation,
+  decideOperationProposal,
   operations,
   revertOperation,
   setCardCore,
+  setCardNote,
   validation,
+  deckAnalytics,
   cachedDeckEvaluation,
   evaluateCard,
   evaluateCurrentDeck,

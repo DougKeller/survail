@@ -1,4 +1,4 @@
-import type { Validation } from "../decks/contracts";
+import type { CardFinish, CardZone, Validation } from "../decks/contracts";
 
 interface AgentCard {
   printing_id: string;
@@ -9,6 +9,15 @@ interface AgentCard {
   image_uri: string | null;
   set: string;
   finishes: string[];
+}
+
+interface AgentProposedChange {
+  printing_id: string;
+  quantity_delta: number;
+  zone: CardZone;
+  finish: CardFinish;
+  tags?: string[] | null;
+  card: AgentCard;
 }
 
 export interface DeckConversation {
@@ -40,6 +49,16 @@ export type AgentUiEvent =
       type: "card_results";
       run_id: string;
       payload: { query: string; cards: AgentCard[] };
+    }
+  | {
+      type: "operation_proposal";
+      run_id: string;
+      payload: {
+        proposal_id: string;
+        expected_revision: number;
+        reason: string;
+        changes: AgentProposedChange[];
+      };
     }
   | {
       type: "guidance_proposal";

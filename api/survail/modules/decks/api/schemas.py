@@ -20,6 +20,7 @@ class CardSetRead(StrictModel):
     set_code: str
     collector_number: str
     core: bool
+    note: str
     tags: list[str]
     scryfall: ScryfallCardSnapshot
 
@@ -121,6 +122,39 @@ class GeneratedDeckDescriptionRead(StrictModel):
     revision: int
     description: GeneratedDeckDescriptionContentRead
     cached: bool
+
+
+class AnalyticsBucketRead(StrictModel):
+    key: str
+    label: str
+    quantity: int = Field(ge=0)
+    percentage: float = Field(ge=0, le=100)
+
+
+class MissingRoleEvaluationCardRead(StrictModel):
+    oracle_id: str
+    card_name: str
+
+
+class RoleDistributionRead(StrictModel):
+    available: bool
+    complete: bool
+    evaluated_cards: int = Field(ge=0)
+    total_cards: int = Field(ge=0)
+    unevaluated_cards: int = Field(ge=0)
+    message: str | None = None
+    buckets: list[AnalyticsBucketRead]
+    missing_cards: list[MissingRoleEvaluationCardRead]
+
+
+class DeckAnalyticsRead(StrictModel):
+    total_cards: int = Field(ge=0)
+    unique_cards: int = Field(ge=0)
+    nonland_cards: int = Field(ge=0)
+    mana_curve: list[AnalyticsBucketRead]
+    color_distribution: list[AnalyticsBucketRead]
+    type_distribution: list[AnalyticsBucketRead]
+    role_distribution: RoleDistributionRead
 
 
 class CloneDeckRequest(StrictModel):

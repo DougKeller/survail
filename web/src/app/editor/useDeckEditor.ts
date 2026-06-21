@@ -1,8 +1,17 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import type { NavigateFunction } from "react-router-dom";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
+import { useSearchParams, type NavigateFunction } from "react-router-dom";
 
 import { api } from "../api";
 import {
+  deckDisplayPreferencesFromSearchParams,
+  editorViewFromSearchParams,
   messageFor,
   PriceProviderContext,
   storedDeckDisplayPreferences,
@@ -11,18 +20,24 @@ import {
 
 import type { ScryfallCard } from "../../modules/cards/contracts";
 import type {
+  CardSet,
   Deck,
   DeckOperation,
   Validation,
 } from "../../modules/decks/contracts";
 import type { ImportPreferences } from "../../modules/imports/contracts";
 import type { DeckDisplayPreferences, EditorView } from "../deck/constants";
+import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
 import { useDeckActions } from "./useDeckActions";
 import { useDeckScoring } from "./useDeckScoring";
 
 export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const priceProvider = useContext(PriceProviderContext);
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const initialDisplayPreferences = useRef<DeckDisplayPreferences>(
+    storedDeckDisplayPreferences(),
+  );
   const [deck, setDeck] = useState<Deck | null>(null);
   const [validation, setValidation] = useState<Validation | null>(null);
   const [operations, setOperations] = useState<DeckOperation[]>([]);
@@ -33,9 +48,9 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
-  const [displayPreferences, setDisplayPreferences] =
-    useState<DeckDisplayPreferences>(storedDeckDisplayPreferences);
-  const [editorView, setEditorView] = useState<EditorView>("cards");
+  const [analytics, setAnalytics] = useState<DeckAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [printingPreferences] = useState<ImportPreferences>(
     storedImportPreferences,
   );
@@ -46,6 +61,12 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const [bulkEditErrors, setBulkEditErrors] = useState<string[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [activeCardNote, setActiveCardNote] = useState<CardSet | null>(null);
+  const displayPreferences = deckDisplayPreferencesFromSearchParams(
+    searchParams,
+    initialDisplayPreferences.current,
+  );
+  const editorView = editorViewFromSearchParams(searchParams);
 
   const loadDeck = useCallback(async (): Promise<void> => {
     const [loadedDeck, loadedValidation, loadedOperations] = await Promise.all([
@@ -74,10 +95,48 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     );
   }, [displayPreferences]);
 
+  const loadAnalytics = useCallback(async (): Promise<void> => {
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+    try {
+      setAnalytics(await api.deckAnalytics(id));
+    } catch (reason) {
+      setAnalyticsError(
+        reason instanceof Error ? reason.message : "Could not load deck analytics",
+      );
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [id]);
+
+  const setDisplayPreferences = useCallback(
+    (update: SetStateAction<DeckDisplayPreferences>) => {
+      const next =
+        typeof update === "function" ? update(displayPreferences) : update;
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.set("view", next.view);
+      nextSearchParams.set("group", next.groupBy);
+      nextSearchParams.set("sort", next.sortBy);
+      setSearchParams(nextSearchParams, { replace: true });
+    },
+    [displayPreferences, searchParams, setSearchParams],
+  );
+
+  const setEditorView = useCallback(
+    (view: EditorView) => {
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.set("tab", view);
+      setSearchParams(nextSearchParams, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   const {
     evaluationProgress,
+    evaluateCard,
     evaluateCurrentDeck,
     loadCachedScores,
+    refreshingOracleIds,
     scoring,
     scores,
   } = useDeckScoring({ deck, setAnnouncement, setError });
@@ -91,8 +150,10 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     handleSaveDetails,
     handleSearch,
     markAsCommander,
+    moveCardToZone,
     openBulkEdit,
     toggleCoreCard,
+    updateCardNote,
   } = useDeckActions({
     bulkDecklist,
     busy,
@@ -133,8 +194,16 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     };
   }, [editorView, handleSearch, query]);
 
+  useEffect(() => {
+    if (editorView !== "charts") return;
+    void loadAnalytics();
+  }, [deck?.revision, editorView, loadAnalytics, scores.size]);
+
   return {
     addSearchResult,
+    analytics,
+    analyticsError,
+    analyticsLoading,
     announcement,
     applyBulkEdit,
     busy,
@@ -147,26 +216,32 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     editorView,
     error,
     evaluationProgress,
+    evaluateCard,
     evaluateCurrentDeck,
     handleDelete,
     handleGenerateDescription,
     handleRevert,
     handleSaveDetails,
     handleSearch,
+    loadAnalytics,
     loadCachedScores,
     loadDeck,
     goal,
     markAsCommander,
+    moveCardToZone,
     openBulkEdit,
     operations,
     priceProvider,
     query,
+    refreshingOracleIds,
     results,
+    activeCardNote,
     scoring,
     scores,
     searchInputRef,
     setAnnouncement,
     setBulkDecklist,
+    setActiveCardNote,
     setDeck,
     setDescription,
     setDisplayPreferences,
@@ -186,6 +261,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     showSearchResults,
     title,
     toggleCoreCard,
+    updateCardNote,
     validation,
   };
 }

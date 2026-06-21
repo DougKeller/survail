@@ -132,7 +132,7 @@ def test_cached_current_scores_allow_blank_goal_and_return_existing_scores(
     monkeypatch.setattr(
         evaluation_service,
         "read_cached_oracle_ids",
-        lambda db, subject, oracle_ids: [expected],  # type: ignore[arg-type]
+        lambda db, subject, oracle_ids, contexts: [expected],  # type: ignore[arg-type]
     )
 
     result = evaluations.cached_current_deck_evaluations(

@@ -11,6 +11,7 @@ from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation import fastapi as otel_fastapi
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
@@ -23,6 +24,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Status, StatusCode
 from sqlalchemy import Engine
+from starlette.routing import Match, Route
 
 from survail.core.config import Settings
 
@@ -73,6 +75,37 @@ def _agent_metrics() -> AgentMetrics:
 AGENT_METRICS = _agent_metrics()
 
 
+def _safe_fastapi_default_span_details(scope: dict[str, object]) -> tuple[str, dict[str, str]]:
+    app = scope.get("app")
+    route: str | None = None
+    if app is not None:
+        for starlette_route in getattr(app, "routes", ()):
+            match, _ = (
+                Route.matches(starlette_route, scope)
+                if isinstance(starlette_route, Route)
+                else starlette_route.matches(scope)
+            )
+            if match == Match.FULL:
+                route = getattr(starlette_route, "path", None) or scope.get("path")  # type: ignore[assignment]
+                break
+            if match == Match.PARTIAL:
+                route = getattr(starlette_route, "path", None) or scope.get("path")  # type: ignore[assignment]
+
+    method = otel_fastapi.sanitize_method(str(scope.get("method", "")).strip())
+    attributes: dict[str, str] = {}
+    if method == "_OTHER":
+        method = "HTTP"
+    if route:
+        attributes[otel_fastapi.HTTP_ROUTE] = route
+    if method and route:
+        span_name = f"{method} {route}"
+    elif route:
+        span_name = route
+    else:
+        span_name = method
+    return span_name, attributes
+
+
 def configure_telemetry(app: FastAPI, engine: Engine, settings: Settings) -> None:
     global _configured
     if not settings.otel_enabled or _configured:
@@ -103,6 +136,9 @@ def configure_telemetry(app: FastAPI, engine: Engine, settings: Settings) -> Non
     )
     metrics.set_meter_provider(MeterProvider(resource=resource, metric_readers=[metric_reader]))
 
+    # FastAPI instrumentation currently assumes every partial route match exposes
+    # `.path`. Newer router internals can surface wrapper objects without it.
+    otel_fastapi._get_default_span_details = _safe_fastapi_default_span_details
     FastAPIInstrumentor.instrument_app(app, tracer_provider=trace_provider)
     SQLAlchemyInstrumentor().instrument(engine=engine, tracer_provider=trace_provider)
     RedisInstrumentor().instrument(tracer_provider=trace_provider)

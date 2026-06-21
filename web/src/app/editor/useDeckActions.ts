@@ -5,6 +5,7 @@ import { ApiError } from "../../core/http/client";
 import type { ScryfallCard } from "../../modules/cards/contracts";
 import type {
   CardSet,
+  CardZone,
   Deck,
   DeckOperation,
   DeckOperationChangeInput,
@@ -143,6 +144,7 @@ export function useDeckActions({
           quantity_delta: quantityDelta,
           zone: cardset.zone,
           finish: cardset.finish,
+          note: cardset.note,
           tags: cardset.tags,
         },
       ],
@@ -158,16 +160,43 @@ export function useDeckActions({
           quantity_delta: -1,
           zone: cardset.zone,
           finish: cardset.finish,
+          note: cardset.note,
         },
         {
           printing_id: cardset.printing_id,
           quantity_delta: 1,
           zone: "commander",
           finish: cardset.finish,
+          note: cardset.note,
           tags: cardset.tags,
         },
       ],
       `Set ${cardset.card_name} as commander`,
+    );
+  };
+
+  const moveCardToZone = (cardset: CardSet, zone: CardZone): void => {
+    if (cardset.zone === zone) return;
+    applyChanges(
+      [
+        {
+          printing_id: cardset.printing_id,
+          quantity_delta: -1,
+          zone: cardset.zone,
+          finish: cardset.finish,
+          note: cardset.note,
+          tags: cardset.tags,
+        },
+        {
+          printing_id: cardset.printing_id,
+          quantity_delta: 1,
+          zone,
+          finish: cardset.finish,
+          note: cardset.note,
+          tags: cardset.tags,
+        },
+      ],
+      `Move ${cardset.card_name} to ${zone}`,
     );
   };
 
@@ -196,17 +225,43 @@ export function useDeckActions({
     })();
   };
 
-  const addSearchResult = (card: ScryfallCard): void => {
+  const updateCardNote = (cardset: CardSet, note: string): void => {
+    if (deck === null || busy) return;
+    setBusy(true);
+    setError(null);
+    void (async () => {
+      try {
+        const trimmedNote = note.trim();
+        const nextDeck = await api.setCardNote(deck.id, cardset.id, trimmedNote);
+        setDeck(nextDeck);
+        setAnnouncement(
+          trimmedNote === ""
+            ? `Cleared note for ${cardset.card_name}`
+            : `Saved note for ${cardset.card_name}`,
+        );
+      } catch (reason) {
+        setError(
+          reason instanceof Error
+            ? messageFor(reason)
+            : "Could not update card note",
+        );
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
+  const addSearchResult = (card: ScryfallCard, zone: CardZone): void => {
     applyChanges(
       [
         {
           printing_id: card.id,
           quantity_delta: 1,
-          zone: "mainboard",
+          zone,
           finish: preferredFinish(card, "nonfoil"),
         },
       ],
-      `Add ${card.name}`,
+      `Add ${card.name} to ${zone}`,
     );
   };
 
@@ -265,8 +320,10 @@ export function useDeckActions({
     applyBulkEdit,
     changeQuantity,
     markAsCommander,
+    moveCardToZone,
     openBulkEdit,
     toggleCoreCard,
+    updateCardNote,
     ...metadataActions,
   };
 }

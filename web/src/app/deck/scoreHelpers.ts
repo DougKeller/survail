@@ -1,18 +1,35 @@
-import type React from "react";
+import type { CardSet, CardZone, Deck } from "../../modules/decks/contracts";
+import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
+import { PREFERRED_CARD_ROLE_ORDER } from "./constants";
 
-import type { CardSet, Deck } from "../../modules/decks/contracts";
-import type {
-  CardRole,
-  CardRoleEvaluation,
-} from "../../modules/decks/evaluations/contracts";
-
-export type ScoreSortKey = "card" | "overall" | "starred" | CardRole;
+export type ScoreSortKey = string;
 export type ScoreSortDirection = "asc" | "desc";
 export interface ScoreRow {
   oracleId: string;
   name: string;
   card: CardSet | undefined;
+  zones: CardZone[];
   evaluation: CardRoleEvaluation | null;
+}
+
+const SCORE_ROW_ZONE_PRIORITY: Record<CardSet["zone"], number> = {
+  commander: 0,
+  mainboard: 1,
+  sideboard: 2,
+  companion: 3,
+  considering: 4,
+};
+
+function preferredScoreRowCard(
+  current: CardSet | undefined,
+  candidate: CardSet,
+): CardSet {
+  if (current === undefined) return candidate;
+  if (current.core !== candidate.core) return candidate.core ? candidate : current;
+  const zoneDelta =
+    SCORE_ROW_ZONE_PRIORITY[current.zone] - SCORE_ROW_ZONE_PRIORITY[candidate.zone];
+  if (zoneDelta !== 0) return zoneDelta <= 0 ? current : candidate;
+  return current.card_name.localeCompare(candidate.card_name) <= 0 ? current : candidate;
 }
 
 export function scoreContextDescription(deck: Deck): string {
@@ -39,9 +56,18 @@ export function createDeckScoreContext(deck: Deck) {
   const cardNames = new Map(
     deck.cardsets.map((card) => [card.oracle_id, card.card_name]),
   );
-  const cardsByOracleId = new Map(
-    deck.cardsets.map((card) => [card.oracle_id, card]),
-  );
+  const cardsByOracleId = new Map<string, CardSet>();
+  const zonesByOracleId = new Map<string, Set<CardZone>>();
+  for (const card of deck.cardsets) {
+    cardsByOracleId.set(
+      card.oracle_id,
+      preferredScoreRowCard(cardsByOracleId.get(card.oracle_id), card),
+    );
+    zonesByOracleId.set(card.oracle_id, new Set([
+      ...(zonesByOracleId.get(card.oracle_id) ?? new Set<CardZone>()),
+      card.zone,
+    ]));
+  }
   return {
     uniqueCards: uniqueOracleIds.length,
     cardNames,
@@ -51,20 +77,40 @@ export function createDeckScoreContext(deck: Deck) {
         oracleId,
         name: cardNames.get(oracleId) ?? oracleId,
         card: cardsByOracleId.get(oracleId),
+        zones: [...(zonesByOracleId.get(oracleId) ?? new Set<CardZone>())].sort(
+          (left, right) =>
+            SCORE_ROW_ZONE_PRIORITY[left] - SCORE_ROW_ZONE_PRIORITY[right],
+        ),
         evaluation: scores.get(oracleId) ?? null,
       })),
     roleScore: (
       evaluation: CardRoleEvaluation,
-      role: CardRole,
+      role: string,
     ): number | null =>
       evaluation.roles.find((item) => item.role === role)?.score ?? null,
   };
 }
 
+export function displayedRoles(
+  scores: ReadonlyMap<string, CardRoleEvaluation>,
+): string[] {
+  const seen = new Set<string>();
+  for (const evaluation of scores.values()) {
+    for (const role of evaluation.roles) {
+      seen.add(role.role);
+    }
+  }
+  const preferred = PREFERRED_CARD_ROLE_ORDER.filter((role) => seen.has(role));
+  const extras = [...seen]
+    .filter((role) => !PREFERRED_CARD_ROLE_ORDER.includes(role))
+    .sort((left, right) => left.localeCompare(right));
+  return [...preferred, ...extras];
+}
+
 export function rankScores(
   rows: readonly ScoreRow[],
   sort: { key: ScoreSortKey; direction: ScoreSortDirection },
-  roleScore: (evaluation: CardRoleEvaluation, role: CardRole) => number | null,
+  roleScore: (evaluation: CardRoleEvaluation, role: string) => number | null,
 ) {
   const compareOptionalNumbers = (
     left: number | null,
@@ -81,55 +127,58 @@ export function rankScores(
       : right.localeCompare(left);
 
   return [...rows].sort((left, right) => {
+    if (sort.key === "card") {
+      return compareStrings(left.name, right.name);
+    }
+    if (sort.key === "starred") {
+      return (
+        compareOptionalNumbers(
+          left.card?.core === true ? 1 : 0,
+          right.card?.core === true ? 1 : 0,
+        ) || left.name.localeCompare(right.name)
+      );
+    }
     if (left.evaluation === null && right.evaluation === null) {
       return left.name.localeCompare(right.name);
     }
     if (left.evaluation === null) return 1;
     if (right.evaluation === null) return -1;
     const primary =
-      sort.key === "card"
-        ? compareStrings(left.name, right.name)
-        : sort.key === "starred"
-          ? compareOptionalNumbers(
-              left.card?.core === true ? 1 : 0,
-              right.card?.core === true ? 1 : 0,
-            )
-        : sort.key === "overall"
-          ? compareOptionalNumbers(
-              left.evaluation.overall_score,
-              right.evaluation.overall_score,
-            )
-          : compareOptionalNumbers(
-              roleScore(left.evaluation, sort.key),
-              roleScore(right.evaluation, sort.key),
-            );
+      sort.key === "overall"
+        ? compareOptionalNumbers(
+            left.evaluation.overall_score,
+            right.evaluation.overall_score,
+          )
+        : compareOptionalNumbers(
+            roleScore(left.evaluation, sort.key),
+            roleScore(right.evaluation, sort.key),
+          );
     return primary || left.name.localeCompare(right.name);
   });
 }
 
 export function updateHoverPreview(
-  event: React.MouseEvent<HTMLTableRowElement>,
+  row: HTMLTableRowElement,
   score: CardRoleEvaluation,
   card: CardSet | undefined,
   name: string,
 ) {
-  const width = Math.min(
-    300 + score.roles.length * 280,
-    window.innerWidth - 32,
-  );
-  const height = Math.min(620, window.innerHeight - 32);
-  const margin = 20;
-  const left = Math.min(event.clientX + 18, window.innerWidth - width - margin);
-  const top = Math.min(
-    event.clientY + 18,
-    window.innerHeight - height - margin,
-  );
+  const rect = row.getBoundingClientRect();
+  const margin = 24;
+  const width = Math.min(300 + score.roles.length * 280, window.innerWidth - margin * 2);
+  const height = Math.min(620, window.innerHeight - margin * 2);
+  const belowTop = rect.bottom;
+  const aboveTop = rect.top - height;
+  const top =
+    belowTop + height <= window.innerHeight - margin
+      ? belowTop
+      : Math.max(margin, aboveTop);
   return {
     score,
     card,
     name,
-    left: Math.max(margin, left),
-    top: Math.max(margin, top),
+    left: margin,
+    top,
     width,
   };
 }

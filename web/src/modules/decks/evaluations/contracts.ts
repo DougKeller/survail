@@ -1,24 +1,17 @@
-export type CardRole =
-  | "land"
-  | "mana_ramp"
-  | "card_advantage"
-  | "removal"
-  | "board_wipe"
-  | "enabler"
-  | "enhancer"
-  | "payoff";
+export type CardRole = string;
 
-interface QualitativeAnswer {
-  criterion_id: string;
-  rating: "very_low" | "low" | "neutral" | "high" | "very_high";
-  score: number;
-}
+export type QualitativeRating =
+  | "very_low"
+  | "low"
+  | "neutral"
+  | "high"
+  | "very_high";
 
 interface CardRoleScore {
   role: CardRole;
   score: number;
   description: string;
-  answers: QualitativeAnswer[];
+  answers: Record<string, QualitativeRating>;
 }
 
 export interface CardRoleEvaluation {

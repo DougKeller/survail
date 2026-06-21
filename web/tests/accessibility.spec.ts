@@ -6,6 +6,7 @@ import {
   type Route,
   type TestInfo,
 } from "@playwright/test";
+import type { CardSet, Deck } from "../src/modules/decks/contracts";
 
 const card = {
   id: "printing-1",
@@ -54,7 +55,7 @@ const secondCard = {
   cmc: 1,
 };
 
-const cardset = {
+const cardset: CardSet = {
   id: "cardset-1",
   quantity: 2,
   zone: "mainboard",
@@ -65,11 +66,12 @@ const cardset = {
   set_code: card.set,
   collector_number: card.collector_number,
   core: false,
+  note: "",
   tags: [],
   scryfall: card,
 };
 
-const commanderCardset = {
+const commanderCardset: CardSet = {
   ...cardset,
   quantity: 1,
   id: "cardset-commander",
@@ -81,7 +83,7 @@ const commanderCardset = {
   zone: "commander",
 };
 
-const secondCardset = {
+const secondCardset: CardSet = {
   ...commanderCardset,
   id: "cardset-2",
   zone: "mainboard",
@@ -100,7 +102,7 @@ const deck = {
   revision: 0,
   created_at: "2026-06-10T00:00:00Z",
   updated_at: "2026-06-10T00:00:00Z",
-};
+} satisfies Deck & { created_at: string };
 
 const operation = {
   id: "operation-1",
@@ -193,7 +195,24 @@ async function fulfillAgentStream(
   });
 }
 
+function cloneDeckState<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
 async function mockApi(page: Page): Promise<void> {
+  let currentDeck: Deck = cloneDeckState(deck);
+
+  function currentValidation() {
+    return {
+      valid: true,
+      card_count: currentDeck.cardsets.reduce(
+        (total, cardset) => total + cardset.quantity,
+        0,
+      ),
+      errors: [],
+    };
+  }
+
   await page.route("http://localhost:8000/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/auth/me") {
@@ -204,9 +223,9 @@ async function mockApi(page: Page): Promise<void> {
     } else if (url.pathname === "/decks") {
       await fulfillJson(route, [deck]);
     } else if (url.pathname === "/decks/deck-1") {
-      await fulfillJson(route, deck);
+      await fulfillJson(route, currentDeck);
     } else if (url.pathname === "/decks/deck-1/validation") {
-      await fulfillJson(route, { valid: true, card_count: 100, errors: [] });
+      await fulfillJson(route, currentValidation());
     } else if (
       url.pathname === "/decks/deck-1/card-evaluations/current/cached"
     ) {
@@ -256,16 +275,114 @@ async function mockApi(page: Page): Promise<void> {
           .filter((score): score is typeof cardScore => score !== null),
       );
     } else if (url.pathname === "/decks/deck-1/cardsets/cardset-1/core") {
-      await fulfillJson(route, {
-        ...deck,
-        cardsets: [
-          { ...cardset, core: true },
-          secondCardset,
-          commanderCardset,
-        ],
-      });
+      const payload = route.request().postDataJSON() as { core: boolean };
+      currentDeck = {
+        ...currentDeck,
+        cardsets: currentDeck.cardsets.map((entry) =>
+          entry.id === "cardset-1" ? { ...entry, core: payload.core } : entry,
+        ),
+      };
+      await fulfillJson(route, currentDeck);
+    } else if (url.pathname === "/decks/deck-1/cardsets/cardset-1/note") {
+      const payload = route.request().postDataJSON() as { note: string };
+      currentDeck = {
+        ...currentDeck,
+        cardsets: currentDeck.cardsets.map((entry) =>
+          entry.id === "cardset-1" ? { ...entry, note: payload.note } : entry,
+        ),
+      };
+      await fulfillJson(route, currentDeck);
     } else if (url.pathname === "/decks/deck-1/operations") {
-      await fulfillJson(route, []);
+      if (route.request().method() === "POST") {
+        const payload = route.request().postDataJSON() as {
+          reason?: string;
+          changes: {
+            printing_id: string;
+            quantity_delta: number;
+            zone: CardSet["zone"];
+            finish: CardSet["finish"];
+            note?: string;
+            tags?: string[];
+          }[];
+        };
+        let nextCardsets = [...currentDeck.cardsets];
+        const operationChanges = payload.changes.map((change, index) => {
+          const cardsetIndex = nextCardsets.findIndex(
+            (entry) =>
+              entry.printing_id === change.printing_id &&
+              entry.zone === change.zone &&
+              entry.finish === change.finish,
+          );
+          const existing = cardsetIndex >= 0 ? nextCardsets[cardsetIndex] : undefined;
+          const source =
+            existing ??
+            currentDeck.cardsets.find(
+              (entry) => entry.printing_id === change.printing_id,
+            );
+          if (source === undefined) {
+            throw new Error(`Missing cardset fixture for ${change.printing_id}`);
+          }
+          const quantityBefore = existing?.quantity ?? 0;
+          const quantityAfter = quantityBefore + change.quantity_delta;
+
+          if (quantityAfter <= 0) {
+            if (cardsetIndex >= 0) nextCardsets.splice(cardsetIndex, 1);
+          } else if (existing === undefined) {
+            nextCardsets = nextCardsets.concat({
+              ...source,
+              id: `cardset-new-${String(index)}`,
+              quantity: quantityAfter,
+              zone: change.zone,
+              finish: change.finish,
+              note: change.note ?? source.note,
+              tags: change.tags ?? source.tags,
+            });
+          } else {
+            nextCardsets[cardsetIndex] = {
+              ...existing,
+              quantity: quantityAfter,
+              note: change.note ?? existing.note,
+              tags: change.tags ?? existing.tags,
+            };
+          }
+
+          return {
+            printing_id: source.printing_id,
+            oracle_id: source.oracle_id,
+            card_name: source.card_name,
+            set_code: source.set_code,
+            collector_number: source.collector_number,
+            quantity_delta: change.quantity_delta,
+            quantity_before: quantityBefore,
+            quantity_after: Math.max(quantityAfter, 0),
+            zone: change.zone,
+            finish: change.finish,
+            tags_before: existing?.tags ?? [],
+            tags_after:
+              quantityAfter <= 0
+                ? []
+                : (change.tags ?? existing?.tags ?? source.tags),
+          };
+        });
+        currentDeck = {
+          ...currentDeck,
+          revision: currentDeck.revision + 1,
+          cardsets: nextCardsets,
+        };
+        await fulfillJson(route, {
+          operation: {
+            ...operation,
+            reason: payload.reason ?? null,
+            revision_before: currentDeck.revision - 1,
+            revision_after: currentDeck.revision,
+            changes: operationChanges,
+          },
+          deck: currentDeck,
+          validation: currentValidation(),
+        });
+      } else {
+        await fulfillJson(route, []);
+      }
     } else if (url.pathname === "/decks/deck-1/generate-description") {
       await fulfillJson(route, {
         deck_id: deck.id,
@@ -397,7 +514,17 @@ test("editor opens with primary views, contextual card controls, and integrated 
     page.getByRole("navigation", { name: "Deck views" }),
   ).toContainText("Info");
   await expect(toolbar.getByRole("button", { name: "Stacks" })).toBeVisible();
-  await expect(toolbar.getByText("Organize")).toBeVisible();
+  await expect(toolbar.getByLabel("Group by")).toBeVisible();
+  await expect(toolbar.getByLabel("Card sort")).toBeVisible();
+  await expect(
+    toolbar.getByRole("radio", { name: "Mainboard" }),
+  ).toBeChecked();
+  await expect(
+    toolbar.getByRole("radio", { name: "Commander" }),
+  ).toBeVisible();
+  await expect(
+    toolbar.getByRole("radio", { name: "Considering" }),
+  ).toBeVisible();
   expect(
     await toolbar.evaluate((element) => getComputedStyle(element).position),
   ).toBe("sticky");
@@ -650,17 +777,38 @@ test("cards can be starred as core pieces from hover actions", async ({
   );
 });
 
-test("text view uses responsive columns for card groups", async ({ page }) => {
+test("hover actions only offer format-appropriate move zones", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Grid" }).click();
+
+  const arcaneCard = page
+    .getByRole("button", { name: "View details for Arcane Signet" })
+    .locator("xpath=../..");
+  await arcaneCard.hover();
+
+  const moveSelect = page.getByLabel("Move Arcane Signet to another zone");
+  await expect(moveSelect).toBeVisible();
+  await expect(moveSelect.locator("option")).toHaveText([
+    "Move",
+    "Considering",
+  ]);
+});
+
+test("text view uses masonry columns for card groups", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Text" }).click();
 
   const groups = page.locator(".text-groups");
-  const groupColumns = await groups
+  const groupColumns = await groups.first().evaluate((element) => ({
+    columnWidth: getComputedStyle(element).columnWidth,
+    columnCount: getComputedStyle(element).columnCount,
+  }));
+  const sectionBreakInside = await groups
+    .locator(".text-group-section")
     .first()
-    .evaluate(
-      (element) =>
-        getComputedStyle(element).gridTemplateColumns.split(" ").length,
-    );
+    .evaluate((element) => getComputedStyle(element).breakInside);
   const cardColumns = await groups
     .locator(".card-grid")
     .first()
@@ -668,8 +816,151 @@ test("text view uses responsive columns for card groups", async ({ page }) => {
       (element) =>
         getComputedStyle(element).gridTemplateColumns.split(" ").length,
     );
-  expect(groupColumns).toBeGreaterThan(1);
+  expect(groupColumns.columnWidth).not.toBe("auto");
+  expect(groupColumns.columnCount).toBe("auto");
+  expect(sectionBreakInside).toBe("avoid");
   expect(cardColumns).toBe(1);
+});
+
+test("grid and stacks views use masonry columns for groups", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1");
+
+  for (const view of ["Grid", "Stacks"] as const) {
+    await page.getByRole("button", { name: view }).click();
+    const visualGroups = page.locator(".visual-groups");
+    const groupColumns = await visualGroups.first().evaluate((element) => ({
+      columnWidth: getComputedStyle(element).columnWidth,
+      columnCount: getComputedStyle(element).columnCount,
+    }));
+    const sectionBreakInside = await visualGroups
+      .locator(".visual-group")
+      .first()
+      .evaluate((element) => getComputedStyle(element).breakInside);
+    expect(groupColumns.columnWidth).not.toBe("auto");
+    expect(groupColumns.columnCount).toBe("auto");
+    expect(sectionBreakInside).toBe("avoid");
+  }
+});
+
+test("text view compacts card actions into a caret popover", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Text" }).click();
+
+  await page
+    .getByRole("button", { name: "Open quick actions for Arcane Signet" })
+    .click();
+  const popover = page.getByRole("dialog", {
+    name: "Arcane Signet quick actions",
+  });
+  await expect(popover).toBeVisible();
+  await popover
+    .getByRole("button", { name: "Star Arcane Signet as a core card" })
+    .click();
+  await expect(page.getByText("Starred Arcane Signet as a core card")).toBeVisible();
+  await expect(
+    page.getByLabel("Arcane Signet is starred as a core card"),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Open quick actions for Arcane Signet" })
+    .click();
+  await page.getByRole("button", { name: "Edit note for Arcane Signet" }).click();
+  await expect(page.getByRole("dialog", { name: "Card note" })).toBeVisible();
+  await expect(popover).toHaveCount(0);
+});
+
+test("text view can move a card to another zone from the quick-actions popover", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Text" }).click();
+
+  await page
+    .getByRole("button", { name: "Open quick actions for Arcane Signet" })
+    .click();
+  await page
+    .getByLabel("Move Arcane Signet to another zone")
+    .selectOption("considering");
+
+  await expect(page.getByText("Move Arcane Signet to considering")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Considering 1/ })).toBeVisible();
+  await expect(
+    page
+      .locator(".zone")
+      .filter({ has: page.getByRole("heading", { name: /Mainboard 2/ }) })
+      .getByText("Arcane Signet"),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator(".zone")
+      .filter({ has: page.getByRole("heading", { name: /Considering 1/ }) })
+      .getByText("Arcane Signet"),
+  ).toBeVisible();
+});
+
+test("text view closes the quick-actions popover on outside click and final removal", async ({
+  page,
+}) => {
+  await page.route("http://localhost:8000/decks/deck-1", async (route) => {
+    await fulfillJson(route, {
+      ...deck,
+      cardsets: [{ ...cardset, quantity: 1 }, commanderCardset],
+    });
+  });
+  await page.route("http://localhost:8000/decks/deck-1/validation", async (route) => {
+    await fulfillJson(route, { valid: true, card_count: 2, errors: [] });
+  });
+  await page.route("http://localhost:8000/decks/deck-1/operations", async (route) => {
+    if (route.request().method() !== "POST") {
+      await fulfillJson(route, []);
+      return;
+    }
+    await fulfillJson(route, {
+      operation: {
+        ...operation,
+        changes: [
+          {
+            ...operation.changes[0],
+            quantity_delta: -1,
+            quantity_before: 1,
+            quantity_after: 0,
+          },
+        ],
+      },
+      deck: {
+        ...deck,
+        revision: 1,
+        cardsets: [commanderCardset],
+      },
+      validation: { valid: true, card_count: 1, errors: [] },
+    });
+  });
+
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Text" }).click();
+
+  const toggle = page.getByRole("button", {
+    name: "Open quick actions for Arcane Signet",
+  });
+  await toggle.click();
+  const popover = page.getByRole("dialog", {
+    name: "Arcane Signet quick actions",
+  });
+  await expect(popover).toBeVisible();
+  await page.getByRole("button", { name: "Cards", exact: true }).click({
+    position: { x: 4, y: 4 },
+  });
+  await expect(popover).toHaveCount(0);
+
+  await toggle.click();
+  await page.getByRole("button", { name: "Remove one Arcane Signet" }).click();
+  await expect(page.getByText("Remove Arcane Signet")).toBeVisible();
+  await expect(page.getByText("Arcane Signet")).toHaveCount(0);
+  await expect(popover).toHaveCount(0);
 });
 
 test("scores are presented in a dedicated sortable view", async ({ page }) => {
@@ -683,10 +974,64 @@ test("scores are presented in a dedicated sortable view", async ({ page }) => {
   await expect(
     scoresView.getByRole("button", { name: /Overall/ }),
   ).toBeVisible();
+  await expect(
+    scoresView.getByRole("button", { name: "Reload Sol Ring score" }),
+  ).toBeVisible();
   await expect(scoresView.locator(".score-table-row").nth(1)).toContainText(
     "Arcane Signet",
   );
   await expect(scoresView.locator(".score-table-row").nth(1)).toContainText("-");
+});
+
+test("a single card score can be reloaded from the scores table", async ({
+  page,
+}) => {
+  let reloadRequests = 0;
+  await page.route(
+    "http://localhost:8000/decks/deck-1/card-evaluations/oracle/oracle-1",
+    async (route) => {
+      reloadRequests += 1;
+      await fulfillJson(route, {
+        ...cardScore,
+        overall_score: 77,
+        overall_comment: "A refreshed card-specific evaluation.",
+        roles: [
+          {
+            role: "mana_ramp",
+            score: 77,
+            description: "Updated after a targeted refresh.",
+            answers: [{ criterion_id: "speed", rating: "high", score: 75 }],
+          },
+        ],
+      });
+    },
+  );
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Scores" }).click();
+
+  const arcaneRow = page
+    .locator(".score-table-row")
+    .filter({ hasText: "Arcane Signet" });
+  await expect(arcaneRow).toContainText("-");
+  await arcaneRow.getByRole("button", { name: "Reload Arcane Signet score" }).click();
+
+  await expect.poll(() => reloadRequests).toBe(1);
+  await expect(arcaneRow).toContainText("77");
+});
+
+test("scores can be filtered by a regex-style subsequence query", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Scores" }).click();
+
+  await page.getByLabel("Filter cards").fill("sgt");
+
+  await expect(page.locator(".score-table-row")).toHaveCount(1);
+  await expect(page.locator(".score-table-row").first()).toContainText(
+    "Arcane Signet",
+  );
+  await expect(page.locator(".scores-view")).toContainText("Showing 1 of 2 cards");
 });
 
 test("card evaluation clearly requires a Goal or North Star", async ({
@@ -787,14 +1132,17 @@ test("card scores only load after manual evaluation and cards sort by role score
     "Sol Ring",
     "Arcane Signet",
   ]);
-  await expect(page.locator(".score-row-preview-comment")).toHaveCount(0);
-  await page.locator(".score-table-row").first().hover();
+  await expect(page.locator(".score-row-details")).toHaveCount(0);
+  await page
+    .locator(".score-table-row")
+    .first()
+    .getByRole("button", { name: "Expand Sol Ring score details" })
+    .click();
   await expect(page.locator(".score-row-preview-comment")).toContainText(
     "An efficient source of acceleration for this deck.",
   );
   await page.getByRole("button", { name: /Mana Ramp/ }).click();
   await page.getByRole("button", { name: "Cards", exact: true }).click();
-  await page.getByText("Organize").click();
   await page.getByLabel("Card sort").selectOption("score");
   await page.getByLabel("Group by").selectOption("type");
 
@@ -806,6 +1154,22 @@ test("card scores only load after manual evaluation and cards sort by role score
   await expect(rows.nth(0)).toContainText("Sol Ring");
   await expect(rows.nth(1)).toContainText("Arcane Signet");
   await expect(page.getByLabel("Card sort")).toHaveValue("score");
+});
+
+test("scores can sort by starred cards", async ({ page }) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Scores" }).click();
+
+  await page
+    .locator(".score-table-row")
+    .nth(1)
+    .getByRole("button", { name: "Star Arcane Signet as a core card" })
+    .click();
+  await page.getByRole("button", { name: "Starred" }).click();
+
+  await expect(page.locator(".score-table-row").first()).toContainText(
+    "Arcane Signet",
+  );
 });
 
 test("completed card evaluations remain visible when a later evaluation fails", async ({
@@ -1335,6 +1699,7 @@ test("bulk decklist editor applies one atomic diff", async ({ page }) => {
           collector_number: commanderCardset.collector_number,
           finish: commanderCardset.finish,
           zone: "commander",
+          note: "",
           tags: [],
           source_lines: [2],
           selected_price_usd: "1.00",
@@ -1350,6 +1715,7 @@ test("bulk decklist editor applies one atomic diff", async ({ page }) => {
           collector_number: cardset.collector_number,
           finish: cardset.finish,
           zone: "mainboard",
+          note: "",
           tags: [],
           source_lines: [5],
           selected_price_usd: "1.00",
@@ -1365,6 +1731,7 @@ test("bulk decklist editor applies one atomic diff", async ({ page }) => {
           collector_number: secondCardset.collector_number,
           finish: secondCardset.finish,
           zone: "mainboard",
+          note: "",
           tags: [],
           source_lines: [6],
           selected_price_usd: "1.00",

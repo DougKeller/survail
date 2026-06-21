@@ -52,6 +52,7 @@ def commander(
         card_name=card.name,
         set_code=card.set,
         collector_number=card.collector_number,
+        note=None,
         tags=["Commander"],
         scryfall=card.model_dump(mode="json"),
     )
@@ -95,8 +96,15 @@ def test_incompatible_existing_commander_moves_to_mainboard() -> None:
     deck = deck_with(existing)
     deltas = changes_for(incoming)
     tags: dict[CardSetIdentity, list[str]] = {}
+    notes: dict[CardSetIdentity, str] = {}
 
-    _replace_incompatible_commanders(deck, deltas, tags, FakeCatalog({incoming.id: incoming}))
+    _replace_incompatible_commanders(
+        deck,
+        deltas,
+        tags,
+        notes,
+        FakeCatalog({incoming.id: incoming}),
+    )
 
     assert deltas[(existing.id, CardFinish.NONFOIL, CardZone.COMMANDER)] == -1
     assert deltas[(existing.id, CardFinish.NONFOIL, CardZone.MAINBOARD)] == 1
@@ -109,7 +117,7 @@ def test_compatible_partner_commander_remains_in_command_zone() -> None:
     deck = deck_with(existing)
     deltas = changes_for(incoming)
 
-    _replace_incompatible_commanders(deck, deltas, {}, FakeCatalog({incoming.id: incoming}))
+    _replace_incompatible_commanders(deck, deltas, {}, {}, FakeCatalog({incoming.id: incoming}))
 
     assert (existing.id, CardFinish.NONFOIL, CardZone.COMMANDER) not in deltas
     assert (existing.id, CardFinish.NONFOIL, CardZone.MAINBOARD) not in deltas
@@ -121,7 +129,7 @@ def test_brawl_always_replaces_existing_commander() -> None:
     deck = deck_with(existing, DeckFormat.BRAWL)
     deltas = changes_for(incoming)
 
-    _replace_incompatible_commanders(deck, deltas, {}, FakeCatalog({incoming.id: incoming}))
+    _replace_incompatible_commanders(deck, deltas, {}, {}, FakeCatalog({incoming.id: incoming}))
 
     assert deltas[(existing.id, CardFinish.NONFOIL, CardZone.COMMANDER)] == -1
     assert deltas[(existing.id, CardFinish.NONFOIL, CardZone.MAINBOARD)] == 1
@@ -133,7 +141,7 @@ def test_replacing_foil_commander_adds_missing_deltas_without_key_error() -> Non
     deck = deck_with(existing, finish=CardFinish.FOIL)
     deltas = dict(changes_for(incoming))
 
-    _replace_incompatible_commanders(deck, deltas, {}, FakeCatalog({incoming.id: incoming}))
+    _replace_incompatible_commanders(deck, deltas, {}, {}, FakeCatalog({incoming.id: incoming}))
 
     assert deltas[(existing.id, CardFinish.FOIL, CardZone.COMMANDER)] == -1
     assert deltas[(existing.id, CardFinish.FOIL, CardZone.MAINBOARD)] == 1

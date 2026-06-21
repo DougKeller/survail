@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { InlineCardText } from "../../modules/cards/ui/cardPresentation";
 import type { AgentUiEvent } from "../../modules/agent/contracts";
 import type { Deck } from "../../modules/decks/contracts";
@@ -9,6 +10,7 @@ import {
   toolLabel,
   truncatedHint,
   visibleStreamingText,
+  zoneLabel,
 } from "../deckPrimitives";
 
 function ActivityMessage({
@@ -84,9 +86,11 @@ export function AgentEventFeed({
   agentBusy,
   agentEvents,
   busy,
+  decideOperationProposal,
   deck,
   decideGuidanceProposal,
   guidanceDecisions,
+  operationProposalDecisions,
   latestUserMessageId,
   latestUserMessageRef,
   submitAgentMessage,
@@ -94,6 +98,11 @@ export function AgentEventFeed({
   agentBusy: boolean;
   agentEvents: AgentUiEvent[];
   busy: boolean;
+  decideOperationProposal: (
+    proposalId: string,
+    expectedRevision: number,
+    decision: "approve" | "reject",
+  ) => Promise<void>;
   deck: Deck;
   decideGuidanceProposal: (
     proposalId: string,
@@ -101,6 +110,7 @@ export function AgentEventFeed({
     decision: "approve" | "reject",
   ) => Promise<void>;
   guidanceDecisions: Record<string, "approved" | "rejected">;
+  operationProposalDecisions: Record<string, "approved" | "rejected">;
   latestUserMessageId: string | null;
   latestUserMessageRef: React.RefObject<HTMLElement | null>;
   submitAgentMessage: (message: string) => Promise<void>;
@@ -260,6 +270,72 @@ export function AgentEventFeed({
                 name={decision === "approved" ? "check" : "close"}
               />{" "}
               Proposal {decision}
+            </p>
+          )}
+        </article>
+      );
+    }
+    if (event.type === "operation_proposal") {
+      const decision = operationProposalDecisions[event.payload.proposal_id];
+      return (
+        <article className="agent-proposal" key={key}>
+          <span className="eyebrow">Your approval is required</span>
+          <strong>Apply proposed deck changes?</strong>
+          <p>
+            <InlineCardText text={event.payload.reason} />
+          </p>
+          <div className="agent-proposal-cards">
+            {event.payload.changes.map((change, changeIndex) => (
+              <div
+                key={`${event.payload.proposal_id}-${change.printing_id}-${String(changeIndex)}`}
+              >
+                {change.card.image_uri !== null && (
+                  <img alt="" aria-hidden="true" src={change.card.image_uri} />
+                )}
+                <span>
+                  {change.quantity_delta > 0 ? "+" : ""}
+                  {change.quantity_delta}{" "}
+                  <InlineCardText text={`[[${change.card.name}]]`} />
+                  {" · "}
+                  {zoneLabel(change.zone)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {decision === undefined ? (
+            <div className="button-row">
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void decideOperationProposal(
+                    event.payload.proposal_id,
+                    event.payload.expected_revision,
+                    "approve",
+                  )
+                }
+              >
+                Apply
+              </button>
+              <button
+                className="secondary-button"
+                disabled={busy}
+                onClick={() =>
+                  void decideOperationProposal(
+                    event.payload.proposal_id,
+                    event.payload.expected_revision,
+                    "reject",
+                  )
+                }
+              >
+                Discard
+              </button>
+            </div>
+          ) : (
+            <p className="agent-stream-state complete">
+              <MaterialIcon
+                name={decision === "approved" ? "check" : "close"}
+              />{" "}
+              Proposal {decision === "approved" ? "applied" : "discarded"}
             </p>
           )}
         </article>
