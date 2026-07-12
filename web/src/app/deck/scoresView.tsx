@@ -76,7 +76,7 @@ function highlightedName(
   const matched = filter.exec(name);
   if (matched === null || matched[0].length === 0) return name;
   const target = matched[0];
-  const segments: Array<{ text: string; highlighted: boolean }> = [];
+  const segments: { text: string; highlighted: boolean }[] = [];
   let cursor = 0;
 
   for (const character of target) {
@@ -134,13 +134,11 @@ export function DeckScoresView({
 }) {
   const typeMenuRef = useRef<HTMLDetailsElement | null>(null);
   const roleMenuRef = useRef<HTMLDetailsElement | null>(null);
-  const zoneMenuRef = useRef<HTMLDetailsElement | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedOracleId, setExpandedOracleId] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [typeMenuOpen, setTypeMenuOpen] = useState(false);
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-  const [zoneMenuOpen, setZoneMenuOpen] = useState(false);
   const [excludedTypes, setExcludedTypes] = useState<string[]>([]);
   const [excludedRoles, setExcludedRoles] = useState<string[]>([]);
   const [excludedZones, setExcludedZones] = useState<CardZone[]>([]);
@@ -217,10 +215,8 @@ export function DeckScoresView({
       if (!(target instanceof Node)) return;
       if (typeMenuRef.current?.contains(target) === true) return;
       if (roleMenuRef.current?.contains(target) === true) return;
-      if (zoneMenuRef.current?.contains(target) === true) return;
       setTypeMenuOpen(false);
       setRoleMenuOpen(false);
-      setZoneMenuOpen(false);
     }
 
     document.addEventListener("pointerdown", handlePointerDown);
@@ -381,7 +377,6 @@ export function DeckScoresView({
                   setTypeMenuOpen(open);
                   if (open) {
                     setRoleMenuOpen(false);
-                    setZoneMenuOpen(false);
                   }
                 }}
                 open={typeMenuOpen}
@@ -427,60 +422,46 @@ export function DeckScoresView({
                   </div>
                 </div>
               </details>
-              <details
-                className="score-filter-menu"
-                ref={zoneMenuRef}
-                onToggle={(event) => {
-                  const open = event.currentTarget.open;
-                  setZoneMenuOpen(open);
-                  if (open) {
-                    setTypeMenuOpen(false);
-                    setRoleMenuOpen(false);
-                  }
-                }}
-                open={zoneMenuOpen}
-              >
-                <summary>
+              <fieldset className="score-inline-zones">
+                <legend>
                   <span>Zones</span>
                   <b>{selectedZoneCount()}/{zoneFilterOptions.length}</b>
-                </summary>
-                <div className="score-filter-panel">
-                  <div className="score-filter-actions">
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        setExcludedZones([]);
-                      }}
-                      type="button"
-                    >
-                      Select all
-                    </button>
-                    <button
-                      className="text-button"
-                      onClick={() => {
-                        setExcludedZones([...zoneFilterOptions]);
-                      }}
-                      type="button"
-                    >
-                      Select none
-                    </button>
-                  </div>
-                  <div className="score-filter-options">
-                    {zoneFilterOptions.map((zone) => (
-                      <label key={zone}>
-                        <input
-                          checked={!activeExcludedZones.includes(zone)}
-                          onChange={() => {
-                            toggleZone(zone);
-                          }}
-                          type="checkbox"
-                        />
-                        <span>{zoneLabel(zone)}</span>
-                      </label>
-                    ))}
-                  </div>
+                </legend>
+                <div className="score-inline-zone-actions">
+                  <button
+                    className="text-button"
+                    onClick={() => {
+                      setExcludedZones([]);
+                    }}
+                    type="button"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={() => {
+                      setExcludedZones([...zoneFilterOptions]);
+                    }}
+                    type="button"
+                  >
+                    Select none
+                  </button>
                 </div>
-              </details>
+                <div className="score-inline-zone-options">
+                  {zoneFilterOptions.map((zone) => (
+                    <label key={zone}>
+                      <input
+                        checked={!activeExcludedZones.includes(zone)}
+                        onChange={() => {
+                          toggleZone(zone);
+                        }}
+                        type="checkbox"
+                      />
+                      <span>{zoneLabel(zone)}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <details
                 className="score-filter-menu"
                 ref={roleMenuRef}
@@ -489,7 +470,6 @@ export function DeckScoresView({
                   setRoleMenuOpen(open);
                   if (open) {
                     setTypeMenuOpen(false);
-                    setZoneMenuOpen(false);
                   }
                 }}
                 open={roleMenuOpen}

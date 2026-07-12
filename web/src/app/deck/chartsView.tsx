@@ -10,32 +10,15 @@ import {
 } from "recharts";
 
 import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
+import {
+  chartRoleSwatch,
+  COLOR_SWATCHES,
+  TYPE_SWATCHES,
+} from "./groupColors";
 import { MaterialIcon, titleize } from "./text";
-
-const COLOR_SWATCHES: Record<string, string> = {
-  W: "#f4ead2",
-  U: "#7bc5ff",
-  B: "#4e485c",
-  R: "#ff7d5e",
-  G: "#5ec67a",
-  C: "#c7d1dd",
-};
 
 const SERIES_COLORS = {
   manaCurve: "#ff8a5b",
-  roleDistribution: "#5fcf8f",
-};
-
-const TYPE_SWATCHES: Record<string, string> = {
-  Creature: "#4da3ff",
-  Land: "#6fc17b",
-  Instant: "#ffd166",
-  Sorcery: "#ff8a5b",
-  Artifact: "#b8c0cc",
-  Enchantment: "#d78bff",
-  Planeswalker: "#ff6f91",
-  Battle: "#7ee0d4",
-  Other: "#8f95b2",
 };
 type Bucket = DeckAnalytics["mana_curve"][number];
 
@@ -146,6 +129,16 @@ export function DeckChartsView({
   const manaCurveTotal = analytics.mana_curve.reduce((total, bucket) => total + bucket.quantity, 0);
   const colorData = withBarColors(analytics.color_distribution, COLOR_SWATCHES, "#8ca1b3");
   const typeData = withBarColors(analytics.type_distribution, TYPE_SWATCHES, "#3ea4ff");
+  const roleData = withBarColors(
+    analytics.role_distribution.buckets,
+    Object.fromEntries(
+      analytics.role_distribution.buckets.map((bucket) => [
+        bucket.key,
+        chartRoleSwatch(bucket.key, bucket.label),
+      ]),
+    ),
+    "#8f95b2",
+  );
 
   return (
     <section aria-labelledby="charts-title" className="charts-view">
@@ -259,7 +252,7 @@ export function DeckChartsView({
           )}
           <div className="analytics-chart">
             <ResponsiveContainer height={336} width="100%">
-              <BarChart data={analytics.role_distribution.buckets}>
+              <BarChart data={roleData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="label"
@@ -271,13 +264,21 @@ export function DeckChartsView({
                 />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="quantity" fill={SERIES_COLORS.roleDistribution} radius={[2, 2, 0, 0]} />
+                <Bar dataKey="quantity" radius={[2, 2, 0, 0]} shape={<RoundedBar />} />
               </BarChart>
             </ResponsiveContainer>
           </div>
           <div className="analytics-detail-grid analytics-detail-grid-compact">
             <DetailChip label={String(analytics.role_distribution.evaluated_cards)} value="Evaluated cards" />
             <DetailChip label={String(analytics.role_distribution.unevaluated_cards)} value="Unevaluated cards" />
+            {analytics.role_distribution.buckets.map((bucket) => (
+              <DetailChip
+                accent={chartRoleSwatch(bucket.key, bucket.label)}
+                key={bucket.key}
+                label={titleize(bucket.label)}
+                value={`${String(bucket.quantity)} · ${bucket.percentage.toFixed(1)}%`}
+              />
+            ))}
           </div>
           {!analytics.role_distribution.complete &&
             analytics.role_distribution.missing_cards.length > 0 && (

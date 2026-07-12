@@ -112,6 +112,9 @@ export function EditorScreen() {
             onEdit={() => {
               editor.setShowEditDeck(true);
             }}
+            onOpenAnnotations={() => {
+              navigate(`/decks/${id}/annotations`);
+            }}
             onOpenBulkEdit={editor.openBulkEdit}
             onOpenHistory={() => {
               editor.setShowHistory(true);

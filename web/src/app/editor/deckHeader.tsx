@@ -12,6 +12,7 @@ export function DeckHeader({
   editorView,
   onDelete,
   onEdit,
+  onOpenAnnotations,
   onOpenBulkEdit,
   onOpenHistory,
   onSelectView,
@@ -24,6 +25,7 @@ export function DeckHeader({
   editorView: "cards" | "scores" | "charts" | "info";
   onDelete: () => Promise<void>;
   onEdit: () => void;
+  onOpenAnnotations: () => void;
   onOpenBulkEdit: () => void;
   onOpenHistory: () => void;
   onSelectView: (view: "cards" | "scores" | "charts" | "info") => void;
@@ -72,6 +74,9 @@ export function DeckHeader({
         </details>
         <button className="secondary-button labeled-action" onClick={onEdit}>
           <MaterialIcon name="edit" /> Edit
+        </button>
+        <button className="secondary-button labeled-action" onClick={onOpenAnnotations}>
+          <MaterialIcon name="assignment" /> Annotations
         </button>
         <button
           aria-pressed={showAgent}

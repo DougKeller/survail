@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { api } from "../api";
 
@@ -6,6 +6,9 @@ import type { Deck } from "../../modules/decks/contracts";
 import type {
   CardEvaluationProgress,
   CardRoleEvaluation,
+  RoleAnnotationLabel,
+  RoleAnnotationQueue,
+  SandboxRun,
 } from "../../modules/decks/evaluations/contracts";
 
 export function useDeckScoring({
@@ -29,6 +32,15 @@ export function useDeckScoring({
   const [cachedScoresLoadedFor, setCachedScoresLoadedFor] = useState<string | null>(
     null,
   );
+  const [annotationQueue, setAnnotationQueue] = useState<RoleAnnotationQueue | null>(
+    null,
+  );
+  const [annotationQueueLoadedFor, setAnnotationQueueLoadedFor] = useState<string | null>(
+    null,
+  );
+  const [annotationLoading, setAnnotationLoading] = useState(false);
+  const [sandboxRun, setSandboxRun] = useState<SandboxRun | null>(null);
+  const [sandboxRunning, setSandboxRunning] = useState(false);
 
   useEffect(() => {
     if (deck === null) return;
@@ -36,9 +48,12 @@ export function useDeckScoring({
     setRefreshingOracleIds(new Set());
     setEvaluationProgress(null);
     setCachedScoresLoadedFor(null);
+    setAnnotationQueue(null);
+    setAnnotationQueueLoadedFor(null);
+    setSandboxRun(null);
   }, [deck]);
 
-  async function loadCachedScores(): Promise<void> {
+  const loadCachedScores = useCallback(async (): Promise<void> => {
     if (deck === null || cachedScoresLoadedFor === deck.id) return;
     try {
       const loadedScores = await api.cachedDeckEvaluation(deck.id);
@@ -49,9 +64,28 @@ export function useDeckScoring({
         reason instanceof Error ? reason.message : "Could not load cached scores",
       );
     }
-  }
+  }, [cachedScoresLoadedFor, deck, setError]);
 
-  async function evaluateCurrentDeck(): Promise<void> {
+  const loadAnnotationQueue = useCallback(
+    async (force = false): Promise<void> => {
+      if (deck === null) return;
+      if (!force && annotationQueueLoadedFor === deck.id) return;
+      setAnnotationLoading(true);
+      try {
+        setAnnotationQueue(await api.annotationQueue(deck.id));
+        setAnnotationQueueLoadedFor(deck.id);
+      } catch (reason) {
+        setError(
+          reason instanceof Error ? reason.message : "Could not load annotation queue",
+        );
+      } finally {
+        setAnnotationLoading(false);
+      }
+    },
+    [annotationQueueLoadedFor, deck, setError],
+  );
+
+  const evaluateCurrentDeck = useCallback(async (): Promise<void> => {
     if (deck === null || scoring) return;
     if (deck.goal.trim() === "") {
       setAnnouncement("Add a Goal / North Star before evaluating cards");
@@ -75,6 +109,7 @@ export function useDeckScoring({
         },
       );
       setScores(new Map(loadedScores.map((score) => [score.oracle_id, score])));
+      void loadAnnotationQueue(true);
       setAnnouncement(`${String(loadedScores.length)} cards scored`);
     } catch (reason) {
       setError(
@@ -84,9 +119,9 @@ export function useDeckScoring({
       setScoring(false);
       setEvaluationProgress(null);
     }
-  }
+  }, [deck, loadAnnotationQueue, scoring, setAnnouncement, setError]);
 
-  async function evaluateCard(oracleId: string): Promise<void> {
+  const evaluateCard = useCallback(async (oracleId: string): Promise<void> => {
     if (
       deck === null ||
       scoring ||
@@ -102,6 +137,7 @@ export function useDeckScoring({
     try {
       const result = await api.evaluateCard(deck.id, oracleId);
       setScores((current) => new Map(current).set(result.oracle_id, result));
+      void loadAnnotationQueue(true);
       setAnnouncement("Card score refreshed");
     } catch (reason) {
       setError(
@@ -114,14 +150,58 @@ export function useDeckScoring({
         return next;
       });
     }
-  }
+  }, [deck, loadAnnotationQueue, refreshingOracleIds, scoring, setAnnouncement, setError]);
+
+  const saveAnnotationLabel = useCallback(async (
+    captureId: string,
+    label: RoleAnnotationLabel,
+  ): Promise<void> => {
+    if (deck === null) return;
+    try {
+      const updated = await api.labelAnnotationCapture(deck.id, captureId, label);
+      setAnnotationQueue((current) => {
+        if (current === null) return current;
+        return {
+          unlabeled: current.unlabeled.filter((item) => item.id !== captureId),
+          labeled: [updated, ...current.labeled.filter((item) => item.id !== captureId)],
+        };
+      });
+      setAnnouncement("Annotation saved");
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not save annotation",
+      );
+    }
+  }, [deck, setAnnouncement, setError]);
+
+  const runSandbox = useCallback(async (systemPrompt: string, model: string): Promise<void> => {
+    if (deck === null || sandboxRunning) return;
+    setSandboxRunning(true);
+    try {
+      setSandboxRun(await api.runAnnotationSandbox(deck.id, { system_prompt: systemPrompt, model }));
+      setAnnouncement("Sandbox run completed");
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not run sandbox",
+      );
+    } finally {
+      setSandboxRunning(false);
+    }
+  }, [deck, sandboxRunning, setAnnouncement, setError]);
 
   return {
+    annotationLoading,
+    annotationQueue,
     evaluationProgress,
     evaluateCard,
     evaluateCurrentDeck,
     loadCachedScores,
+    loadAnnotationQueue,
     refreshingOracleIds,
+    runSandbox,
+    sandboxRun,
+    sandboxRunning,
+    saveAnnotationLabel,
     scoring,
     scores,
   };

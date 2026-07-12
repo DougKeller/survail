@@ -822,26 +822,41 @@ test("text view uses masonry columns for card groups", async ({ page }) => {
   expect(cardColumns).toBe(1);
 });
 
-test("grid and stacks views use masonry columns for groups", async ({
+test("grid view flows group placeholders and cards through one continuous grid", async ({
   page,
 }) => {
   await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Grid" }).click();
 
-  for (const view of ["Grid", "Stacks"] as const) {
-    await page.getByRole("button", { name: view }).click();
-    const visualGroups = page.locator(".visual-groups");
-    const groupColumns = await visualGroups.first().evaluate((element) => ({
-      columnWidth: getComputedStyle(element).columnWidth,
-      columnCount: getComputedStyle(element).columnCount,
-    }));
-    const sectionBreakInside = await visualGroups
-      .locator(".visual-group")
-      .first()
-      .evaluate((element) => getComputedStyle(element).breakInside);
-    expect(groupColumns.columnWidth).not.toBe("auto");
-    expect(groupColumns.columnCount).toBe("auto");
-    expect(sectionBreakInside).toBe("avoid");
-  }
+  const flowGrid = page.locator(".visual-card-flow-grid");
+  await expect(flowGrid).toBeVisible();
+  await expect(flowGrid.locator(".group-placeholder-card").first()).toContainText(
+    "Type",
+  );
+  const gridStyles = await flowGrid.evaluate((element) => ({
+    display: getComputedStyle(element).display,
+    template: getComputedStyle(element).gridTemplateColumns,
+  }));
+  expect(gridStyles.display).toBe("grid");
+  expect(gridStyles.template).not.toBe("none");
+});
+
+test("stacks view keeps grouped masonry columns", async ({ page }) => {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Stacks" }).click();
+
+  const visualGroups = page.locator(".visual-groups");
+  const groupColumns = await visualGroups.first().evaluate((element) => ({
+    columnWidth: getComputedStyle(element).columnWidth,
+    columnCount: getComputedStyle(element).columnCount,
+  }));
+  const sectionBreakInside = await visualGroups
+    .locator(".visual-group")
+    .first()
+    .evaluate((element) => getComputedStyle(element).breakInside);
+  expect(groupColumns.columnWidth).not.toBe("auto");
+  expect(groupColumns.columnCount).toBe("auto");
+  expect(sectionBreakInside).toBe("avoid");
 });
 
 test("text view compacts card actions into a caret popover", async ({

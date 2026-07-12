@@ -1,4 +1,5 @@
-import { useContext } from "react";
+/* eslint-disable max-lines */
+import { useContext, type CSSProperties } from "react";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type {
@@ -18,7 +19,8 @@ import {
   PriceProviderContext,
   type SortBy,
 } from "./constants";
-import { groupedCards } from "./grouping";
+import { groupPlaceholderLabel, groupSwatch } from "./groupColors";
+import { groupedCards, type CardGroup } from "./grouping";
 import { MaterialIcon, zoneLabel } from "./text";
 
 function DeckCardImage({
@@ -156,6 +158,34 @@ function ImageCard(props: {
   );
 }
 
+function GroupPlaceholder({
+  group,
+  groupBy,
+}: {
+  group: CardGroup;
+  groupBy: GroupBy;
+}) {
+  const label = groupPlaceholderLabel(groupBy, group.label);
+  const accent = groupSwatch(groupBy, group.label);
+  return (
+    <article
+      aria-label={`${label} group with ${String(group.quantity)} cards`}
+      className="group-placeholder-card"
+      style={{ "--group-accent": accent } as CSSProperties}
+    >
+      <span className="group-placeholder-eyebrow">{titleFor(groupBy)}</span>
+      <strong>{label}</strong>
+      <span>{group.quantity} cards</span>
+    </article>
+  );
+}
+
+function titleFor(groupBy: GroupBy): string {
+  if (groupBy === "mana-value") return "Mana value";
+  if (groupBy === "type") return "Card type";
+  return groupBy.charAt(0).toUpperCase() + groupBy.slice(1);
+}
+
 export function VisualCardGroups(props: {
   cards: CardSet[];
   view: Exclude<DeckView, "text">;
@@ -187,20 +217,63 @@ export function VisualCardGroups(props: {
     scores,
   } = props;
   const provider = useContext(PriceProviderContext);
+  const groups = groupedCards(cards, groupBy, sortBy, provider, scores);
+
+  if (view === "grid") {
+    return (
+      <div className="visual-card-flow-grid">
+        {groups.flatMap((group) => [
+          <GroupPlaceholder group={group} groupBy={groupBy} key={`${group.label}-placeholder`} />,
+          ...group.cards.map((card) => (
+            <ImageCard
+              add={() => {
+                addCard(card);
+              }}
+              card={card}
+              disabled={busy}
+              editNote={() => {
+                editCardNote(card);
+              }}
+              format={format}
+              index={0}
+              key={card.id}
+              markCommander={
+                card.zone !== "commander" && canMoveToCommanderZone(card.scryfall, format)
+                  ? () => {
+                      markCommander(card);
+                    }
+                  : null
+              }
+              move={(zone) => {
+                moveCardToZone(card, zone);
+              }}
+              remove={() => {
+                removeCard(card);
+              }}
+              score={null}
+              stacked={false}
+              toggleCore={() => {
+                toggleCoreCard(card);
+              }}
+            />
+          )),
+        ])}
+      </div>
+    );
+  }
+
   return (
     <div className={`visual-groups ${view}`}>
-      {groupedCards(cards, groupBy, sortBy, provider, scores).map((group) => (
+      {groups.map((group) => (
         <section className="visual-group" key={group.label}>
           <h3>
             <span className="group-title-text">{group.label}</span>{" "}
             <small>{group.quantity}</small>
           </h3>
-          <div
-            className={view === "stacks" ? "card-stacks" : "visual-card-grid"}
-          >
+          <div className="card-stacks">
             {group.cards.flatMap((card) =>
               Array.from(
-                { length: view === "stacks" ? card.quantity : 1 },
+                { length: card.quantity },
                 (_, index) => (
                   <ImageCard
                     add={() => {
@@ -229,7 +302,7 @@ export function VisualCardGroups(props: {
                       removeCard(card);
                     }}
                     score={null}
-                    stacked={view === "stacks"}
+                    stacked
                     toggleCore={() => {
                       toggleCoreCard(card);
                     }}

@@ -1,6 +1,13 @@
 import { ApiError, API, request } from "../../../../core/http/client";
 
-import type { CardEvaluationProgress, CardRoleEvaluation } from "../contracts";
+import type {
+  CardEvaluationProgress,
+  CardRoleEvaluation,
+  RoleAnnotationCapture,
+  RoleAnnotationLabel,
+  RoleAnnotationQueue,
+  SandboxRun,
+} from "../contracts";
 
 type EvaluationStreamEvent =
   | { type: "progress"; payload: CardEvaluationProgress }
@@ -99,4 +106,32 @@ export function evaluateCard(
       body: "{}",
     },
   );
+}
+
+export function annotationQueue(deckId: string): Promise<RoleAnnotationQueue> {
+  return request<RoleAnnotationQueue>(`/decks/${deckId}/card-evaluation-annotations`);
+}
+
+export function labelAnnotationCapture(
+  deckId: string,
+  captureId: string,
+  label: RoleAnnotationLabel,
+): Promise<RoleAnnotationCapture> {
+  return request<RoleAnnotationCapture>(
+    `/decks/${deckId}/card-evaluation-annotations/${captureId}/label`,
+    {
+      method: "PUT",
+      body: JSON.stringify(label),
+    },
+  );
+}
+
+export function runAnnotationSandbox(
+  deckId: string,
+  payload: { system_prompt: string; model: string },
+): Promise<SandboxRun> {
+  return request<SandboxRun>(`/decks/${deckId}/card-evaluation-annotations/sandbox`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

@@ -24,10 +24,13 @@ import {
   setCardNote,
 } from "../modules/decks/api/operations";
 import {
+  annotationQueue,
   cachedDeckEvaluation,
   evaluateCard,
   evaluateCards,
   evaluateCurrentDeck,
+  labelAnnotationCapture,
+  runAnnotationSandbox,
   streamCurrentDeckEvaluation,
 } from "../modules/decks/evaluations/api/client";
 import { decideGuidanceProposal } from "../modules/decks/guidance/api/client";
@@ -58,6 +61,9 @@ export const api = {
   validation,
   deckAnalytics,
   cachedDeckEvaluation,
+  annotationQueue,
+  labelAnnotationCapture,
+  runAnnotationSandbox,
   evaluateCard,
   evaluateCurrentDeck,
   streamCurrentDeckEvaluation,

@@ -10,7 +10,7 @@ import type { GroupBy, SortBy } from "./constants";
 import { isCardFinish } from "./transforms";
 import { titleize } from "./text";
 
-interface CardGroup {
+export interface CardGroup {
   label: string;
   cards: CardSet[];
   quantity: number;

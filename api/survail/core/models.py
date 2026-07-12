@@ -131,6 +131,12 @@ class Deck(TimestampMixin, Base):
     role_evaluations: Mapped[list["CardRoleEvaluation"]] = relationship(
         back_populates="deck", cascade="all, delete-orphan"
     )
+    role_annotation_captures: Mapped[list["CardRoleAnnotationCapture"]] = relationship(
+        back_populates="deck", cascade="all, delete-orphan"
+    )
+    role_sandbox_runs: Mapped[list["CardRoleSandboxRun"]] = relationship(
+        back_populates="deck", cascade="all, delete-orphan"
+    )
     guidance_proposals: Mapped[list["DeckGuidanceProposal"]] = relationship(
         back_populates="deck", cascade="all, delete-orphan"
     )
@@ -361,6 +367,63 @@ class CardRoleEvaluation(TimestampMixin, Base):
     roles: Mapped[list[JsonObject]] = mapped_column(JSONB)
 
     deck: Mapped[Deck] = relationship(back_populates="role_evaluations")
+
+
+class CardRoleAnnotationCapture(TimestampMixin, Base):
+    __tablename__ = "card_role_annotation_captures"
+    __table_args__ = (
+        UniqueConstraint(
+            "deck_id",
+            "context_key",
+            "evaluator_version",
+            "prompt_hash",
+            name="uq_card_role_annotation_capture_context_prompt",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    deck_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"), index=True
+    )
+    evaluation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("card_role_evaluations.id", ondelete="SET NULL"), index=True
+    )
+    deck_revision: Mapped[int] = mapped_column(Integer, index=True)
+    context_key: Mapped[str] = mapped_column(String(64), index=True)
+    evaluator_version: Mapped[str] = mapped_column(String(40), index=True)
+    oracle_id: Mapped[str] = mapped_column(String(40), index=True)
+    model: Mapped[str] = mapped_column(String(80))
+    prompt_hash: Mapped[str] = mapped_column(String(64), index=True)
+    system_prompt: Mapped[str] = mapped_column(Text)
+    input_text: Mapped[str] = mapped_column(Text)
+    output: Mapped[JsonObject] = mapped_column(JSONB)
+    label: Mapped[JsonObject | None] = mapped_column(JSONB)
+    labeled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+
+    deck: Mapped[Deck] = relationship(back_populates="role_annotation_captures")
+
+
+class CardRoleSandboxRun(TimestampMixin, Base):
+    __tablename__ = "card_role_sandbox_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    deck_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"), index=True
+    )
+    model: Mapped[str] = mapped_column(String(80))
+    prompt_hash: Mapped[str] = mapped_column(String(64), index=True)
+    system_prompt: Mapped[str] = mapped_column(Text)
+    example_count: Mapped[int]
+    metrics: Mapped[JsonObject] = mapped_column(JSONB)
+    results: Mapped[list[JsonObject]] = mapped_column(JSONB)
+
+    deck: Mapped[Deck] = relationship(back_populates="role_sandbox_runs")
 
 
 class DeckGuidanceProposal(TimestampMixin, Base):

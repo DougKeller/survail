@@ -12,6 +12,7 @@ import {
   ScrollToTop,
   storedPriceProvider,
 } from "./deckPrimitives";
+import { AnnotationScreen } from "./screens/AnnotationScreen";
 import { EditorScreen } from "./screens/EditorScreen";
 import { LibraryScreen } from "./screens/LibraryScreen";
 
@@ -91,6 +92,7 @@ export function App() {
           <Route path="*" element={<LibraryScreen mode="decks" />} />
           <Route path="/decks" element={<LibraryScreen mode="decks" />} />
           <Route path="/import" element={<LibraryScreen mode="import" />} />
+          <Route path="/decks/:id/annotations" element={<AnnotationScreen />} />
           <Route path="/decks/:id" element={<EditorScreen />} />
         </Routes>
       </BrowserRouter>
