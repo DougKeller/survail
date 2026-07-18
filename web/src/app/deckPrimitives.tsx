@@ -6,25 +6,25 @@ export {
 } from "./deck/constants";
 export { preferredFinish } from "./deck/grouping";
 export { CoreCardToggle } from "./deck/coreCardToggle";
-export { DeckChartsView } from "./deck/chartsView";
-export { useDismissibleSurface, useModalBehavior } from "./deck/hooks";
+export { useDismissibleSurface } from "./deck/hooks";
 export { DeckInfoView } from "./deck/infoView";
 export { DeckScoresView } from "./deck/scoresView";
 export {
   deckDisplayPreferencesFromSearchParams,
-  defaultDeckDisplayPreferences,
   editorViewFromSearchParams,
-  isDeckView,
-  isEditorView,
-  isGroupBy,
   isPriceProvider,
-  isSortBy,
+  storeAdvisorOpen,
+  storeAdvisorWidth,
+  storeDeckDisplayPreferences,
+  storeImportPreferences,
+  storePriceProvider,
+  storedAdvisorOpen,
+  storedAdvisorWidth,
   storedDeckDisplayPreferences,
   storedImportPreferences,
   storedPriceProvider,
 } from "./deck/storage";
 export {
-  MaterialIcon,
   messageFor,
   Price,
   RichTextBlock,
@@ -39,7 +39,6 @@ export {
   decklistText,
   groupedValidationErrors,
   isAgentActivityEvent,
-  isCardFinish,
   isDeckFormat,
   queryForDeckFormat,
   streamedAgentText,

@@ -1,0 +1,35 @@
+/* Wireframe .chip — quiet surface pill with icon and bold count slots. */
+
+.ds-chip {
+  align-items: center;
+  background: var(--color-surface);
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  display: inline-flex;
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+  line-height: 1.3;
+  padding: var(--space-1) var(--space-2);
+}
+
+button.ds-chip {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+button.ds-chip:hover {
+  background: var(--color-neutral-300);
+}
+
+.ds-chip-icon {
+  color: var(--color-text-subtle);
+  display: inline-flex;
+  flex: none;
+}
+
+.ds-chip-count {
+  font-weight: 700;
+  margin-left: calc(var(--space-1) * 0.5);
+}

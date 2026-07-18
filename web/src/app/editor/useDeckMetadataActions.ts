@@ -64,7 +64,9 @@ export function useDeckMetadataActions({
     }
     setError(null);
     try {
-      const cards = (await api.search(queryForDeckFormat(nextQuery, deck.format))).cards;
+      const cards = (
+        await api.search(queryForDeckFormat(nextQuery, deck.format))
+      ).cards;
       if (latestSearchRequest.current !== requestId) return;
       setResults(cards);
       setShowSearchResults(true);
@@ -82,9 +84,7 @@ export function useDeckMetadataActions({
     setShowSearchResults,
   ]);
 
-  async function handleSaveDetails(
-    event: SyntheticEvent<HTMLFormElement>,
-  ): Promise<boolean> {
+  async function handleSaveDetails(event: SyntheticEvent): Promise<boolean> {
     event.preventDefault();
     setBusy(true);
     setError(null);

@@ -1,0 +1,52 @@
+/* Card gallery layouts — the grid and stacks deck views. */
+
+.ds-image-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(var(--size-image-tile), 1fr));
+}
+
+.ds-image-grid-sm {
+  gap: var(--space-3);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(var(--size-image-tile-sm), 1fr)
+  );
+}
+
+.ds-stack-columns {
+  column-fill: balance;
+  column-gap: var(--space-6);
+  column-width: var(--size-stack-column);
+}
+
+.ds-stack-section {
+  break-inside: avoid;
+  display: inline-block;
+  margin: 0 0 var(--space-6);
+  min-width: 0;
+  width: 100%;
+}
+
+.ds-card-stack {
+  display: flex;
+  flex-direction: column;
+  max-width: var(--size-card-stack);
+
+  /* stylelint-disable-next-line survail/spacing-tokens -- reserves the final card's aspect ratio under the overlap, not rhythm spacing */
+  padding-bottom: min(14.25rem, 120%);
+}
+
+.ds-card-stack > * {
+  filter: drop-shadow(
+    0 3px 3px color-mix(in srgb, var(--color-neutral-900) 55%, transparent)
+  );
+  margin-bottom: -120%;
+  position: relative;
+}
+
+.ds-card-stack > *:hover,
+.ds-card-stack > *:focus-within {
+  transform: translateY(-10px);
+  z-index: var(--layer-raised);
+}

@@ -1,0 +1,38 @@
+/* Inline card reference trigger — a dotted-underline run of text that
+   behaves as a button without disturbing the surrounding line. */
+
+.ds-inline-reference-trigger {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dotted currentcolor;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  text-align: inherit;
+  vertical-align: baseline;
+}
+
+.ds-inline-text {
+  white-space: pre-wrap;
+}
+
+/* Inside board rows the reference affordance stays quiet — 70 orange
+   underlines would leave nothing emphasized (Von Restorff). Hover/focus
+   restores the dotted accent treatment. */
+.ds-card-row .ds-inline-reference-trigger {
+  border-bottom-color: transparent;
+  color: inherit;
+}
+
+.ds-card-row .ds-inline-reference-trigger:hover,
+.ds-card-row .ds-inline-reference-trigger:focus-visible {
+  border-bottom-color: currentcolor;
+  color: var(--color-accent-700);
+}

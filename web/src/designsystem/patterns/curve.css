@@ -1,0 +1,92 @@
+.ds-curve {
+  align-items: flex-end;
+  display: flex;
+  gap: calc(var(--space-2) * 0.8);
+}
+
+.ds-curve-col {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ds-curve-bar-track {
+  align-items: flex-end;
+  display: flex;
+  height: var(--size-curve);
+  width: 100%;
+}
+
+.ds-curve-bar {
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+.ds-curve-bar-t1 {
+  background: var(--color-accent-200);
+}
+
+.ds-curve-bar-t2 {
+  background: var(--color-accent-300);
+}
+
+.ds-curve-bar-t3 {
+  background: var(--color-accent-400);
+}
+
+.ds-curve-bar-t4 {
+  background: var(--color-accent-500);
+}
+
+.ds-curve-bar-h0 {
+  height: 4%;
+}
+
+.ds-curve-bar-h1 {
+  height: 10%;
+}
+
+.ds-curve-bar-h2 {
+  height: 20%;
+}
+
+.ds-curve-bar-h3 {
+  height: 30%;
+}
+
+.ds-curve-bar-h4 {
+  height: 40%;
+}
+
+.ds-curve-bar-h5 {
+  height: 50%;
+}
+
+.ds-curve-bar-h6 {
+  height: 60%;
+}
+
+.ds-curve-bar-h7 {
+  height: 70%;
+}
+
+.ds-curve-bar-h8 {
+  height: 80%;
+}
+
+.ds-curve-bar-h9 {
+  height: 90%;
+}
+
+.ds-curve-bar-h10 {
+  height: 100%;
+}
+
+.ds-curve-label {
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  line-height: 1;
+}

@@ -1,94 +1,104 @@
-import type { RefObject } from "react";
-
 import { InlineCardText } from "../../modules/cards/ui/cardPresentation";
 import type { DeckOperation } from "../../modules/decks/contracts";
-import { MaterialIcon, zoneLabel } from "../deckPrimitives";
+import { Button } from "../../designsystem/primitives/button";
+import { Dialog } from "../../designsystem/primitives/dialog";
+import { Tag } from "../../designsystem/primitives/tag";
+import { Inline } from "../../designsystem/layout/inline";
+import { Stack } from "../../designsystem/layout/stack";
+import { Text } from "../../designsystem/layout/typography";
+import { TimelineItem } from "../../designsystem/patterns/timeline";
+import { zoneLabel } from "../deckPrimitives";
+import { useDeckEditorContext } from "./deckEditorContext";
 
-export function HistoryModal({
-  busy,
-  close,
-  dialogRef,
-  handleRevert,
-  operations,
-}: {
-  busy: boolean;
-  close: () => void;
-  dialogRef: RefObject<HTMLElement | null>;
-  handleRevert: (operation: DeckOperation) => Promise<void>;
-  operations: DeckOperation[];
-}) {
+const VISIBLE_CHANGES = 8;
+
+function ChangeTags({ operation }: { operation: DeckOperation }) {
+  const visible = operation.changes.slice(0, VISIBLE_CHANGES);
+  const hidden = operation.changes.length - visible.length;
   return (
-    <div className="modal-backdrop" onClick={close}>
-      <section
-        aria-describedby="history-description"
-        aria-labelledby="history-title"
-        aria-modal="true"
-        className="history-modal"
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
-      >
-        <div className="page-heading">
-          <div>
-            <h2 id="history-title">Deck history</h2>
-            <p id="history-description">
-              {operations.length} recorded{" "}
-              {operations.length === 1 ? "change" : "changes"}
-            </p>
-          </div>
-          <button
-            aria-label="Close deck history"
-            className="icon-action"
-            onClick={close}
+    <Inline gap={1} wrap>
+      {visible.map((change, index) => (
+        <Tag
+          key={`${change.printing_id}-${String(index)}`}
+          tone={change.quantity_delta > 0 ? "accent2" : "neutral"}
+        >
+          {change.quantity_delta > 0 ? "+" : "−"}
+          {Math.abs(change.quantity_delta)}{" "}
+          <InlineCardText text={`[[${change.card_name}]]`} />
+          {change.zone === "mainboard" ? "" : ` · ${zoneLabel(change.zone)}`}
+        </Tag>
+      ))}
+      {hidden > 0 && <Tag tone="neutral">+{hidden} more</Tag>}
+    </Inline>
+  );
+}
+
+export function HistoryModal() {
+  const {
+    actions: { handleRevert },
+    data: { busy, operations },
+    deck,
+    modals: { setOpenDialog },
+  } = useDeckEditorContext();
+  const close = (): void => {
+    setOpenDialog(null);
+  };
+  return (
+    <Dialog
+      actions={
+        <>
+          <Text muted size="xs">
+            Operations are atomic and idempotent — reverts are auditable inverse
+            operations, never edits.
+          </Text>
+          <Button onClick={close} variant="secondary">
+            Close
+          </Button>
+        </>
+      }
+      onClose={close}
+      open
+      title="History"
+    >
+      <Stack gap={2}>
+        <Text muted size="sm">
+          {operations.length} recorded{" "}
+          {operations.length === 1 ? "change" : "changes"} · rev {deck.revision}
+        </Text>
+        {operations.length === 0 && (
+          <Text muted>No changes have been recorded.</Text>
+        )}
+        {operations.map((operation, index) => (
+          <TimelineItem
+            action={
+              <Button
+                disabled={busy}
+                onClick={() => void handleRevert(operation)}
+                variant="ghost"
+              >
+                Revert
+              </Button>
+            }
+            key={operation.id}
+            tone={index === operations.length - 1 ? "accent" : "default"}
           >
-            <MaterialIcon name="close" />
-          </button>
-        </div>
-        <div className="history-list">
-          {operations.length === 0 && (
-            <p className="muted">No changes have been recorded.</p>
-          )}
-          {operations.map((operation) => (
-            <details className="history-entry" key={operation.id}>
-              <summary>
-                <span>
-                  <strong>
-                    <InlineCardText text={operation.reason ?? "Deck update"} />
-                  </strong>
-                  <small>
-                    Version {operation.revision_after} ·{" "}
-                    {new Date(operation.created_at).toLocaleString()} ·{" "}
-                    {operation.changes.length}{" "}
-                    {operation.changes.length === 1 ? "change" : "changes"}
-                  </small>
-                </span>
-                <button
-                  disabled={busy}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    void handleRevert(operation);
-                  }}
-                >
-                  Undo
-                </button>
-              </summary>
-              <div>
-                {operation.changes.map((change, index) => (
-                  <small key={`${change.printing_id}-${String(index)}`}>
-                    {change.quantity_delta > 0 ? "+" : ""}
-                    {change.quantity_delta}{" "}
-                    <InlineCardText text={`[[${change.card_name}]]`} /> ·{" "}
-                    {zoneLabel(change.zone)}
-                  </small>
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
-    </div>
+            <Stack gap={1}>
+              <Inline align="baseline" gap={2} wrap>
+                <Text as="span" size="md">
+                  <InlineCardText text={operation.reason ?? "Deck update"} />
+                </Text>
+                <Text as="span" muted size="xs">
+                  rev {operation.revision_after} ·{" "}
+                  {new Date(operation.created_at).toLocaleString()} ·{" "}
+                  {operation.changes.length}{" "}
+                  {operation.changes.length === 1 ? "change" : "changes"}
+                </Text>
+              </Inline>
+              <ChangeTags operation={operation} />
+            </Stack>
+          </TimelineItem>
+        ))}
+      </Stack>
+    </Dialog>
   );
 }

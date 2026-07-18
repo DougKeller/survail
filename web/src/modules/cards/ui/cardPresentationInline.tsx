@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { ImageOff } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -10,6 +11,16 @@ import {
 } from "react";
 
 import {
+  ImageButton,
+  ImageFallback,
+} from "../../../designsystem/primitives/imageButton";
+import {
+  InlineReferenceTrigger,
+  InlineText,
+} from "../../../designsystem/primitives/inlineReference";
+import { TooltipSurface } from "../../../designsystem/primitives/tooltip";
+
+import {
   cardDetails,
   cardName,
   imageSource,
@@ -18,57 +29,55 @@ import {
   useCardPresentation,
 } from "./cardPresentationShared";
 
+function CardImageContent({
+  name,
+  source,
+  loading,
+}: {
+  name: string;
+  source: string | null;
+  loading: "eager" | "lazy";
+}) {
+  if (source === null) {
+    return (
+      <ImageFallback>
+        <ImageOff aria-hidden="true" size={18} strokeWidth={2.75} />
+        {name}
+      </ImageFallback>
+    );
+  }
+  return <img alt={name} loading={loading} src={source} />;
+}
+
 export function ClickableCardImage({
   card,
-  className = "",
   loading = "lazy",
+  size = "full",
 }: {
   card: CardPresentationSource;
-  className?: string;
   loading?: "eager" | "lazy";
+  /** thumb: table row art · preview: expanded row art · full: fill parent. */
+  size?: "full" | "preview" | "thumb";
 }) {
   const presentation = useOptionalCardPresentation();
   const details = cardDetails(card);
   const name = cardName(card);
   const source = imageSource(details.card);
 
-  if (presentation === null) {
-    return (
-      <div className={`clickable-card-image ${className}`.trim()}>
-        {source === null ? (
-          <span className="card-presentation-placeholder">
-            <span aria-hidden="true" className="material-symbols-outlined">
-              image_not_supported
-            </span>
-            {name}
-          </span>
-        ) : (
-          <img alt={name} loading={loading} src={source} />
-        )}
-      </div>
-    );
-  }
-
   return (
-    <button
-      aria-label={`View details for ${name}`}
-      className={`clickable-card-image ${className}`.trim()}
-      onClick={() => {
-        presentation.openCard(card);
-      }}
-      type="button"
+    <ImageButton
+      label={`View details for ${name}`}
+      onClick={
+        presentation === null
+          ? undefined
+          : () => {
+              presentation.openCard(card);
+            }
+      }
+      size={size}
     >
-      {source === null ? (
-        <span className="card-presentation-placeholder">
-          <span aria-hidden="true" className="material-symbols-outlined">
-            image_not_supported
-          </span>
-          {name}
-        </span>
-      ) : (
-        <img alt={name} loading={loading} src={source} />
-      )}
-    </button>
+      <CardImageContent loading={loading} name={name} source={source} />
+    </ImageButton>
   );
 }
 
@@ -131,10 +140,9 @@ function InlineCardReference({
   }
 
   return (
-    <span className="inline-card-reference">
-      <button
+    <span>
+      <InlineReferenceTrigger
         aria-haspopup="dialog"
-        className="inline-card-reference-trigger"
         onBlur={hidePreview}
         onClick={() => {
           openCard(card);
@@ -144,24 +152,21 @@ function InlineCardReference({
         onMouseEnter={showPreview}
         onMouseLeave={hidePreview}
         ref={triggerRef}
-        type="button"
       >
         {label}
-      </button>
+      </InlineReferenceTrigger>
       {previewVisible &&
         source !== null &&
         previewStyle !== null &&
         createPortal(
-          <span
-            className="inline-card-preview"
-            role="tooltip"
+          <TooltipSurface
             style={{
               left: `${String(previewStyle.left)}px`,
               top: `${String(previewStyle.top)}px`,
             }}
           >
             <img alt="" src={source} />
-          </span>,
+          </TooltipSurface>,
           document.body,
         )}
     </span>
@@ -217,5 +222,5 @@ export function InlineCardText({
   }
   if (cursor < text.length)
     content.push(<span key={String(key)}>{text.slice(cursor)}</span>);
-  return <span className="inline-card-text">{content}</span>;
+  return <InlineText>{content}</InlineText>;
 }

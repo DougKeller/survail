@@ -1,74 +1,61 @@
-import type React from "react";
+import { Send, X } from "lucide-react";
 
-import { MaterialIcon } from "../deckPrimitives";
-
-import type { Deck } from "../../modules/decks/contracts";
-import type { AgentUiEvent } from "../../modules/agent/contracts";
+import { IconButton } from "../../designsystem/primitives/button";
+import { TextArea } from "../../designsystem/primitives/input";
+import { FlexSpacer, Inline } from "../../designsystem/layout/inline";
+import { Stack } from "../../designsystem/layout/stack";
+import { Panel, PanelScroll } from "../../designsystem/layout/workspace";
+import { Heading, Text } from "../../designsystem/layout/typography";
+import {
+  useDeckAdvisorContext,
+  useDeckEditorContext,
+} from "./deckEditorContext";
 import { AgentEventFeed } from "./agentEventFeed";
 
-export function AgentDrawer({
-  agentBusy,
-  agentEvents,
-  agentEventsRef,
-  agentMessage,
-  busy,
-  close,
-  decideOperationProposal,
-  deck,
-  decideGuidanceProposal,
-  guidanceDecisions,
-  operationProposalDecisions,
-  handleAgentComposerKeyDown,
-  latestUserMessageId,
-  latestUserMessageRef,
-  sendAgentMessage,
-  setAgentMessage,
-  submitAgentMessage,
-}: {
-  agentBusy: boolean;
-  agentEvents: AgentUiEvent[];
-  agentEventsRef: React.RefObject<HTMLDivElement | null>;
-  agentMessage: string;
-  busy: boolean;
-  close: () => void;
-  decideOperationProposal: (
-    proposalId: string,
-    expectedRevision: number,
-    decision: "approve" | "reject",
-  ) => Promise<void>;
-  deck: Deck;
-  decideGuidanceProposal: (
-    proposalId: string,
-    expectedRevision: number,
-    decision: "approve" | "reject",
-  ) => Promise<void>;
-  guidanceDecisions: Record<string, "approved" | "rejected">;
-  operationProposalDecisions: Record<string, "approved" | "rejected">;
-  handleAgentComposerKeyDown: (
-    event: React.KeyboardEvent<HTMLTextAreaElement>,
-  ) => void;
-  latestUserMessageId: string | null;
-  latestUserMessageRef: React.RefObject<HTMLElement | null>;
-  sendAgentMessage: (event: React.SyntheticEvent<HTMLFormElement>) => void;
-  setAgentMessage: (value: string) => void;
-  submitAgentMessage: (message: string) => Promise<void>;
-}) {
+export function AgentDrawer() {
+  const {
+    data: { busy },
+    deck,
+  } = useDeckEditorContext();
+  const {
+    agentBusy,
+    agentEvents,
+    agentEventsRef,
+    agentMessage,
+    decideGuidanceProposal,
+    decideOperationProposal,
+    guidanceDecisions,
+    handleAgentComposerKeyDown,
+    latestUserMessageId,
+    latestUserMessageRef,
+    operationProposalDecisions,
+    sendAgentMessage,
+    setAgentMessage,
+    setShowAgent,
+    submitAgentMessage,
+  } = useDeckAdvisorContext();
   return (
-    <aside aria-labelledby="agent-title" className="agent-drawer">
-      <div className="page-heading">
-        <div>
-          <h2 id="agent-title">Deck advisor</h2>
-          <p>Ask questions or review proposed changes.</p>
-        </div>
-        <button
-          aria-label="Close deck advisor"
-          className="icon-action"
-          onClick={close}
+    <Panel labelledBy="agent-title">
+      <Inline align="start" gap={2}>
+        <Stack gap={1}>
+          <Heading id="agent-title" level={2} size="xl">
+            Deck advisor
+          </Heading>
+          <Text muted size="sm">
+            Ask questions or review proposed changes.
+          </Text>
+        </Stack>
+        <FlexSpacer />
+        <IconButton
+          label="Close deck advisor"
+          onClick={() => {
+            setShowAgent(false);
+          }}
         >
-          <MaterialIcon name="close" />
-        </button>
-      </div>
-      <div aria-live="polite" className="agent-events" ref={agentEventsRef}>
+          <X size={16} strokeWidth={2.75} />
+        </IconButton>
+      </Inline>
+      <PanelScroll live ref={agentEventsRef}>
         <AgentEventFeed
           agentBusy={agentBusy}
           agentEvents={agentEvents}
@@ -82,13 +69,10 @@ export function AgentDrawer({
           latestUserMessageRef={latestUserMessageRef}
           submitAgentMessage={submitAgentMessage}
         />
-      </div>
-      <form className="agent-composer" onSubmit={sendAgentMessage}>
-        <label className="sr-only" htmlFor="agent-message">
-          Message deck advisor
-        </label>
-        <textarea
-          id="agent-message"
+      </PanelScroll>
+      <Stack as="form" gap={2} onSubmit={sendAgentMessage}>
+        <TextArea
+          aria-label="Message deck advisor"
           onChange={(event) => {
             setAgentMessage(event.target.value);
           }}
@@ -97,14 +81,17 @@ export function AgentDrawer({
           rows={2}
           value={agentMessage}
         />
-        <button
-          aria-label="Send message"
-          className="icon-action"
-          disabled={agentBusy || agentMessage.trim() === ""}
-        >
-          <MaterialIcon name="send" />
-        </button>
-      </form>
-    </aside>
+        <Inline justify="end">
+          <IconButton
+            disabled={agentBusy || agentMessage.trim() === ""}
+            label="Send message"
+            type="submit"
+            variant="primary"
+          >
+            <Send size={16} strokeWidth={2.75} />
+          </IconButton>
+        </Inline>
+      </Stack>
+    </Panel>
   );
 }

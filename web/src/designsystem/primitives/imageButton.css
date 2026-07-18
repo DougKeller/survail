@@ -1,0 +1,45 @@
+/* Borderless artwork button and its no-art fallback tile. */
+
+.ds-image-button {
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  width: 100%;
+}
+
+button.ds-image-button {
+  cursor: pointer;
+}
+
+.ds-image-button img {
+  border-radius: var(--radius-sm);
+  display: block;
+  width: 100%;
+}
+
+.ds-image-button-thumb {
+  flex: none;
+  width: 2.75rem;
+}
+
+.ds-image-button-preview {
+  flex: none;
+  width: 9rem;
+}
+
+.ds-image-fallback {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  display: grid;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+  min-height: 6rem;
+  padding: var(--space-3);
+  place-items: center;
+  text-align: center;
+}

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { streamEvents } from "../../modules/agent/api/conversations";
-import { metadataFor } from "../../modules/imports/api/preferences";
+import { metadataFor } from "../../modules/decks/api/metadata";
 
 import { ApiError, errorMessage, request } from "./client";
 

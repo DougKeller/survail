@@ -75,6 +75,11 @@ def _agent_metrics() -> AgentMetrics:
 AGENT_METRICS = _agent_metrics()
 
 
+def _route_path(starlette_route: object, scope: dict[str, object]) -> str | None:
+    path = getattr(starlette_route, "path", None) or scope.get("path")
+    return path if isinstance(path, str) else None
+
+
 def _safe_fastapi_default_span_details(scope: dict[str, object]) -> tuple[str, dict[str, str]]:
     app = scope.get("app")
     route: str | None = None
@@ -86,10 +91,10 @@ def _safe_fastapi_default_span_details(scope: dict[str, object]) -> tuple[str, d
                 else starlette_route.matches(scope)
             )
             if match == Match.FULL:
-                route = getattr(starlette_route, "path", None) or scope.get("path")  # type: ignore[assignment]
+                route = _route_path(starlette_route, scope)
                 break
             if match == Match.PARTIAL:
-                route = getattr(starlette_route, "path", None) or scope.get("path")  # type: ignore[assignment]
+                route = _route_path(starlette_route, scope)
 
     method = otel_fastapi.sanitize_method(str(scope.get("method", "")).strip())
     attributes: dict[str, str] = {}

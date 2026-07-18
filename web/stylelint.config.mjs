@@ -1,0 +1,67 @@
+export default {
+  extends: ["stylelint-config-standard"],
+  plugins: [
+    "stylelint-declaration-strict-value",
+    "stylelint-order",
+    "./stylelint-rules/spacing-tokens.mjs",
+  ],
+  ignoreFiles: ["coverage/**", "dist/**", "node_modules/**", "test-results/**"],
+  rules: {
+    "alpha-value-notation": "number",
+    "color-function-notation": "modern",
+    "color-hex-length": "long",
+    "declaration-no-important": true,
+    "declaration-property-value-disallowed-list": {
+      "/^(?:margin|padding|gap)/": ["/\\d+px/"],
+      transition: ["/\\ball\\b/"],
+    },
+    "max-nesting-depth": 3,
+    "no-descending-specificity": null,
+    "no-duplicate-selectors": true,
+    "order/properties-alphabetical-order": true,
+    "selector-class-pattern": [
+      "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      { message: "Use kebab-case classes for consistent component styling." },
+    ],
+    "selector-id-pattern": [
+      "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      { message: "Use kebab-case IDs." },
+    ],
+    "selector-max-id": 1,
+    "selector-max-specificity": "1,5,1",
+    "selector-no-qualifying-type": null,
+    "survail/spacing-tokens": true,
+    "scale-unlimited/declaration-strict-value": [
+      [
+        "color",
+        "background-color",
+        "border-color",
+        "outline-color",
+        "text-decoration-color",
+        "fill",
+        "stroke",
+        "z-index",
+        "font-size",
+        "box-shadow",
+        "border-radius",
+      ],
+      {
+        ignoreValues: {
+          "": [
+            "auto",
+            "currentColor",
+            "inherit",
+            "initial",
+            "none",
+            "transparent",
+            "unset",
+          ],
+          "font-size": ["0", "inherit", "/^clamp\\(/"],
+          "box-shadow": ["none", "/inset/", "/100vmax/"],
+          "border-radius": ["0", "50%", "inherit"],
+        },
+        disableFix: true,
+      },
+    ],
+  },
+};

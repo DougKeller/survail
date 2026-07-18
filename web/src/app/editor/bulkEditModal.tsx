@@ -1,84 +1,71 @@
-import type { RefObject } from "react";
+import { Button } from "../../designsystem/primitives/button";
+import { Dialog } from "../../designsystem/primitives/dialog";
+import { Field, TextArea } from "../../designsystem/primitives/input";
+import { Notice } from "../../designsystem/primitives/notice";
+import { Stack } from "../../designsystem/layout/stack";
+import { Text } from "../../designsystem/layout/typography";
+import { useDeckEditorContext } from "./deckEditorContext";
 
-import { MaterialIcon } from "../deckPrimitives";
-
-export function BulkEditModal({
-  applyBulkEdit,
-  bulkDecklist,
-  bulkEditDialogRef,
-  bulkEditErrors,
-  busy,
-  close,
-  setBulkDecklist,
-}: {
-  applyBulkEdit: () => Promise<void>;
-  bulkDecklist: string;
-  bulkEditDialogRef: RefObject<HTMLElement | null>;
-  bulkEditErrors: string[];
-  busy: boolean;
-  close: () => void;
-  setBulkDecklist: (value: string) => void;
-}) {
+export function BulkEditModal() {
+  const {
+    data: { busy },
+    modals: {
+      applyBulkEdit,
+      bulkDecklist,
+      bulkEditErrors,
+      setBulkDecklist,
+      setShowBulkEdit,
+    },
+  } = useDeckEditorContext();
+  const close = (): void => {
+    setShowBulkEdit(false);
+  };
   return (
-    <div className="modal-backdrop" onClick={close}>
-      <section
-        aria-describedby="bulk-edit-description"
-        aria-labelledby="bulk-edit-title"
-        aria-modal="true"
-        className="bulk-edit-modal"
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
-        ref={bulkEditDialogRef}
-        role="dialog"
-        tabIndex={-1}
-      >
-        <div className="page-heading">
-          <div>
-            <h2 id="bulk-edit-title">Bulk edit decklist</h2>
-            <p className="muted" id="bulk-edit-description">
-              Edit quantities, cards, or sections as free text. Changes are
-              applied together.
-            </p>
-          </div>
-          <button
-            aria-label="Close bulk decklist editor"
-            className="icon-action"
-            onClick={close}
-          >
-            <MaterialIcon name="close" />
-          </button>
-        </div>
-        {bulkEditErrors.length > 0 && (
-          <div className="notice error" role="alert">
-            {bulkEditErrors.map((message) => (
-              <p key={message}>{message}</p>
-            ))}
-          </div>
-        )}
-        <label className="bulk-edit-field">
-          Decklist
-          <textarea
-            aria-label="Decklist"
-            onChange={(event) => {
-              setBulkDecklist(event.target.value);
-            }}
-            spellCheck={false}
-            value={bulkDecklist}
-          />
-        </label>
-        <div className="button-row bulk-edit-actions">
-          <button className="secondary-button" disabled={busy} onClick={close}>
+    <Dialog
+      actions={
+        <>
+          <Button disabled={busy} onClick={close} variant="secondary">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             disabled={busy || bulkDecklist.trim() === ""}
             onClick={() => void applyBulkEdit()}
           >
             {busy ? "Applying changes…" : "Apply changes"}
-          </button>
-        </div>
-      </section>
-    </div>
+          </Button>
+        </>
+      }
+      onClose={close}
+      open
+      title="Bulk edit"
+    >
+      <Stack gap={3}>
+        <Text muted size="md">
+          Edit quantities, cards, or sections as free text. Changes are applied
+          together.
+        </Text>
+        {bulkEditErrors.length > 0 && (
+          <Notice role="alert" tone="error">
+            {bulkEditErrors.map((message) => (
+              <Text key={message} size="md">
+                {message}
+              </Text>
+            ))}
+          </Notice>
+        )}
+        <Field label="Decklist">
+          <TextArea
+            aria-label="Decklist"
+            mono
+            onChange={(event) => {
+              setBulkDecklist(event.target.value);
+            }}
+            rows={14}
+            spellCheck={false}
+            value={bulkDecklist}
+          />
+        </Field>
+      </Stack>
+    </Dialog>
   );
 }

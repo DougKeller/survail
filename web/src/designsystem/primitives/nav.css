@@ -1,0 +1,44 @@
+/* Organic .nav / .nav-brand — flex top bar with Caprasimo wordmark. */
+
+.ds-nav {
+  align-items: center;
+  display: flex;
+
+  /* Wrap instead of overflowing: in the workspace grid an overflowing bar
+     would run underneath the sticky side panel, which then swallows clicks
+     on the bar's trailing controls (view switcher at 1280px wide). */
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+}
+
+.ds-nav-divided {
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.ds-nav-brand {
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.015em;
+}
+
+.ds-nav-link {
+  border-radius: var(--radius-full);
+  color: color-mix(in srgb, var(--color-text) 72%, transparent);
+  font-size: var(--text-base);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.ds-nav-link:hover {
+  color: var(--color-text);
+}
+
+.ds-nav-link[aria-current="page"] {
+  /* accent-700, not accent: accent-on-ground is only ~3:1 at text sizes. */
+  color: var(--color-accent-700);
+}

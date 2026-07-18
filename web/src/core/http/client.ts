@@ -35,10 +35,10 @@ function parseJson(body: string): JsonValue {
   return JSON.parse(body) as JsonValue;
 }
 
-export async function request<T>(
+export async function stream(
   path: string,
   init: RequestInit = {},
-): Promise<T> {
+): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("Content-Type", "application/json");
 
@@ -49,15 +49,28 @@ export async function request<T>(
   });
 
   if (!response.ok) {
-    const responseBody = await response.text();
-    const error =
-      responseBody === "" ? {} : (parseJson(responseBody) as ErrorResponse);
-    throw new ApiError(
-      errorMessage(error.detail, response.statusText),
-      response.status,
-    );
+    throw new ApiError(await responseErrorMessage(response), response.status);
   }
 
+  return response;
+}
+
+async function responseErrorMessage(response: Response): Promise<string> {
+  const responseBody = await response.text();
+  try {
+    const error =
+      responseBody === "" ? {} : (parseJson(responseBody) as ErrorResponse);
+    return errorMessage(error.detail, response.statusText);
+  } catch {
+    return responseBody;
+  }
+}
+
+export async function request<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const response = await stream(path, init);
   const responseBody = await response.text();
   return responseBody === ""
     ? (undefined as T)

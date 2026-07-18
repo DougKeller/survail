@@ -8,7 +8,13 @@ import {
 } from "react";
 
 import { api } from "../api";
-import { messageFor } from "../deckPrimitives";
+import {
+  messageFor,
+  storeAdvisorOpen,
+  storeAdvisorWidth,
+  storedAdvisorOpen,
+  storedAdvisorWidth,
+} from "../deckPrimitives";
 
 import type { AgentUiEvent } from "../../modules/agent/contracts";
 
@@ -25,17 +31,8 @@ export function useDeckAdvisor({
   setAnnouncement: (value: string) => void;
   setError: (value: string | null) => void;
 }) {
-  const [showAgent, setShowAgent] = useState(() => {
-    const stored = localStorage.getItem("survail.advisor-open");
-    return stored === null ? true : stored === "true";
-  });
-  const [advisorWidth, setAdvisorWidth] = useState(() => {
-    const stored = Number.parseInt(
-      localStorage.getItem("survail.advisor-width") ?? "",
-      10,
-    );
-    return Number.isFinite(stored) ? Math.max(320, stored) : 400;
-  });
+  const [showAgent, setShowAgent] = useState(storedAdvisorOpen);
+  const [advisorWidth, setAdvisorWidth] = useState(storedAdvisorWidth);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [agentMessage, setAgentMessage] = useState("");
   const [agentEvents, setAgentEvents] = useState<AgentUiEvent[]>([]);
@@ -53,11 +50,11 @@ export function useDeckAdvisor({
   const latestUserMessageRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    localStorage.setItem("survail.advisor-open", String(showAgent));
+    storeAdvisorOpen(showAgent);
   }, [showAgent]);
 
   useEffect(() => {
-    localStorage.setItem("survail.advisor-width", String(advisorWidth));
+    storeAdvisorWidth(advisorWidth);
   }, [advisorWidth]);
 
   useEffect(() => {
@@ -226,7 +223,7 @@ export function useDeckAdvisor({
     }
   }
 
-  function sendAgentMessage(event: SyntheticEvent<HTMLFormElement>): void {
+  function sendAgentMessage(event: SyntheticEvent): void {
     event.preventDefault();
     void submitAgentMessage(agentMessage);
   }

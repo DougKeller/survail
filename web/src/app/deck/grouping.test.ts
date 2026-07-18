@@ -56,7 +56,10 @@ describe("groupedCards", () => {
       new Map<string, CardRoleEvaluation>(),
     );
 
-    expect(groups.map((group) => group.label)).toEqual(["Artifact", "Creature"]);
+    expect(groups.map((group) => group.label)).toEqual([
+      "Artifact",
+      "Creature",
+    ]);
     expect(groups[0]?.cards[0]?.card_name).toBe("Beta Relic");
   });
 });

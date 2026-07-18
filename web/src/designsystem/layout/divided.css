@@ -1,0 +1,45 @@
+.ds-divided {
+  display: flex;
+  flex-direction: column;
+}
+
+.ds-divided > * {
+  border-top: 1px solid var(--color-divider);
+  padding-block: var(--space-3);
+}
+
+.ds-divided > :first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.ds-divided > :last-child {
+  padding-bottom: 0;
+}
+
+.ds-split-pane {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-width: 0;
+}
+
+.ds-split-pane-wide-end {
+  grid-template-columns: 1fr 1.15fr;
+}
+
+.ds-split-pane > * {
+  min-width: 0;
+  padding: var(--space-6);
+}
+
+.ds-split-pane-tint-start > :first-child,
+.ds-split-pane-tint-end > :last-child {
+  background: var(--color-surface);
+}
+
+@media (width <= 720px) {
+  .ds-split-pane,
+  .ds-split-pane-wide-end {
+    grid-template-columns: 1fr;
+  }
+}

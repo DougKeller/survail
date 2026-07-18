@@ -38,6 +38,26 @@ module.exports = {
       to: { path: "^src/modules/agent/" },
     },
     {
+      name: "designsystem-is-standalone",
+      comment:
+        "The design system is a pure component library: it may not depend on app, modules, or core. Everything else may depend on it.",
+      severity: "error",
+      from: { path: "^src/designsystem/" },
+      to: { path: "^src/(app|modules|core)/" },
+    },
+    {
+      name: "modules-must-not-import-other-modules",
+      comment:
+        "Modules stay self-contained: only type-only (contracts) imports may cross module boundaries. Runtime dependencies must be inverted through the app layer.",
+      severity: "error",
+      from: { path: "^src/modules/([^/]+)/" },
+      to: {
+        path: "^src/modules/",
+        pathNot: "^src/modules/$1/",
+        dependencyTypesNot: ["type-only"],
+      },
+    },
+    {
       name: "app-must-not-be-imported",
       severity: "error",
       from: { pathNot: "^src/main\\.tsx$" },
@@ -48,7 +68,7 @@ module.exports = {
       severity: "error",
       from: {
         orphan: true,
-        pathNot: "^src/(main\\.tsx|vite-env\\.d\\.ts|.+/contracts\\.ts)$",
+        pathNot: "^src/(main\\.tsx|vite-env\\.d\\.ts|.+/contracts\\.ts)",
       },
       to: {},
     },

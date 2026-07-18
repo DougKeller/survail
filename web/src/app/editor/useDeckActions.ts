@@ -78,23 +78,14 @@ export function useDeckActions({
     [loadDeck, setError],
   );
 
-  const applyChanges = useCallback(
-    (changes: DeckOperationChangeInput[], reason: string) => {
+  const runMutation = useCallback(
+    (mutate: (currentDeck: Deck) => Promise<void>): void => {
       if (deck === null || busy) return;
       setBusy(true);
       setError(null);
       void (async () => {
         try {
-          const result = await api.applyOperation(
-            id,
-            deck.revision,
-            changes,
-            reason,
-          );
-          setDeck(result.deck);
-          setValidation(result.validation);
-          setOperations(await api.operations(id));
-          setAnnouncement(reason);
+          await mutate(deck);
         } catch (caught) {
           await setConflictError(caught);
         } finally {
@@ -102,18 +93,25 @@ export function useDeckActions({
         }
       })();
     },
-    [
-      busy,
-      deck,
-      id,
-      setAnnouncement,
-      setBusy,
-      setConflictError,
-      setDeck,
-      setError,
-      setOperations,
-      setValidation,
-    ],
+    [busy, deck, setBusy, setConflictError, setError],
+  );
+
+  const applyChanges = useCallback(
+    (changes: DeckOperationChangeInput[], reason: string) => {
+      runMutation(async (currentDeck) => {
+        const result = await api.applyOperation(
+          id,
+          currentDeck.revision,
+          changes,
+          reason,
+        );
+        setDeck(result.deck);
+        setValidation(result.validation);
+        setOperations(await api.operations(id));
+        setAnnouncement(reason);
+      });
+    },
+    [id, runMutation, setAnnouncement, setDeck, setOperations, setValidation],
   );
 
   const metadataActions = useDeckMetadataActions({
@@ -201,54 +199,36 @@ export function useDeckActions({
   };
 
   const toggleCoreCard = (cardset: CardSet): void => {
-    if (deck === null || busy) return;
-    setBusy(true);
-    setError(null);
-    void (async () => {
-      try {
-        const nextCore = !cardset.core;
-        const nextDeck = await api.setCardCore(deck.id, cardset.id, nextCore);
-        setDeck(nextDeck);
-        setValidation(await api.validation(deck.id));
-        setAnnouncement(
-          `${nextCore ? "Starred" : "Unstarred"} ${cardset.card_name} as a core card`,
-        );
-      } catch (reason) {
-        setError(
-          reason instanceof Error
-            ? messageFor(reason)
-            : "Could not update core card",
-        );
-      } finally {
-        setBusy(false);
-      }
-    })();
+    runMutation(async (currentDeck) => {
+      const nextCore = !cardset.core;
+      const nextDeck = await api.setCardCore(
+        currentDeck.id,
+        cardset.id,
+        nextCore,
+      );
+      setDeck(nextDeck);
+      setValidation(await api.validation(currentDeck.id));
+      setAnnouncement(
+        `${nextCore ? "Starred" : "Unstarred"} ${cardset.card_name} as a core card`,
+      );
+    });
   };
 
   const updateCardNote = (cardset: CardSet, note: string): void => {
-    if (deck === null || busy) return;
-    setBusy(true);
-    setError(null);
-    void (async () => {
-      try {
-        const trimmedNote = note.trim();
-        const nextDeck = await api.setCardNote(deck.id, cardset.id, trimmedNote);
-        setDeck(nextDeck);
-        setAnnouncement(
-          trimmedNote === ""
-            ? `Cleared note for ${cardset.card_name}`
-            : `Saved note for ${cardset.card_name}`,
-        );
-      } catch (reason) {
-        setError(
-          reason instanceof Error
-            ? messageFor(reason)
-            : "Could not update card note",
-        );
-      } finally {
-        setBusy(false);
-      }
-    })();
+    runMutation(async (currentDeck) => {
+      const trimmedNote = note.trim();
+      const nextDeck = await api.setCardNote(
+        currentDeck.id,
+        cardset.id,
+        trimmedNote,
+      );
+      setDeck(nextDeck);
+      setAnnouncement(
+        trimmedNote === ""
+          ? `Cleared note for ${cardset.card_name}`
+          : `Saved note for ${cardset.card_name}`,
+      );
+    });
   };
 
   const addSearchResult = (card: ScryfallCard, zone: CardZone): void => {
@@ -271,7 +251,10 @@ export function useDeckActions({
     setBulkEditErrors([]);
     setError(null);
     try {
-      const preview = await api.importMoxfield(bulkDecklist, printingPreferences);
+      const preview = await api.importMoxfield(
+        bulkDecklist,
+        printingPreferences,
+      );
       if (preview.errors.length > 0) {
         setBulkEditErrors(
           preview.errors.map(
@@ -298,11 +281,7 @@ export function useDeckActions({
       setShowBulkEdit(false);
       setAnnouncement("Decklist updated");
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? messageFor(reason)
-          : "Could not update decklist",
-      );
+      await setConflictError(reason);
     } finally {
       setBusy(false);
     }

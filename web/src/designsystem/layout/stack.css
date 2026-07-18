@@ -1,0 +1,52 @@
+.ds-stack {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.ds-stack-gap-0 {
+  gap: 0;
+}
+
+.ds-stack-gap-1 {
+  gap: var(--space-1);
+}
+
+.ds-stack-gap-2 {
+  gap: var(--space-2);
+}
+
+.ds-stack-gap-3 {
+  gap: var(--space-3);
+}
+
+.ds-stack-gap-4 {
+  gap: var(--space-4);
+}
+
+.ds-stack-gap-6 {
+  gap: var(--space-6);
+}
+
+.ds-stack-gap-8 {
+  gap: var(--space-8);
+}
+
+.ds-stack-align-center {
+  align-items: center;
+}
+
+.ds-stack-align-end {
+  align-items: flex-end;
+}
+
+.ds-stack-align-start {
+  align-items: flex-start;
+}
+
+.ds-stack-align-stretch {
+  align-items: stretch;
+}

@@ -3,13 +3,13 @@ import contextlib
 import hashlib
 import json
 import logging
+import math
 import random
 import re
 import time
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Literal, Protocol
+from typing import Literal, Protocol, TypedDict, TypeVar, cast
 
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, RateLimitError
 from pydantic import BaseModel, ConfigDict, Field, create_model
@@ -20,26 +20,21 @@ from survail.core.models import CardRoleEvaluation, CardSet, Deck
 from survail.core.schemas import ScryfallCardSnapshot
 from survail.core.types import JsonObject, json_object
 from survail.modules.cards.repository.cards import CatalogRepository
-from survail.modules.decks.service.analytics import (
-    COLOR_LABELS,
-    color_pip_counts,
-    format_mana_value,
-    mana_curve_counts,
-    mana_curve_sort_key,
-    scoped_cardsets,
-)
 from survail.modules.decks.service.context import (
-    format_cardset_group_for_llm,
     oracle_text_for_llm,
     power_toughness_for_llm,
     snapshot_from_cardsets,
 )
 from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead, CardRoleScoreRead
-from survail.modules.decks.evaluations.service.annotations import capture_role_annotation, prompt_hash
-from survail.modules.decks.evaluations.service.role_rubrics import ROLE_NAMES, ROLE_RUBRICS
+from survail.modules.decks.evaluations.service.role_rubrics import (
+    ROLE_DEFINITIONS,
+    ROLE_GATE_CRITERIA,
+    ROLE_NAMES,
+    ROLE_RUBRICS,
+)
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v7"
+EVALUATOR_VERSION = "roles-v9"
 MAX_ATTEMPTS = 8
 MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
@@ -53,6 +48,8 @@ _RETRY_AFTER_MESSAGE = re.compile(
     r"(?:try again in|retry after) ([0-9.]+)\s*(ms|s(?:ec(?:ond)?s?)?)\b",
     re.IGNORECASE,
 )
+_CARD_MENTION = re.compile(r"\[\[([^\[\]]+)\]\]")
+ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 class EvaluationProgress(BaseModel):
@@ -61,15 +58,6 @@ class EvaluationProgress(BaseModel):
     total: int
     average_seconds_per_card: float | None
     eta_seconds: float | None
-
-
-@dataclass(frozen=True)
-class EvaluationPromptRequest:
-    model: str
-    instructions: str
-    input_text: str
-    text_format: type[BaseModel]
-    max_output_tokens: int
 
 
 class QualitativeRating(StrEnum):
@@ -87,8 +75,11 @@ RATING_SCORES: dict[QualitativeRating, int] = {
     QualitativeRating.HIGH: 75,
     QualitativeRating.VERY_HIGH: 100,
 }
+# create_model's overloads reject dynamically-built **field_definitions under
+# mypy, so the dynamic calls go through this loosely-parameterized alias.
+_create_structured_model: Callable[..., type[BaseModel]] = create_model
 StructuredRoleAnswers = {
-    role: create_model(  # type: ignore[call-overload]
+    role: _create_structured_model(
         f"{role.title().replace('_', '')}RoleAnswers",
         __config__=ConfigDict(extra="forbid", strict=True),
         **{criterion_id: (QualitativeRating, ...) for criterion_id in rubric},
@@ -96,7 +87,7 @@ StructuredRoleAnswers = {
     for role, rubric in ROLE_RUBRICS.items()
 }
 StructuredApplicableRoles = {
-    role: create_model(  # type: ignore[call-overload]
+    role: _create_structured_model(
         f"{role.title().replace('_', '')}ApplicableRole",
         __config__=ConfigDict(extra="forbid", strict=True),
         description=(str, Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)),
@@ -114,18 +105,30 @@ class StructuredRoleScore(BaseModel):
 
 
 NotApplicableRole = Literal["N/A"]
-StructuredLLMaaJ = create_model(  # type: ignore[call-overload]
-    "StructuredLLMaaJ",
-    __config__=ConfigDict(extra="forbid", strict=True),
-    **{
-        role: (StructuredApplicableRoles[role] | NotApplicableRole, ...)
-        for role in ROLE_NAMES
-    },
-    overall_summary=(str, Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)),
+
+
+class StructuredLLMaaJBase(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    overall_summary: str = Field(min_length=1, max_length=ROLE_JUDGE_MAX_TEXT_LENGTH)
+
+
+StructuredLLMaaJ = cast(
+    "type[StructuredLLMaaJBase]",
+    _create_structured_model(
+        "StructuredLLMaaJ",
+        __base__=StructuredLLMaaJBase,
+        **{
+            role: (StructuredApplicableRoles[role] | NotApplicableRole, ...)
+            for role in ROLE_NAMES
+        },
+    ),
 )
 
+
 class RoleEvaluator(Protocol):
-    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> BaseModel: ...
+    async def evaluate(
+        self, deck: Deck, oracle_id: str, card_context: str, references: str
+    ) -> StructuredLLMaaJBase: ...
 
 
 class OpenAIRoleEvaluator:
@@ -144,31 +147,18 @@ class OpenAIRoleEvaluator:
         self._sleep = sleep
         self._random_value = random_value
 
-    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> BaseModel:
-        result = await self.evaluate_request(self.build_request(deck, oracle_id, card_context))
-        _validate_llmaaj(result)
-        return result
-
-    def build_request(
-        self, deck: Deck, oracle_id: str, card_context: str, *, system_prompt: str | None = None
-    ) -> EvaluationPromptRequest:
-        instructions = system_prompt or _evaluation_instructions()
-        return EvaluationPromptRequest(
+    async def evaluate(
+        self, deck: Deck, oracle_id: str, card_context: str, references: str
+    ) -> StructuredLLMaaJBase:
+        result = await self._parse_with_retry(
             model=self._model,
-            instructions=instructions,
-            input_text=_evaluation_input_with_rubrics(deck, oracle_id, card_context),
+            instructions=_evaluation_instructions(),
+            input_text=_evaluation_input_with_rubrics(deck, oracle_id, card_context, references),
             text_format=StructuredLLMaaJ,
             max_output_tokens=MAX_ROLE_JUDGE_OUTPUT_TOKENS,
         )
-
-    async def evaluate_request(self, request: EvaluationPromptRequest) -> BaseModel:
-        return await self._parse_with_retry(
-            model=request.model,
-            instructions=request.instructions,
-            input_text=request.input_text,
-            text_format=request.text_format,
-            max_output_tokens=request.max_output_tokens,
-        )
+        _validate_llmaaj(result)
+        return result
 
     async def _parse_with_retry(
         self,
@@ -176,9 +166,9 @@ class OpenAIRoleEvaluator:
         model: str,
         instructions: str,
         input_text: str,
-        text_format: type[BaseModel],
+        text_format: type[ModelT],
         max_output_tokens: int,
-    ) -> BaseModel:
+    ) -> ModelT:
         for attempt in range(MAX_ATTEMPTS):
             try:
                 response = await self._client.responses.parse(
@@ -242,8 +232,8 @@ def _retry_delay(error: Exception, attempt: int, random_value: float) -> float:
     return min(max(exponential, retry_after) + jitter, MAX_RETRY_DELAY_SECONDS)
 
 
-def _evaluation_input(deck: Deck, oracle_id: str, card_context: str) -> str:
-    payload = _scoring_context_payload(deck, oracle_id, card_context)
+def _evaluation_input(deck: Deck, oracle_id: str, card_context: str, references: str) -> str:
+    payload = _scoring_context_payload(deck, oracle_id, card_context, references)
     sections = [
         "North Star:",
         payload["goal"],
@@ -251,14 +241,11 @@ def _evaluation_input(deck: Deck, oracle_id: str, card_context: str) -> str:
         "Commander:",
         payload["commander"],
         "",
-        "Full Decklist:",
-        payload["full_decklist"],
+        "Deck shape (rough shares in coarse bands):",
+        payload["deck_shape"],
         "",
-        "Current Mana Curve:",
-        payload["mana_curve"],
-        "",
-        "Current Color-Pip Distribution:",
-        payload["color_pip_distribution"],
+        "Cards referenced by the North Star or card notes:",
+        payload["referenced_cards"],
         "",
         "Card under evaluation:",
         payload["card_under_evaluation"],
@@ -270,50 +257,207 @@ def _evaluation_instructions() -> str:
     role_list = ", ".join(ROLE_NAMES)
     return (
         "Return one combined LLMaaJ object for this card in this specific deck. Evaluate "
-        f"all configured roles: {role_list}. For each role the card does not materially "
-        'fulfill, return exactly "N/A". For each applicable role, return exactly one '
-        "concise sentence describing how well the card fulfills that role and why, plus an "
-        '"answers" object whose keys exactly match that role\'s rubric criterion IDs and '
-        "whose values are qualitative ratings using only: very_low, low, neutral, high, "
-        f"or very_high. Aim for about {ROLE_JUDGE_TARGET_WORDS} per applicable role "
-        "description. Do not calculate numbers. Only mark land as applicable when the "
-        "card's type line explicitly includes Land. Treat incidental or negligible "
-        "functionality as inapplicable. Then return exactly one concise overall_summary "
-        "sentence based only on the role evaluations, emphasizing the strongest "
-        "contribution and any important limitation."
+        f"all configured roles: {role_list}. Apply each role's definition strictly, "
+        "including its exclusions: replacement draw is card_selection rather than "
+        "card_advantage, one-shot burst mana is not mana_ramp, and effects that protect "
+        "this deck's own plan are enabler rather than disruption. Decide between "
+        "targeted_disruption and mass_disruption with the parity test in their "
+        "definitions. Strong cards often fill several roles, so mark every role the card "
+        "materially fulfills, including the spell half of a modal land. For each role the "
+        'card does not materially fulfill, return exactly "N/A". Marking a role '
+        "applicable claims the card genuinely performs that job in this deck: if most of "
+        'a role\'s criteria would rate low or very_low, return "N/A" for that role '
+        "instead of rating it. For each applicable "
+        "role, return exactly one concise sentence describing how well the card fulfills "
+        'that role and why, plus an "answers" object whose keys exactly match that '
+        "role's rubric criterion IDs and whose values are qualitative ratings using "
+        "only: very_low, low, neutral, high, or very_high. Aim for about "
+        f"{ROLE_JUDGE_TARGET_WORDS} per applicable role description. Do not calculate "
+        "numbers. Only mark land as applicable when the card's type line explicitly "
+        "includes Land. Treat incidental or negligible functionality as inapplicable. "
+        "Use the deck shape to judge whether mass or symmetric effects would spare or "
+        "hurt this deck's own board. Then return exactly one concise overall_summary "
+        "sentence describing what the card does for this deck through its strongest "
+        "applicable roles, plus any important limitation within those roles. The "
+        "summary must not mention any role you did not rate highly: never write "
+        "phrases like 'offers no', 'does not provide', or 'lacks' about ramp, draw, "
+        "selection, disruption, or any other job the card is not meant to do."
     )
 
 
-def _evaluation_input_with_rubrics(deck: Deck, oracle_id: str, card_context: str) -> str:
-    rubric_payload = {role: dict(rubric) for role, rubric in ROLE_RUBRICS.items()}
+def _evaluation_input_with_rubrics(
+    deck: Deck, oracle_id: str, card_context: str, references: str
+) -> str:
+    rubric_payload = {
+        role: {"definition": ROLE_DEFINITIONS[role], "criteria": dict(rubric)}
+        for role, rubric in ROLE_RUBRICS.items()
+    }
     return (
-        f"{_evaluation_input(deck, oracle_id, card_context)}\n\n"
-        "Role rubrics:\n"
+        f"{_evaluation_input(deck, oracle_id, card_context, references)}\n\n"
+        "Role definitions and rubrics:\n"
         f"{json.dumps(rubric_payload, indent=2)}"
     )
 
 
-def _scoring_context_payload(deck: Deck, oracle_id: str, card_context: str) -> dict[str, Any]:
+class _ScoringContextPayload(TypedDict):
+    goal: str
+    commander: str
+    deck_shape: str
+    referenced_cards: str
+    card_under_evaluation: str
+    role_definitions: dict[str, str]
+    role_rubrics: dict[str, dict[str, str]]
+    evaluator_version: str
+
+
+def _scoring_context_payload(
+    deck: Deck, oracle_id: str, card_context: str, references: str
+) -> _ScoringContextPayload:
     return {
         "goal": deck.goal,
         "commander": _card_group_section(_commander_cardsets(deck, oracle_id)),
-        "full_decklist": _card_group_section(
-            scoped_cardsets(deck, exclude_oracle_id=oracle_id, core_only=True)
-        ),
-        "mana_curve": _mana_curve_section(deck, oracle_id),
-        "color_pip_distribution": _color_pip_section(deck, oracle_id),
+        "deck_shape": _deck_shape(deck),
+        "referenced_cards": references,
         "card_under_evaluation": card_context,
+        "role_definitions": ROLE_DEFINITIONS,
         "role_rubrics": ROLE_RUBRICS,
         "evaluator_version": EVALUATOR_VERSION,
     }
 
 
-def _context_key(deck: Deck, oracle_id: str, card_context: str) -> str:
-    payload = _scoring_context_payload(deck, oracle_id, card_context)
-    payload["goal"] = " ".join(str(payload["goal"]).split())
+def _context_key(deck: Deck, oracle_id: str, card_context: str, references: str) -> str:
+    payload = _scoring_context_payload(deck, oracle_id, card_context, references)
+    payload["goal"] = " ".join(payload["goal"].split())
     return hashlib.sha256(
         json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
     ).hexdigest()
+
+
+def _referenced_card_context(db: Session, deck: Deck, oracle_id: str) -> str:
+    texts = [deck.goal]
+    texts.extend(
+        cardset.note or "" for cardset in deck.cardsets if cardset.oracle_id == oracle_id
+    )
+    names = list(
+        dict.fromkeys(
+            match.group(1).strip() for text in texts for match in _CARD_MENTION.finditer(text)
+        )
+    )
+    briefs = [
+        _snapshot_brief(snapshot)
+        if (snapshot := _snapshot_for_name(db, deck, name)) is not None
+        else f"Name: {name}\nOracle Text: (card not found)"
+        for name in names
+        if name
+    ]
+    return "\n\n".join(briefs) if briefs else "None"
+
+
+_SHAPE_TYPE_LABELS = {
+    "Creature": "Creatures",
+    "Instant": "Instants",
+    "Sorcery": "Sorceries",
+    "Artifact": "Artifacts",
+    "Enchantment": "Enchantments",
+    "Planeswalker": "Planeswalkers",
+    "Battle": "Battles",
+    "Land": "Lands",
+}
+_SHAPE_ZONES = {"mainboard", "commander"}
+_SHAPE_COLOR_LABELS = {"W": "White", "U": "Blue", "B": "Black", "R": "Red", "G": "Green"}
+_SHAPE_PROMINENCE_THRESHOLD = 0.1
+_BASIC_LAND_SUBTYPES = {"Plains", "Island", "Swamp", "Mountain", "Forest"}
+_MANA_SYMBOL = re.compile(r"\{([^}]*)\}")
+
+
+def _deck_shape(deck: Deck) -> str:
+    type_counts = dict.fromkeys(_SHAPE_TYPE_LABELS, 0)
+    pip_counts = dict.fromkeys(_SHAPE_COLOR_LABELS, 0)
+    subtype_counts: dict[str, int] = {}
+    legendary = 0
+    total = 0
+    for cardset in deck.cardsets:
+        if cardset.zone.value not in _SHAPE_ZONES:
+            continue
+        type_line = str(cardset.scryfall.get("type_line", ""))
+        total += cardset.quantity
+        for card_type in _SHAPE_TYPE_LABELS:
+            if card_type in type_line:
+                type_counts[card_type] += cardset.quantity
+        if "Legendary" in type_line:
+            legendary += cardset.quantity
+        for subtype in _subtypes(type_line):
+            subtype_counts[subtype] = subtype_counts.get(subtype, 0) + cardset.quantity
+        for color, pips in _card_pips(cardset.scryfall).items():
+            pip_counts[color] += pips * cardset.quantity
+    if total == 0:
+        return "None"
+    lines = [
+        f"- {_SHAPE_TYPE_LABELS[card_type]}: {_shape_band(count / total)}"
+        for card_type, count in type_counts.items()
+        if count > 0
+    ]
+    if legendary / total >= _SHAPE_PROMINENCE_THRESHOLD:
+        lines.append(f"- Legendary: {_shape_band(legendary / total)}")
+    total_pips = sum(pip_counts.values())
+    if total_pips > 0:
+        lines.append("Color pips:")
+        lines.extend(
+            f"- {label}: {_shape_band(pip_counts[color] / total_pips)}"
+            for color, label in _SHAPE_COLOR_LABELS.items()
+            if pip_counts[color] > 0
+        )
+    prominent_subtypes = [
+        f"- {subtype}: {_shape_band(count / total)}"
+        for subtype, count in sorted(subtype_counts.items())
+        if count / total >= _SHAPE_PROMINENCE_THRESHOLD
+    ]
+    if prominent_subtypes:
+        lines.append("Prominent subtypes:")
+        lines.extend(prominent_subtypes)
+    return "\n".join(lines) if lines else "None"
+
+
+def _subtypes(type_line: str) -> set[str]:
+    subtypes: set[str] = set()
+    for face in type_line.split("//"):
+        _, _, tail = face.partition("—")
+        subtypes.update(token for token in tail.split() if token not in _BASIC_LAND_SUBTYPES)
+    return subtypes
+
+
+def _card_pips(snapshot_payload: JsonObject) -> dict[str, int]:
+    cost = str(snapshot_payload.get("mana_cost") or "")
+    if not cost:
+        faces = snapshot_payload.get("card_faces")
+        if isinstance(faces, list):
+            cost = "".join(
+                str(face.get("mana_cost") or "") for face in faces if isinstance(face, dict)
+            )
+    counts: dict[str, int] = {}
+    for symbol in _MANA_SYMBOL.findall(cost):
+        for color in _SHAPE_COLOR_LABELS:
+            if color in symbol:
+                counts[color] = counts.get(color, 0) + 1
+    return counts
+
+
+def _shape_band(share: float) -> str:
+    if share >= 0.5:
+        return "most"
+    if share >= 0.25:
+        return "many"
+    if share >= _SHAPE_PROMINENCE_THRESHOLD:
+        return "some"
+    return "few"
+
+
+def _snapshot_for_name(db: Session, deck: Deck, name: str) -> ScryfallCardSnapshot | None:
+    lowered = name.lower()
+    for cardset in deck.cardsets:
+        if cardset.card_name.lower() == lowered:
+            return snapshot_from_cardsets([cardset])
+    return CatalogRepository(db).exact_name(name)
 
 
 def _commander_cardsets(deck: Deck, oracle_id: str) -> list[CardSet]:
@@ -345,7 +489,9 @@ def read_cached_oracle_ids(
     if not deck.goal.strip():
         return []
     context_keys = {
-        oracle_id: _context_key(deck, oracle_id, contexts[oracle_id])
+        oracle_id: _context_key(
+            deck, oracle_id, contexts[oracle_id], _referenced_card_context(db, deck, oracle_id)
+        )
         for oracle_id in unique_ids
         if oracle_id in contexts
     }
@@ -396,53 +542,35 @@ def _group_cardsets(cardsets: Sequence[CardSet]) -> list[list[CardSet]]:
 
 
 def _card_brief(cardsets: Sequence[CardSet]) -> str:
-    return format_cardset_group_for_llm(cardsets)
+    snapshot = snapshot_from_cardsets(cardsets)
+    if snapshot is None:
+        return "Name: Unknown"
+    notes = [
+        note
+        for cardset in sorted(cardsets, key=lambda item: (item.zone.value, item.id))
+        if (note := (cardset.note or "").strip())
+    ]
+    lines = [_snapshot_brief(snapshot)]
+    if notes:
+        lines.append("Notes:")
+        lines.extend(f"- {note}" for note in notes)
+    return "\n".join(lines)
 
 
 def _catalog_card_brief(snapshot_payload: JsonObject) -> str:
     snapshot = ScryfallCardSnapshot.model_validate(snapshot_payload, strict=False)
-    return _snapshot_brief(snapshot, quantity=0)
+    return _snapshot_brief(snapshot)
 
 
-def _snapshot_from_cardsets(cardsets: Sequence[CardSet]) -> ScryfallCardSnapshot | None:
-    return snapshot_from_cardsets(cardsets)
-
-
-def _snapshot_brief(snapshot: ScryfallCardSnapshot, *, quantity: int) -> str:
+def _snapshot_brief(snapshot: ScryfallCardSnapshot) -> str:
     return "\n".join(
         [
             f"Name: {snapshot.name}",
-            f"Quantity: {quantity}",
-            "Zone Summary:",
-            "- None",
             f"Cost: {snapshot.mana_cost or 'None'}",
             f"Type: {snapshot.type_line}",
             f"Power/Toughness: {power_toughness_for_llm(snapshot)}",
             f"Oracle Text: {oracle_text_for_llm(snapshot)}",
-            "Cardset Notes:",
-            "- None",
         ]
-    )
-
-
-def _mana_curve_section(deck: Deck, oracle_id: str) -> str:
-    curve = mana_curve_counts(deck, exclude_oracle_id=oracle_id, core_only=True)
-    if not curve:
-        return "None"
-    return "\n".join(
-        f"- {cost}: {curve[cost]}"
-        for cost in sorted(curve, key=mana_curve_sort_key)
-    )
-
-
-def _color_pip_section(deck: Deck, oracle_id: str) -> str:
-    pip_counts = color_pip_counts(deck, exclude_oracle_id=oracle_id, core_only=True)
-    populated = [(color, count) for color, count in pip_counts.items() if count > 0]
-    if not populated:
-        return "None"
-    return "\n".join(
-        f"- {COLOR_LABELS.get(color, color)} ({color}): {count}"
-        for color, count in populated
     )
 
 
@@ -471,21 +599,31 @@ def _role_json(result: StructuredRoleScore) -> JsonObject:
 
 
 def _role_score_from_llmaaj(
-    role: str, evaluation: BaseModel, *, is_land: bool
+    role: str, evaluation: StructuredLLMaaJBase, *, is_land: bool
 ) -> StructuredRoleScore | None:
     role_value = getattr(evaluation, role)
     if role == "land" and not is_land:
         return None
     if role_value == "N/A":
         return None
+    answers: dict[str, QualitativeRating] = role_value.answers.model_dump()
+    if _fails_role_gate(role, answers):
+        return None
     return StructuredRoleScore(
         role=role,
         description=role_value.description,
-        answers=role_value.answers.model_dump(),
-    )  # type: ignore[arg-type]
+        answers=answers,
+    )
 
 
-def _validate_llmaaj(evaluation: BaseModel) -> None:
+def _fails_role_gate(role: str, answers: dict[str, QualitativeRating]) -> bool:
+    gate = ROLE_GATE_CRITERIA.get(role)
+    if gate is None:
+        return False
+    return answers[gate] in {QualitativeRating.VERY_LOW, QualitativeRating.LOW}
+
+
+def _validate_llmaaj(evaluation: StructuredLLMaaJBase) -> None:
     for role in ROLE_NAMES:
         role_value = getattr(evaluation, role)
         if role_value == "N/A":
@@ -501,7 +639,7 @@ def _calculate_overall_score(role_scores: list[CardRoleScoreRead]) -> int:
 
     sorted_scores = sorted(role_scores, key=lambda item: item.score, reverse=True)
     final_score = sum(
-        float(role_score.score) / ((index + 1) ** OVERALL_SCORE_WEIGHTING_EXPONENT)
+        float(role_score.score) / math.pow(index + 1, OVERALL_SCORE_WEIGHTING_EXPONENT)
         for index, role_score in enumerate(sorted_scores)
     )
 
@@ -542,8 +680,12 @@ async def evaluate_oracle_ids(
     unresolved = [oracle_id for oracle_id in unique_ids if oracle_id not in contexts]
     if unresolved:
         raise ValueError(f"Oracle IDs not found: {', '.join(unresolved)}")
+    references = {
+        oracle_id: _referenced_card_context(db, deck, oracle_id) for oracle_id in unique_ids
+    }
     context_keys = {
-        oracle_id: _context_key(deck, oracle_id, contexts[oracle_id]) for oracle_id in unique_ids
+        oracle_id: _context_key(deck, oracle_id, contexts[oracle_id], references[oracle_id])
+        for oracle_id in unique_ids
     }
     cached = {
         item.oracle_id: item for item in read_cached_oracle_ids(db, deck, unique_ids, contexts)
@@ -583,24 +725,17 @@ async def evaluate_oracle_ids(
             await asyncio.sleep(2)
             await report_progress()
 
-    async def evaluate(oracle_id: str) -> BaseModel:
+    async def evaluate(oracle_id: str) -> StructuredLLMaaJBase:
         assert evaluator is not None
         async with semaphore:
-            return await evaluator.evaluate(deck, oracle_id, contexts[oracle_id])
+            return await evaluator.evaluate(
+                deck, oracle_id, contexts[oracle_id], references[oracle_id]
+            )
 
     async def evaluate_one(oracle_id: str) -> CardRoleEvaluationRead:
         nonlocal completed
 
-        request = (
-            evaluator.build_request(deck, oracle_id, contexts[oracle_id])
-            if isinstance(evaluator, OpenAIRoleEvaluator)
-            else None
-        )
-        llmaaj = (
-            await evaluator.evaluate_request(request)
-            if request is not None
-            else await evaluate(oracle_id)
-        )
+        llmaaj = await evaluate(oracle_id)
         is_land = _is_land_card_context(contexts[oracle_id])
 
         raw_scores = [
@@ -643,21 +778,6 @@ async def evaluate_oracle_ids(
         async with persist_lock:
             db.add(evaluation)
             db.commit()
-            if request is not None:
-                capture_role_annotation(
-                    db,
-                    deck,
-                    evaluation,
-                    model=request.model,
-                    system_prompt=request.instructions,
-                    input_text=request.input_text,
-                    prompt_hash=prompt_hash(
-                        request.instructions, request.input_text, request.model
-                    ),
-                    output=llmaaj.model_dump(mode="json"),
-                )
-                db.commit()
-
             result = _read(evaluation, cached=False)
             cached[oracle_id] = result
             completed += 1

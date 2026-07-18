@@ -1,0 +1,28 @@
+.ds-page {
+  margin-inline: auto;
+  max-width: var(--size-page-max);
+  padding: clamp(var(--space-4), 3vw, var(--space-8));
+  width: 100%;
+}
+
+.ds-page-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.ds-page-header-lead {
+  align-items: baseline;
+  display: flex;
+  flex: 1;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ds-page-header-actions {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: var(--space-2);
+}

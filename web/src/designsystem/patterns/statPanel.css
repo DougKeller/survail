@@ -1,0 +1,22 @@
+.ds-meter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space-1) * 1.4);
+}
+
+.ds-meter-panel-head {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+}
+
+.ds-meter-panel-value {
+  color: var(--color-accent-2-700);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ds-meter-panel-accent .ds-meter-panel-value {
+  color: var(--color-accent-700);
+}

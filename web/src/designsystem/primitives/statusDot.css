@@ -1,0 +1,38 @@
+/* Pulsing saved-indicator dot (wireframe 1d top bar). Reduced motion is
+   neutralized globally by the base layer's prefers-reduced-motion rule. */
+
+.ds-status-dot {
+  animation: ds-status-pulse 2s ease-in-out infinite;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+  height: 7px;
+  width: 7px;
+}
+
+.ds-status-dot-accent {
+  background: var(--color-accent-500);
+}
+
+.ds-status-dot-accent-2 {
+  background: var(--color-accent-2-500);
+}
+
+.ds-status-dot-neutral {
+  background: var(--color-neutral-500);
+}
+
+.ds-status-dot-static {
+  animation: none;
+}
+
+@keyframes ds-status-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

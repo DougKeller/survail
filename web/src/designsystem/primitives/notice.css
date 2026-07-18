@@ -1,0 +1,17 @@
+/* Inline message block on the Organic surface ramp. */
+
+.ds-notice {
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.ds-notice-info {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.ds-notice-error {
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+}

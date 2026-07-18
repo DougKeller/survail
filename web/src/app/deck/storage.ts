@@ -21,16 +21,28 @@ export function storedPriceProvider(): PriceProvider {
   return stored !== null && isPriceProvider(stored) ? stored : "tcgplayer";
 }
 
+export function storePriceProvider(provider: PriceProvider): void {
+  localStorage.setItem("survail.price-provider", provider);
+}
+
 export function storedImportPreferences(): ImportPreferences {
   const stored = localStorage.getItem("survail.import-preferences");
   if (stored === null) return DEFAULT_IMPORT_PREFERENCES;
   try {
     const parsed = JSON.parse(stored) as { preserveTags?: boolean };
-    if (typeof parsed.preserveTags !== "boolean") return DEFAULT_IMPORT_PREFERENCES;
+    if (typeof parsed.preserveTags !== "boolean")
+      return DEFAULT_IMPORT_PREFERENCES;
     return { preserveTags: parsed.preserveTags };
   } catch {
     return DEFAULT_IMPORT_PREFERENCES;
   }
+}
+
+export function storeImportPreferences(preferences: ImportPreferences): void {
+  localStorage.setItem(
+    "survail.import-preferences",
+    JSON.stringify(preferences),
+  );
 }
 
 export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
@@ -65,11 +77,41 @@ export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
   }
 }
 
-export function defaultDeckDisplayPreferences(): DeckDisplayPreferences {
+export function storeDeckDisplayPreferences(
+  preferences: DeckDisplayPreferences,
+): void {
+  localStorage.setItem(
+    "survail.deck-display-preferences",
+    JSON.stringify(preferences),
+  );
+}
+
+function defaultDeckDisplayPreferences(): DeckDisplayPreferences {
   return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
 }
 
-export function isEditorView(value: string): value is EditorView {
+export function storedAdvisorOpen(): boolean {
+  const stored = localStorage.getItem("survail.advisor-open");
+  return stored === null ? true : stored === "true";
+}
+
+export function storeAdvisorOpen(open: boolean): void {
+  localStorage.setItem("survail.advisor-open", String(open));
+}
+
+export function storedAdvisorWidth(): number {
+  const stored = Number.parseInt(
+    localStorage.getItem("survail.advisor-width") ?? "",
+    10,
+  );
+  return Number.isFinite(stored) ? Math.max(320, stored) : 400;
+}
+
+export function storeAdvisorWidth(width: number): void {
+  localStorage.setItem("survail.advisor-width", String(width));
+}
+
+function isEditorView(value: string): value is EditorView {
   return (
     value === "cards" ||
     value === "scores" ||
@@ -78,11 +120,11 @@ export function isEditorView(value: string): value is EditorView {
   );
 }
 
-export function isDeckView(value: string): value is DeckView {
+function isDeckView(value: string): value is DeckView {
   return value === "stacks" || value === "grid" || value === "text";
 }
 
-export function isGroupBy(value: string): value is GroupBy {
+function isGroupBy(value: string): value is GroupBy {
   return (
     value === "type" ||
     value === "color" ||
@@ -91,7 +133,7 @@ export function isGroupBy(value: string): value is GroupBy {
   );
 }
 
-export function isSortBy(value: string): value is SortBy {
+function isSortBy(value: string): value is SortBy {
   return (
     value === "alphabetical" ||
     value === "mana-value" ||
@@ -117,7 +159,8 @@ export function deckDisplayPreferencesFromSearchParams(
   const sortBy = searchParams.get("sort");
   return {
     view: view !== null && isDeckView(view) ? view : fallback.view,
-    groupBy: groupBy !== null && isGroupBy(groupBy) ? groupBy : fallback.groupBy,
+    groupBy:
+      groupBy !== null && isGroupBy(groupBy) ? groupBy : fallback.groupBy,
     sortBy: sortBy !== null && isSortBy(sortBy) ? sortBy : fallback.sortBy,
   };
 }

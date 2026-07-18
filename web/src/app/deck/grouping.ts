@@ -44,7 +44,10 @@ function compareCards(
     );
   }
   if (sortBy === "starred") {
-    return Number(right.core) - Number(left.core) || left.card_name.localeCompare(right.card_name);
+    return (
+      Number(right.core) - Number(left.core) ||
+      left.card_name.localeCompare(right.card_name)
+    );
   }
   return left.card_name.localeCompare(right.card_name);
 }

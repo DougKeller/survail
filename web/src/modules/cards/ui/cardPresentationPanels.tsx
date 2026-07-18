@@ -1,13 +1,52 @@
+import type { ReactNode } from "react";
+
+import { Card } from "../../../designsystem/primitives/card";
+import { Notice } from "../../../designsystem/primitives/notice";
+import { ManaCost } from "../../../designsystem/primitives/pip";
+import { Tag } from "../../../designsystem/primitives/tag";
+import { Divided } from "../../../designsystem/layout/divided";
+import { Inline } from "../../../designsystem/layout/inline";
+import { Stack } from "../../../designsystem/layout/stack";
+import { Heading, Kicker, Text } from "../../../designsystem/layout/typography";
+
 import type { CardRoleEvaluation } from "../../decks/evaluations/contracts";
 import type { ScryfallCard } from "../contracts";
-
-import { displayPrice } from "./cardPresentationShared";
 
 function titleize(value: string): string {
   return value
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+function FactRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <Inline gap={4} justify="between">
+      <Text as="span" muted size="md">
+        {label}
+      </Text>
+      <Text as="span" size="md">
+        {value}
+      </Text>
+    </Inline>
+  );
+}
+
+function priceRows(
+  prices: NonNullable<ScryfallCard["prices"]>,
+): [string, string][] {
+  const entries: [string, string | null | undefined][] = [
+    ["TCGplayer", prices.usd],
+    ["TCGplayer foil", prices.usd_foil],
+    ["TCGplayer etched", prices.usd_etched],
+    ["Cardmarket", prices.eur],
+    ["Cardmarket foil", prices.eur_foil],
+    ["Cardhoarder", prices.tix],
+  ];
+  return entries.filter(
+    (entry): entry is [string, string] =>
+      entry[1] !== null && entry[1] !== undefined,
+  );
 }
 
 export function CardInfoPanel({
@@ -17,64 +56,49 @@ export function CardInfoPanel({
   card: ScryfallCard;
   finish: string | null;
 }) {
+  const prices = card.prices;
   return (
-    <>
+    <Stack gap={4}>
       {card.mana_cost !== null && (
-        <p className="card-details-mana">
-          <strong>Mana cost</strong>
-          <span>{card.mana_cost}</span>
-        </p>
+        <Inline gap={4} justify="between">
+          <Text as="span" size="md">
+            <strong>Mana cost</strong>
+          </Text>
+          <ManaCost cost={card.mana_cost} />
+        </Inline>
       )}
-      <p className="card-details-oracle">
-        {card.oracle_text ?? "Oracle text unavailable."}
-      </p>
-      <dl className="card-details-facts">
-        <span>
-          <dt>Set</dt>
-          <dd>
-            {card.set_name} ({card.set.toUpperCase()})
-          </dd>
-        </span>
-        <span>
-          <dt>Rarity</dt>
-          <dd>{card.rarity}</dd>
-        </span>
-        {finish !== null && (
-          <span>
-            <dt>Finish</dt>
-            <dd>{finish}</dd>
-          </span>
-        )}
+      <Card>
+        <Text pre size="md">
+          {card.oracle_text ?? "Oracle text unavailable."}
+        </Text>
+      </Card>
+      <Divided>
+        <FactRow
+          label="Set"
+          value={`${card.set_name} (${card.set.toUpperCase()})`}
+        />
+        <FactRow label="Rarity" value={card.rarity} />
+        {finish !== null && <FactRow label="Finish" value={finish} />}
         {finish === null && card.finishes.length > 0 && (
-          <span>
-            <dt>Finishes</dt>
-            <dd>{card.finishes.join(", ")}</dd>
-          </span>
+          <FactRow label="Finishes" value={card.finishes.join(", ")} />
         )}
         {card.released_at !== undefined && card.released_at !== null && (
-          <span>
-            <dt>Released</dt>
-            <dd>{card.released_at}</dd>
-          </span>
+          <FactRow label="Released" value={card.released_at} />
         )}
-      </dl>
-      {card.prices !== undefined && (
-        <section
-          aria-labelledby="card-details-prices"
-          className="card-details-prices"
-        >
-          <h3 id="card-details-prices">Market prices</h3>
-          <dl>
-            {displayPrice("TCGplayer", card.prices.usd)}
-            {displayPrice("TCGplayer foil", card.prices.usd_foil)}
-            {displayPrice("TCGplayer etched", card.prices.usd_etched)}
-            {displayPrice("Cardmarket", card.prices.eur)}
-            {displayPrice("Cardmarket foil", card.prices.eur_foil)}
-            {displayPrice("Cardhoarder", card.prices.tix)}
-          </dl>
-        </section>
+      </Divided>
+      {prices !== undefined && (
+        <Stack as="section" gap={2} labelledBy="card-details-prices">
+          <Heading id="card-details-prices" level={3} size="lg">
+            Market prices
+          </Heading>
+          <Divided>
+            {priceRows(prices).map(([label, value]) => (
+              <FactRow key={label} label={label} value={value} />
+            ))}
+          </Divided>
+        </Stack>
       )}
-    </>
+    </Stack>
   );
 }
 
@@ -88,58 +112,60 @@ export function CardAnalysisPanel({
   loading: boolean;
 }) {
   if (loading)
-    return (
-      <p className="card-analysis-status" role="status">
-        Loading deck-specific analysis…
-      </p>
-    );
+    return <Notice role="status">Loading deck-specific analysis…</Notice>;
   if (error !== null)
     return (
-      <p className="notice error" role="alert">
+      <Notice role="alert" tone="error">
         {error}
-      </p>
+      </Notice>
     );
   if (evaluation === null)
-    return (
-      <p className="card-analysis-status">
-        No deck-specific analysis is available.
-      </p>
-    );
+    return <Text muted>No deck-specific analysis is available.</Text>;
   return (
-    <div className="card-analysis">
-      <div className="card-analysis-summary">
-        <div>
-          <span className="card-analysis-label">Overall score</span>
-          <strong>{evaluation.overall_score}</strong>
-        </div>
-        <small>
+    <Stack gap={4}>
+      <Inline align="end" gap={4} justify="between">
+        <Stack gap={1}>
+          <Kicker>Overall score</Kicker>
+          <Heading level={3} size="3xl">
+            {evaluation.overall_score}
+          </Heading>
+        </Stack>
+        <Text as="span" muted size="sm">
           {evaluation.cached
             ? "Loaded from current deck cache"
             : "Generated for the current deck"}
-        </small>
-      </div>
-      <p className="card-analysis-comment">{evaluation.overall_comment}</p>
-      <div className="card-analysis-roles">
+        </Text>
+      </Inline>
+      <Card>
+        <Text size="md">{evaluation.overall_comment}</Text>
+      </Card>
+      <Stack gap={3}>
         {evaluation.roles.map((role) => (
-          <section className="card-analysis-role" key={role.role}>
-            <header>
-              <b className={`role-tag ${role.role}`}>{titleize(role.role)}</b>
-              <strong>{role.score}</strong>
-            </header>
-            <p>{role.description}</p>
-            <ul>
-              {Object.entries(role.answers).map(([criterion, rating]) => (
-                <li key={criterion}>
-                  <strong>{titleize(criterion)}</strong>
-                  <span>
-                    {titleize(rating)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <Card as="article" key={role.role}>
+            <Stack gap={2}>
+              <Inline gap={3} justify="between">
+                <Tag tone="accent2">{titleize(role.role)}</Tag>
+                <Text as="span" size="base">
+                  <strong>{role.score}</strong>
+                </Text>
+              </Inline>
+              <Text size="md">{role.description}</Text>
+              <Divided>
+                {Object.entries(role.answers).map(([criterion, rating]) => (
+                  <Inline gap={3} justify="between" key={criterion}>
+                    <Text as="span" size="sm">
+                      {titleize(criterion)}
+                    </Text>
+                    <Text as="span" size="sm">
+                      <strong>{titleize(rating)}</strong>
+                    </Text>
+                  </Inline>
+                ))}
+              </Divided>
+            </Stack>
+          </Card>
         ))}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

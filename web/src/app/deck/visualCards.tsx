@@ -1,5 +1,5 @@
-/* eslint-disable max-lines */
 import { useContext, type CSSProperties } from "react";
+import { ShieldUser } from "lucide-react";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type {
@@ -8,10 +8,26 @@ import type {
   DeckFormat,
 } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
+import { IconButton } from "../../designsystem/primitives/button";
 import {
-  canMoveToCommanderZone,
-  moveZoneOptionsFor,
-} from "./cardZones";
+  CardStack,
+  ImageGrid,
+  StackColumns,
+  StackSection,
+} from "../../designsystem/layout/cardGallery";
+import { Heading, Text } from "../../designsystem/layout/typography";
+import {
+  GroupTile,
+  ImageTile,
+  ImageTileActions,
+  ImageTileBadge,
+} from "../../designsystem/patterns/imageTile";
+import {
+  CardNoteButton,
+  MoveZoneSelect,
+  QuantityStepper,
+} from "./cardRowActions";
+import { canMoveToCommanderZone } from "./cardZones";
 import { CoreCardToggle } from "./coreCardToggle";
 import {
   type DeckView,
@@ -21,19 +37,6 @@ import {
 } from "./constants";
 import { groupPlaceholderLabel, groupSwatch } from "./groupColors";
 import { groupedCards, type CardGroup } from "./grouping";
-import { MaterialIcon, zoneLabel } from "./text";
-
-function DeckCardImage({
-  cardset,
-}: {
-  cardset: CardSet;
-}) {
-  return (
-    <div className="card-art">
-      <ClickableCardImage card={cardset} className="card-image" />
-    </div>
-  );
-}
 
 function ImageCard(props: {
   card: CardSet;
@@ -45,7 +48,6 @@ function ImageCard(props: {
   toggleCore: () => void;
   disabled: boolean;
   stacked: boolean;
-  index: number;
   score: CardRoleEvaluation | null;
   format: DeckFormat;
 }) {
@@ -60,101 +62,62 @@ function ImageCard(props: {
     toggleCore,
     disabled,
     stacked,
-    index,
     score,
   } = props;
-  const moveOptions = moveZoneOptionsFor(card, format);
   return (
-    <div
-      className={stacked ? "stacked-card" : "grid-card"}
-      style={
-        stacked
-          ? ({ "--stack-index": index } as React.CSSProperties)
-          : undefined
-      }
-    >
-      <DeckCardImage cardset={card} />
+    <ImageTile>
+      <ClickableCardImage card={card} />
       {!stacked && card.quantity > 1 && (
-        <span
-          aria-label={`${String(card.quantity)} copies`}
-          className="card-quantity"
-        >
+        <ImageTileBadge aria-label={`${String(card.quantity)} copies`}>
           ×{card.quantity}
-        </span>
+        </ImageTileBadge>
       )}
       {score !== null && (
-        <span
+        <ImageTileBadge
           aria-label={`${String(score.overall_score)} role score`}
-          className="card-score"
+          corner="bottom-right"
           title={score.roles
             .map((role) => `${role.role} ${String(role.score)}`)
             .join(", ")}
+          tone="accent"
         >
           {score.overall_score}
-        </span>
+        </ImageTileBadge>
       )}
-      <div className="card-quick-actions">
+      <ImageTileActions>
         <CoreCardToggle
           active={card.core}
           disabled={disabled}
           label={card.card_name}
           onClick={toggleCore}
         />
-        <button
-          aria-label={`${card.note.trim() === "" ? "Add" : "Edit"} note for ${card.card_name}`}
-          disabled={disabled}
-          onClick={editNote}
-          type="button"
-        >
-          <MaterialIcon name="edit_note" />
-        </button>
-        <button
-          aria-label={`Remove one ${card.card_name}`}
-          disabled={disabled}
-          onClick={remove}
-          type="button"
-        >
-          <MaterialIcon name="remove" />
-        </button>
-        <button
-          aria-label={`Add one ${card.card_name}`}
-          disabled={disabled}
-          onClick={add}
-          type="button"
-        >
-          <MaterialIcon name="add" />
-        </button>
-        {moveOptions.length > 0 && (
-          <select
-            aria-label={`Move ${card.card_name} to another zone`}
-            defaultValue=""
-            disabled={disabled}
-            onChange={(event) => {
-              const zone = event.target.value;
-              event.target.value = "";
-              if (zone !== "") move(zone as CardZone);
-            }}
-          >
-            <option value="">Move</option>
-            {moveOptions.map((zone) => (
-              <option key={zone} value={zone}>
-                {zoneLabel(zone)}
-              </option>
-            ))}
-          </select>
-        )}
+        <CardNoteButton busy={disabled} card={card} onClick={editNote} />
+        <QuantityStepper
+          busy={disabled}
+          card={card}
+          onAdd={add}
+          onRemove={remove}
+        />
+        <MoveZoneSelect
+          busy={disabled}
+          card={card}
+          format={format}
+          onMove={move}
+          placeholder="Move"
+        />
         {markCommander !== null && (
-          <button
-            aria-label={`Mark ${card.card_name} as commander`}
+          <IconButton
             disabled={disabled}
+            label={`Mark ${card.card_name} as commander`}
             onClick={markCommander}
-            type="button"
+            size="sm"
+            variant="ghost"
           >
-            <MaterialIcon name="shield_person" />
-          </button>
+            <ShieldUser size={14} strokeWidth={2.75} />
+          </IconButton>
         )}
-      </div>
-    </div>
+      </ImageTileActions>
+    </ImageTile>
   );
 }
 
@@ -168,15 +131,13 @@ function GroupPlaceholder({
   const label = groupPlaceholderLabel(groupBy, group.label);
   const accent = groupSwatch(groupBy, group.label);
   return (
-    <article
+    <GroupTile
       aria-label={`${label} group with ${String(group.quantity)} cards`}
-      className="group-placeholder-card"
-      style={{ "--group-accent": accent } as CSSProperties}
-    >
-      <span className="group-placeholder-eyebrow">{titleFor(groupBy)}</span>
-      <strong>{label}</strong>
-      <span>{group.quantity} cards</span>
-    </article>
+      count={`${String(group.quantity)} cards`}
+      eyebrow={titleFor(groupBy)}
+      style={{ "--ds-group-accent": accent } as CSSProperties}
+      title={label}
+    />
   );
 }
 
@@ -221,9 +182,13 @@ export function VisualCardGroups(props: {
 
   if (view === "grid") {
     return (
-      <div className="visual-card-flow-grid">
+      <ImageGrid>
         {groups.flatMap((group) => [
-          <GroupPlaceholder group={group} groupBy={groupBy} key={`${group.label}-placeholder`} />,
+          <GroupPlaceholder
+            group={group}
+            groupBy={groupBy}
+            key={`${group.label}-placeholder`}
+          />,
           ...group.cards.map((card) => (
             <ImageCard
               add={() => {
@@ -235,10 +200,10 @@ export function VisualCardGroups(props: {
                 editCardNote(card);
               }}
               format={format}
-              index={0}
               key={card.id}
               markCommander={
-                card.zone !== "commander" && canMoveToCommanderZone(card.scryfall, format)
+                card.zone !== "commander" &&
+                canMoveToCommanderZone(card.scryfall, format)
                   ? () => {
                       markCommander(card);
                     }
@@ -258,61 +223,59 @@ export function VisualCardGroups(props: {
             />
           )),
         ])}
-      </div>
+      </ImageGrid>
     );
   }
 
   return (
-    <div className={`visual-groups ${view}`}>
+    <StackColumns>
       {groups.map((group) => (
-        <section className="visual-group" key={group.label}>
-          <h3>
-            <span className="group-title-text">{group.label}</span>{" "}
-            <small>{group.quantity}</small>
-          </h3>
-          <div className="card-stacks">
+        <StackSection key={group.label}>
+          <Heading level={3} size="md">
+            {group.label}{" "}
+            <Text as="span" muted size="sm">
+              {group.quantity}
+            </Text>
+          </Heading>
+          <CardStack>
             {group.cards.flatMap((card) =>
-              Array.from(
-                { length: card.quantity },
-                (_, index) => (
-                  <ImageCard
-                    add={() => {
-                      addCard(card);
-                    }}
-                    card={card}
-                    disabled={busy}
-                    editNote={() => {
-                      editCardNote(card);
-                    }}
-                    format={format}
-                    index={index}
-                    key={`${card.id}-${String(index)}`}
-                    markCommander={
-                      card.zone !== "commander" &&
-                      canMoveToCommanderZone(card.scryfall, format)
-                        ? () => {
-                            markCommander(card);
-                          }
-                        : null
-                    }
-                    move={(zone) => {
-                      moveCardToZone(card, zone);
-                    }}
-                    remove={() => {
-                      removeCard(card);
-                    }}
-                    score={null}
-                    stacked
-                    toggleCore={() => {
-                      toggleCoreCard(card);
-                    }}
-                  />
-                ),
-              ),
+              Array.from({ length: card.quantity }, (_, index) => (
+                <ImageCard
+                  add={() => {
+                    addCard(card);
+                  }}
+                  card={card}
+                  disabled={busy}
+                  editNote={() => {
+                    editCardNote(card);
+                  }}
+                  format={format}
+                  key={`${card.id}-${String(index)}`}
+                  markCommander={
+                    card.zone !== "commander" &&
+                    canMoveToCommanderZone(card.scryfall, format)
+                      ? () => {
+                          markCommander(card);
+                        }
+                      : null
+                  }
+                  move={(zone) => {
+                    moveCardToZone(card, zone);
+                  }}
+                  remove={() => {
+                    removeCard(card);
+                  }}
+                  score={null}
+                  stacked
+                  toggleCore={() => {
+                    toggleCoreCard(card);
+                  }}
+                />
+              )),
             )}
-          </div>
-        </section>
+          </CardStack>
+        </StackSection>
       ))}
-    </div>
+    </StackColumns>
   );
 }

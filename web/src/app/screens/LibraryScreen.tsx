@@ -1,22 +1,24 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type SyntheticEvent,
-} from "react";
+import { Plus } from "lucide-react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { Page, PageHeader } from "../../designsystem/layout/page";
+import { Heading, Text } from "../../designsystem/layout/typography";
+import { Button } from "../../designsystem/primitives/button";
+import { Segmented } from "../../designsystem/primitives/choice";
+import { LiveRegion } from "../../designsystem/primitives/liveRegion";
+import { ValidationItem } from "../../designsystem/patterns/validationItem";
 import { api } from "../api";
 import { AddDeckModal } from "../library/addDeckModal";
 import { DeckGrid } from "../library/deckGrid";
 import { ImportPanel } from "../library/importPanel";
 import {
+  DECK_FORMATS,
   isDeckFormat,
   messageFor,
   storedImportPreferences,
-  useModalBehavior,
+  storeImportPreferences,
+  titleize,
 } from "../deckPrimitives";
 
 import type { Deck, DeckFormat } from "../../modules/decks/contracts";
@@ -29,6 +31,7 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [title, setTitle] = useState("");
   const [format, setFormat] = useState<DeckFormat>("commander");
+  const [formatFilter, setFormatFilter] = useState("all");
   const [decklist, setDecklist] = useState("");
   const [importPreferences, setImportPreferences] = useState<ImportPreferences>(
     storedImportPreferences,
@@ -39,17 +42,9 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
   const [showAddDeck, setShowAddDeck] = useState(false);
   const [openDeckMenu, setOpenDeckMenu] = useState<string | null>(null);
   const navigate = useNavigate();
-  const addDeckButtonRef = useRef<HTMLButtonElement>(null);
   const closeAddDeck = useCallback(() => {
     setShowAddDeck(false);
-    requestAnimationFrame(() => {
-      addDeckButtonRef.current?.focus();
-    });
   }, []);
-  const addDeckDialogRef = useModalBehavior<HTMLFormElement>(
-    showAddDeck,
-    closeAddDeck,
-  );
 
   const loadDecks = useCallback(async (): Promise<void> => {
     setDecks(await api.decks());
@@ -60,10 +55,7 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
   }, [loadDecks]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "survail.import-preferences",
-      JSON.stringify(importPreferences),
-    );
+    storeImportPreferences(importPreferences);
   }, [importPreferences]);
 
   useEffect(() => {
@@ -110,10 +102,7 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
     }
   }
 
-  async function handlePreview(
-    event: SyntheticEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
+  async function handlePreview(): Promise<void> {
     setBusy(true);
     setError(null);
     setPreview(null);
@@ -148,39 +137,58 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
     }
   }
 
+  const formatOptions = [
+    { label: "All", value: "all" },
+    ...DECK_FORMATS.filter((deckFormat) =>
+      decks.some((deck) => deck.format === deckFormat),
+    ).map((deckFormat) => ({ label: titleize(deckFormat), value: deckFormat })),
+  ];
+  const visibleDecks =
+    formatFilter === "all"
+      ? decks
+      : decks.filter((deck) => deck.format === formatFilter);
+
   return (
-    <main aria-busy={busy}>
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {busy ? "Working" : ""}
-      </div>
-      <section className="page-heading">
-        <div>
-          <h1>{mode === "decks" ? "Your decks" : "Import a deck"}</h1>
-          <p>
-            {mode === "decks"
-              ? "Build and manage your deck collection."
-              : "Resolve a decklist and review the imported cards."}
-          </p>
-        </div>
-        {mode === "decks" && (
-          <button
-            ref={addDeckButtonRef}
-            onClick={() => {
-              setShowAddDeck(true);
-            }}
-          >
-            Add Deck
-          </button>
-        )}
-      </section>
+    <Page busy={busy}>
+      <LiveRegion>{busy ? "Working" : ""}</LiveRegion>
+      <PageHeader
+        actions={
+          mode === "decks" ? (
+            <>
+              <Segmented
+                name="format-filter"
+                onChange={setFormatFilter}
+                options={formatOptions}
+                value={formatFilter}
+              />
+              <Button
+                icon={<Plus size={16} strokeWidth={2.75} />}
+                onClick={() => {
+                  setShowAddDeck(true);
+                }}
+              >
+                Add Deck
+              </Button>
+            </>
+          ) : undefined
+        }
+      >
+        <Heading level={1} size="3xl">
+          {mode === "decks" ? "Your decks" : "Import a deck"}
+        </Heading>
+        <Text muted size="md">
+          {mode === "decks"
+            ? `${String(decks.length)} ${decks.length === 1 ? "deck" : "decks"}`
+            : "Resolve a decklist and review the imported cards."}
+        </Text>
+      </PageHeader>
       {error !== null && (
-        <p className="notice error" role="alert">
-          {error}
-        </p>
+        <ValidationItem label={error} role="alert" status="warn" />
       )}
       {mode === "import" && (
         <ImportPanel
           busy={busy}
+          createDeck={handleCreateDeck}
           createImportedDeck={createImportedDeck}
           decklist={decklist}
           format={format}
@@ -196,24 +204,25 @@ export function LibraryScreen({ mode }: { mode: "decks" | "import" }) {
       )}
       {mode === "decks" && (
         <DeckGrid
-          decks={decks}
+          decks={visibleDecks}
           deleteDeck={deleteDeck}
+          onAddDeck={() => {
+            setShowAddDeck(true);
+          }}
           openDeckMenu={openDeckMenu}
           setOpenDeckMenu={setOpenDeckMenu}
         />
       )}
-      {showAddDeck && (
-        <AddDeckModal
-          busy={busy}
-          close={closeAddDeck}
-          dialogRef={addDeckDialogRef}
-          format={format}
-          handleFormatChange={handleFormatChange}
-          handleSubmit={handleCreateDeck}
-          setTitle={setTitle}
-          title={title}
-        />
-      )}
-    </main>
+      <AddDeckModal
+        busy={busy}
+        format={format}
+        handleFormatChange={handleFormatChange}
+        handleSubmit={handleCreateDeck}
+        onClose={closeAddDeck}
+        open={showAddDeck}
+        setTitle={setTitle}
+        title={title}
+      />
+    </Page>
   );
 }

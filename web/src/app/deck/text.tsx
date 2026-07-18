@@ -1,4 +1,5 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
+import { ArrowRight, ArrowUp } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import { ApiError } from "../../core/http/client";
@@ -11,6 +12,10 @@ import type {
   GeneratedDeckDescriptionContent,
   PriceProvider,
 } from "../../modules/decks/contracts";
+import { BackToTopButton } from "../../designsystem/primitives/backToTop";
+import { Inline } from "../../designsystem/layout/inline";
+import { Stack } from "../../designsystem/layout/stack";
+import { Heading, Text } from "../../designsystem/layout/typography";
 
 import { PriceProviderContext } from "./constants";
 
@@ -36,6 +41,15 @@ export function zoneLabel(zone: CardZone): string {
   return zone.charAt(0).toUpperCase() + zone.slice(1);
 }
 
+function GameplanItem({ children }: { children: ReactNode }) {
+  return (
+    <Inline align="start" gap={2}>
+      <ArrowRight aria-hidden="true" size={14} strokeWidth={2.75} />
+      <Text as="span">{children}</Text>
+    </Inline>
+  );
+}
+
 export function RichTextBlock({
   text,
   cards,
@@ -45,33 +59,30 @@ export function RichTextBlock({
 }) {
   const lines = text.split("\n");
   return (
-    <div className="generated-description">
+    <Stack gap={2}>
       {lines.map((line, index) => {
         if (line.startsWith("# ")) {
           return (
-            <h3 key={String(index)}>
+            <Heading key={String(index)} level={3} size="md">
               <InlineCardText cards={cards} text={line.slice(2)} />
-            </h3>
+            </Heading>
           );
         }
         if (line.startsWith("- ")) {
           return (
-            <div className="gameplan-item" key={String(index)}>
-              <MaterialIcon name="arrow_right" />
-              <p>
-                <InlineCardText cards={cards} text={line.slice(2)} />
-              </p>
-            </div>
+            <GameplanItem key={String(index)}>
+              <InlineCardText cards={cards} text={line.slice(2)} />
+            </GameplanItem>
           );
         }
         if (line.trim() === "") return null;
         return (
-          <p key={String(index)}>
+          <Text key={String(index)}>
             <InlineCardText cards={cards} text={line} />
-          </p>
+          </Text>
         );
       })}
-    </div>
+    </Stack>
   );
 }
 
@@ -86,12 +97,16 @@ export function GeneratedDescription({
     return <RichTextBlock cards={cards} text={description} />;
   }
   return (
-    <div className="generated-description" aria-live="polite">
-      <h3>Overview</h3>
-      <p>
+    <Stack aria-live="polite" gap={2}>
+      <Heading level={3} size="md">
+        Overview
+      </Heading>
+      <Text>
         <InlineCardText cards={cards} text={description.overview} />
-      </p>
-      <h3>Gameplan</h3>
+      </Text>
+      <Heading level={3} size="md">
+        Gameplan
+      </Heading>
       {(
         [
           ["Turns 1-3", description.early_game],
@@ -99,16 +114,13 @@ export function GeneratedDescription({
           ["Lategame", description.lategame],
         ] as [string, string][]
       ).map(([label, text]) => (
-        <div className="gameplan-item" key={label}>
-          <MaterialIcon name="arrow_right" />
-          <p>
-            <strong>{label}</strong>
-            {": "}
-            <InlineCardText cards={cards} text={text} />
-          </p>
-        </div>
+        <GameplanItem key={label}>
+          <strong>{label}</strong>
+          {": "}
+          <InlineCardText cards={cards} text={text} />
+        </GameplanItem>
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -150,14 +162,10 @@ export function Price({
 }) {
   const provider = useContext(PriceProviderContext);
   const price = displayPrice(card, finish, provider);
-  return price === null ? null : <small className="price">{price}</small>;
-}
-
-export function MaterialIcon({ name }: { name: string }) {
-  return (
-    <span className="material-symbols-outlined" aria-hidden="true">
-      {name}
-    </span>
+  return price === null ? null : (
+    <Text as="span" muted size="sm">
+      {price}
+    </Text>
   );
 }
 
@@ -167,4 +175,31 @@ export function ScrollToTop() {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [location.pathname]);
   return null;
+}
+
+export function BackToTop() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleThreshold = 360;
+    const syncVisible = () => {
+      setVisible(window.scrollY > toggleThreshold);
+    };
+
+    syncVisible();
+    window.addEventListener("scroll", syncVisible, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", syncVisible);
+    };
+  }, []);
+
+  return (
+    <BackToTopButton
+      icon={<ArrowUp size={14} strokeWidth={2.75} />}
+      onClick={() => {
+        window.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+      }}
+      visible={visible}
+    />
+  );
 }

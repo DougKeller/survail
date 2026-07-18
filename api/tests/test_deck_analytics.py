@@ -131,7 +131,7 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
                 "overall_comment": "",
                 "cached": True,
                 "roles": [
-                    {"role": "engine_enabler", "score": 80, "description": "", "answers": {}},
+                    {"role": "enabler", "score": 80, "description": "", "answers": {}},
                     {"role": "payoff", "score": 70, "description": "", "answers": {}},
                 ],
             },
@@ -146,7 +146,7 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
                 "overall_comment": "",
                 "cached": True,
                 "roles": [
-                    {"role": "engine_support", "score": 80, "description": "", "answers": {}}
+                    {"role": "enhancer", "score": 80, "description": "", "answers": {}}
                 ],
             },
             strict=False,
@@ -154,9 +154,9 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
     ]
 
     assert role_distribution_counts(deck, evaluations) == {
-        "engine_enabler": 2,
+        "enabler": 2,
         "payoff": 2,
-        "engine_support": 1,
+        "enhancer": 1,
     }
 
 

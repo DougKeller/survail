@@ -1,4 +1,4 @@
-import { ApiError, API, request } from "../../../core/http/client";
+import { ApiError, request, stream } from "../../../core/http/client";
 
 import type { AgentUiEvent, DeckConversation } from "../contracts";
 
@@ -18,15 +18,12 @@ export async function streamEvents(
   body: object,
   onEvent: (event: AgentUiEvent) => void,
 ): Promise<"completed" | "interrupted"> {
-  const response = await fetch(`${API}${path}`, {
+  const response = await stream(path, {
     method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok || response.body === null) {
-    const responseText = await response.text();
-    throw new ApiError(responseText, response.status);
+  if (response.body === null) {
+    throw new ApiError("Response body was empty", response.status);
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

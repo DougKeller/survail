@@ -35,13 +35,12 @@ export const PREFERRED_CARD_ROLE_ORDER: readonly string[] = [
   "land",
   "mana_ramp",
   "card_advantage",
-  "selection_tutor",
-  "interaction",
-  "board_control",
-  "protection",
-  "engine_enabler",
-  "engine_support",
+  "card_selection",
+  "targeted_disruption",
+  "mass_disruption",
+  "enabler",
   "payoff",
+  "enhancer",
 ];
 
 export const DEFAULT_IMPORT_PREFERENCES: ImportPreferences = {

@@ -22,8 +22,11 @@ from survail.modules.decks.evaluations.service.evaluator import (
     _card_brief,
     _calculate_overall_score,
     _context_key,
+    _deck_shape,
     _evaluation_input,
+    _referenced_card_context,
     _retry_delay,
+    _role_score_from_llmaaj,
     evaluate_oracle_ids,
 )
 
@@ -36,6 +39,10 @@ class FakeDb:
     def scalars(self, statement: object) -> list[CardRoleEvaluation]:
         del statement
         return self.cached
+
+    def scalar(self, statement: object) -> None:
+        del statement
+        return None
 
     def add(self, evaluation: CardRoleEvaluation) -> None:
         self.added.append(evaluation)
@@ -52,8 +59,10 @@ class FakeEvaluator:
     active: int = 0
     max_active: int = 0
 
-    async def evaluate(self, deck: Deck, oracle_id: str, card_context: str) -> StructuredLLMaaJ:
-        del deck, oracle_id, card_context
+    async def evaluate(
+        self, deck: Deck, oracle_id: str, card_context: str, references: str
+    ) -> StructuredLLMaaJ:
+        del deck, oracle_id, card_context, references
 
         self.active += 1
         self.max_active = max(self.max_active, self.active)
@@ -78,10 +87,10 @@ class FakeEvaluator:
 
         payload = {role: "N/A" for role in ROLE_NAMES}
         payload["card_advantage"] = applicable("card_advantage")
-        payload["board_control"] = applicable("board_control")
+        payload["mass_disruption"] = applicable("mass_disruption")
         payload["overall_summary"] = (
             "Overall: This card is a useful card advantage. "
-            "This card is a useful board control."
+            "This card is a useful mass disruption."
         )
         return StructuredLLMaaJ(**payload)
 
@@ -91,6 +100,7 @@ def _cardset(
     *,
     type_line: str = "Sorcery",
     oracle_text: str | None = "Draw two cards. Destroy all creatures.",
+    mana_cost: str | None = None,
     power: str | None = None,
     toughness: str | None = None,
     card_faces: list[CardFace] | None = None,
@@ -104,6 +114,7 @@ def _cardset(
         cmc=4,
         type_line=type_line,
         oracle_text=oracle_text,
+        mana_cost=mana_cost,
         power=power,
         toughness=toughness,
         legalities={"commander": "legal"},
@@ -135,15 +146,10 @@ def _cardset(
 def _brief(name: str) -> str:
     return (
         f"Name: {name}\n"
-        "Quantity: 1\n"
-        "Zone Summary:\n"
-        "- Mainboard: 1x\n"
         "Cost: None\n"
         "Type: Sorcery\n"
         "Power/Toughness: None\n"
-        "Oracle Text: Draw two cards. Destroy all creatures.\n"
-        "Cardset Notes:\n"
-        "- None"
+        "Oracle Text: Draw two cards. Destroy all creatures."
     )
 
 
@@ -162,8 +168,8 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
     cached = CardRoleEvaluation(
         deck_id=deck.id,
         deck_revision=3,
-        context_key=_context_key(deck, "0", _brief("0")),
-        evaluator_version="roles-v7",
+        context_key=_context_key(deck, "0", _brief("0"), "None"),
+        evaluator_version="roles-v9",
         oracle_id="0",
         overall_comment="Cached comment.",
         roles=[
@@ -174,7 +180,7 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
                 "answers": {},
             },
             {
-                "role": "board_control",
+                "role": "mass_disruption",
                 "score": 50,
                 "description": "Cached secondary role.",
                 "answers": {},
@@ -210,9 +216,9 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
     assert results[0].overall_score == cached_expected
     assert results[1].overall_score == fresh_expected
     assert results[1].overall_comment == (
-        "Overall: This card is a useful card advantage. This card is a useful board control."
+        "Overall: This card is a useful card advantage. This card is a useful mass disruption."
     )
-    assert [role.role for role in results[1].roles] == ["card_advantage", "board_control"]
+    assert [role.role for role in results[1].roles] == ["card_advantage", "mass_disruption"]
     assert results[1].roles[0].description == "This card is a useful card advantage."
     assert list(results[1].roles[0].answers.values())[:4] == [
         "very_high",
@@ -244,13 +250,13 @@ def test_context_key_stays_stable_across_revision_only_changes() -> None:
     subject = _cardset("subject")
     deck.cardsets = [commander, core, subject]
 
-    first = _context_key(deck, subject.oracle_id, _brief("subject"))
+    first = _context_key(deck, subject.oracle_id, _brief("subject"), "None")
     deck.revision = 4
 
-    assert _context_key(deck, subject.oracle_id, _brief("subject")) == first
+    assert _context_key(deck, subject.oracle_id, _brief("subject"), "None") == first
 
 
-def test_evaluation_context_uses_only_starred_cards_and_excludes_subject() -> None:
+def test_evaluation_context_is_decklist_agnostic() -> None:
     deck = Deck(
         id=uuid.uuid4(),
         owner_id=uuid.uuid4(),
@@ -267,19 +273,137 @@ def test_evaluation_context_uses_only_starred_cards_and_excludes_subject() -> No
     support.core = True
     subject = _cardset("subject")
     subject.core = True
-    filler = _cardset("filler")
-    deck.cardsets = [commander, support, subject, filler]
+    deck.cardsets = [commander, support, subject]
 
     evaluation_input = _evaluation_input(
         deck,
         subject.oracle_id,
         _brief("subject"),
+        "None",
     )
 
-    assert "Name: support" in evaluation_input
-    assert "Name: filler" not in evaluation_input
-    assert "Current Mana Curve:\n- 4: 1" in evaluation_input
-    assert "Name: subject\nQuantity: 1" in evaluation_input
+    assert "Name: commander" in evaluation_input
+    assert "Name: support" not in evaluation_input
+    assert "Mana Curve" not in evaluation_input
+    assert "Deck shape (rough shares in coarse bands):" in evaluation_input
+    assert "- Sorceries: most" in evaluation_input
+    assert "Cards referenced by the North Star or card notes:\nNone" in evaluation_input
+    assert f"Card under evaluation:\n{_brief('subject')}" in evaluation_input
+
+
+def test_referenced_card_context_expands_goal_mentions_from_deck() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Deck",
+        format=DeckFormat.COMMANDER,
+        description="",
+        goal="Recur lands with [[commander]] and dig with [[Unknown Card]].",
+        metadata_json={"kind": "commander", "commander_oracle_ids": []},
+        revision=3,
+    )
+    commander = _cardset("commander", type_line="Legendary Creature")
+    commander.zone = CardZone.COMMANDER
+    subject = _cardset("subject")
+    subject.note = "Sacrifice fodder for [[payoff]]."
+    payoff = _cardset("payoff", type_line="Enchantment")
+    deck.cardsets = [commander, subject, payoff]
+
+    references = _referenced_card_context(cast("Session", FakeDb()), deck, subject.oracle_id)
+
+    assert "Name: commander" in references
+    assert "Type: Legendary Creature" in references
+    assert "Name: Unknown Card\nOracle Text: (card not found)" in references
+    assert "Name: payoff" in references
+
+
+def test_referenced_card_context_ignores_other_cards_notes() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Deck",
+        format=DeckFormat.COMMANDER,
+        description="",
+        goal="Win through attrition.",
+        metadata_json={"kind": "commander", "commander_oracle_ids": []},
+        revision=3,
+    )
+    subject = _cardset("subject")
+    other = _cardset("other")
+    other.note = "Pairs with [[commander]]."
+    deck.cardsets = [subject, other]
+
+    references = _referenced_card_context(cast("Session", FakeDb()), deck, subject.oracle_id)
+
+    assert references == "None"
+
+
+def test_deck_shape_uses_coarse_bands_stable_under_small_swaps() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Deck",
+        format=DeckFormat.COMMANDER,
+        description="",
+        goal="Enchantment value.",
+        metadata_json={"kind": "commander", "commander_oracle_ids": []},
+        revision=1,
+    )
+    enchantments = [
+        _cardset(f"enchantment-{index}", type_line="Enchantment") for index in range(12)
+    ]
+    creatures = [_cardset(f"creature-{index}", type_line="Creature — Bear") for index in range(4)]
+    lands = [_cardset(f"land-{index}", type_line="Land") for index in range(4)]
+    considering = _cardset("considering-card", type_line="Instant")
+    considering.zone = CardZone.CONSIDERING
+    deck.cardsets = [*enchantments, *creatures, *lands, considering]
+
+    shape = _deck_shape(deck)
+
+    assert shape == (
+        "- Creatures: some\n"
+        "- Enchantments: most\n"
+        "- Lands: some\n"
+        "Prominent subtypes:\n"
+        "- Bear: some"
+    )
+
+    deck.cardsets = [*enchantments[:11], *creatures, *lands, _cardset("swap", type_line="Enchantment")]
+
+    assert _deck_shape(deck) == shape
+
+
+def test_deck_shape_includes_pips_legendary_and_skips_basic_land_subtypes() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Deck",
+        format=DeckFormat.COMMANDER,
+        description="",
+        goal="Vampire aggression.",
+        metadata_json={"kind": "commander", "commander_oracle_ids": []},
+        revision=1,
+    )
+    vampires = [
+        _cardset(f"vampire-{index}", type_line="Creature — Vampire", mana_cost="{1}{B}")
+        for index in range(7)
+    ]
+    hybrid = _cardset("hybrid", type_line="Legendary Creature — Vampire", mana_cost="{B/G}")
+    swamps = [
+        _cardset(f"swamp-{index}", type_line="Basic Land — Swamp") for index in range(2)
+    ]
+    deck.cardsets = [*vampires, hybrid, *swamps]
+
+    assert _deck_shape(deck) == (
+        "- Creatures: most\n"
+        "- Lands: some\n"
+        "- Legendary: some\n"
+        "Color pips:\n"
+        "- Black: most\n"
+        "- Green: some\n"
+        "Prominent subtypes:\n"
+        "- Vampire: most"
+    )
 
 
 def test_card_brief_uses_face_oracle_text_and_creature_face_stats() -> None:
@@ -311,18 +435,13 @@ def test_card_brief_uses_face_oracle_text_and_creature_face_stats() -> None:
 
     assert brief == (
         "Name: grave-researcher\n"
-        "Quantity: 1\n"
-        "Zone Summary:\n"
-        "- Mainboard: 1x\n"
         "Cost: None\n"
         "Type: Creature // Sorcery\n"
         "Power/Toughness: Grave Researcher: 2/2\n"
         "Oracle Text: Grave Researcher (Creature — Skeleton Wizard)\n"
         "When this enters, mill two cards.\n\n"
         "Notion Rain (Sorcery)\n"
-        "Surveil 2, then draw two cards.\n"
-        "Cardset Notes:\n"
-        "- None"
+        "Surveil 2, then draw two cards."
     )
 
 
@@ -341,15 +460,10 @@ def test_card_brief_uses_top_level_power_toughness_for_normal_creatures() -> Non
 
     assert brief == (
         "Name: bear\n"
-        "Quantity: 1\n"
-        "Zone Summary:\n"
-        "- Mainboard: 1x\n"
         "Cost: None\n"
         "Type: Creature — Bear\n"
         "Power/Toughness: 2/2\n"
-        "Oracle Text: Vigilance\n"
-        "Cardset Notes:\n"
-        "- None"
+        "Oracle Text: Vigilance"
     )
 
 
@@ -359,7 +473,7 @@ def test_card_brief_includes_cardset_note_context() -> None:
 
     brief = _card_brief([noted])
 
-    assert "Cardset Notes:\n- Mainboard: Only keep if the deck stays spell-heavy." in brief
+    assert "Notes:\n- Only keep if the deck stays spell-heavy." in brief
 
 
 def test_overall_score_uses_shared_weighting_exponent_without_upper_clamp() -> None:
@@ -374,10 +488,10 @@ def test_overall_score_uses_shared_weighting_exponent_without_upper_clamp() -> N
         )
         for role, description in (
             ("card_advantage", "Primary"),
-            ("board_control", "Secondary"),
+            ("mass_disruption", "Secondary"),
             ("payoff", "Tertiary"),
-            ("engine_enabler", "Quaternary"),
-            ("engine_support", "Quinary"),
+            ("enabler", "Quaternary"),
+            ("enhancer", "Quinary"),
         )
     ]
 
@@ -394,24 +508,53 @@ def test_overall_score_uses_shared_weighting_exponent_without_upper_clamp() -> N
     assert _calculate_overall_score(role_scores) == expected
 
 
+def test_role_gate_drops_roles_whose_defining_criterion_rates_low() -> None:
+    def llmaaj_with_net_gain(rating: QualitativeRating) -> StructuredLLMaaJ:
+        payload = {role: "N/A" for role in ROLE_NAMES}
+        payload["card_advantage"] = {
+            "description": "Marginal draw effect.",
+            "answers": {
+                "net_gain": rating,
+                "repeatability": QualitativeRating.HIGH,
+                "reliability": QualitativeRating.HIGH,
+                "quality": QualitativeRating.HIGH,
+                "floor": QualitativeRating.HIGH,
+            },
+        }
+        payload["overall_summary"] = "A marginal draw effect."
+        return StructuredLLMaaJ(**payload)
+
+    gated = _role_score_from_llmaaj(
+        "card_advantage", llmaaj_with_net_gain(QualitativeRating.LOW), is_land=False
+    )
+    kept = _role_score_from_llmaaj(
+        "card_advantage", llmaaj_with_net_gain(QualitativeRating.NEUTRAL), is_land=False
+    )
+
+    assert gated is None
+    assert kept is not None
+    assert kept.role == "card_advantage"
+
+
 def test_structured_role_outputs_include_role_description_but_not_per_answer_prose() -> None:
     score_schema = StructuredLLMaaJ.model_json_schema()
     assert set(score_schema["properties"]) == {*ROLE_NAMES, "overall_summary"}
-    engine_support = score_schema["$defs"]["EngineSupportApplicableRole"]
-    engine_support_answers_ref = engine_support["properties"]["answers"]["$ref"].split("/")[-1]
-    engine_support_answers = score_schema["$defs"][engine_support_answers_ref]
-    assert set(engine_support_answers["properties"]) == set(ROLE_RUBRICS["engine_support"])
+    enhancer = score_schema["$defs"]["EnhancerApplicableRole"]
+    enhancer_answers_ref = enhancer["properties"]["answers"]["$ref"].split("/")[-1]
+    enhancer_answers = score_schema["$defs"][enhancer_answers_ref]
+    assert set(enhancer_answers["properties"]) == set(ROLE_RUBRICS["enhancer"])
 
 
 def test_openai_role_evaluator_retries_transient_errors_with_exponential_backoff() -> None:
     payload = {role: "N/A" for role in ROLE_NAMES}
-    payload["engine_enabler"] = {
-        "description": "Starts the engine efficiently.",
+    payload["enabler"] = {
+        "description": "Starts the plan efficiently.",
         "answers": {
             "directness": QualitativeRating.HIGH,
             "reliability": QualitativeRating.HIGH,
-            "synergy_density": QualitativeRating.NEUTRAL,
+            "resilience": QualitativeRating.NEUTRAL,
             "timing": QualitativeRating.HIGH,
+            "breadth": QualitativeRating.NEUTRAL,
         },
     }
     payload["overall_summary"] = "A strong enabler for this deck."
@@ -449,7 +592,7 @@ def test_openai_role_evaluator_retries_transient_errors_with_exponential_backoff
     )
     deck.cardsets = []
 
-    tagged = asyncio.run(evaluator.evaluate(deck, "oracle", "{}"))
+    tagged = asyncio.run(evaluator.evaluate(deck, "oracle", "{}", "None"))
 
     assert tagged == result
     assert sleeps == [1.0]
@@ -476,11 +619,11 @@ def test_retry_delay_parses_millisecond_rate_limit_message() -> None:
 def test_completed_cards_are_persisted_when_another_card_fails() -> None:
     class PartiallyFailingEvaluator(FakeEvaluator):
         async def evaluate(
-            self, deck: Deck, oracle_id: str, card_context: str
+            self, deck: Deck, oracle_id: str, card_context: str, references: str
         ) -> StructuredLLMaaJ:
             if oracle_id == "bad":
                 raise RuntimeError("failed")
-            return await super().evaluate(deck, oracle_id, card_context)
+            return await super().evaluate(deck, oracle_id, card_context, references)
 
     deck = Deck(
         id=uuid.uuid4(),

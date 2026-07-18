@@ -1,21 +1,23 @@
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useState } from "react";
 
 import type { CardSet } from "../../modules/decks/contracts";
-import { MaterialIcon } from "../deckPrimitives";
+import { Button } from "../../designsystem/primitives/button";
+import { Dialog } from "../../designsystem/primitives/dialog";
+import { Field, TextArea } from "../../designsystem/primitives/input";
+import { Inline } from "../../designsystem/layout/inline";
+import { Stack } from "../../designsystem/layout/stack";
+import { Text } from "../../designsystem/layout/typography";
+import { useDeckEditorContext } from "./deckEditorContext";
 
-export function CardNoteModal({
-  busy,
-  cardset,
-  close,
-  dialogRef,
-  save,
-}: {
-  busy: boolean;
-  cardset: CardSet;
-  close: () => void;
-  dialogRef: RefObject<HTMLFormElement | null>;
-  save: (note: string) => void;
-}) {
+export function CardNoteModal({ cardset }: { cardset: CardSet }) {
+  const {
+    actions: { updateCardNote },
+    data: { busy },
+    modals: { setActiveCardNote },
+  } = useDeckEditorContext();
+  const close = (): void => {
+    setActiveCardNote(null);
+  };
   const [note, setNote] = useState(cardset.note);
 
   useEffect(() => {
@@ -23,43 +25,23 @@ export function CardNoteModal({
   }, [cardset.id, cardset.note]);
 
   return (
-    <div className="modal-backdrop" onClick={close}>
-      <form
-        aria-describedby="card-note-description"
-        aria-labelledby="card-note-title"
-        aria-modal="true"
-        className="add-deck-modal guidance-edit-modal stack"
-        onClick={(event) => {
-          event.stopPropagation();
-        }}
+    <Dialog onClose={close} open title="Card note">
+      <Stack
+        as="form"
+        gap={3}
         onSubmit={(event) => {
           event.preventDefault();
-          save(note);
+          updateCardNote(cardset, note);
+          setActiveCardNote(null);
         }}
-        ref={dialogRef}
-        role="dialog"
-        tabIndex={-1}
       >
-        <div className="page-heading">
-          <div>
-            <h2 id="card-note-title">Card note</h2>
-            <p className="muted" id="card-note-description">
-              This note is included when AI evaluates or reasons about this card
-              in the context of the deck.
-            </p>
-          </div>
-          <button
-            aria-label="Close card note editor"
-            className="icon-action"
-            onClick={close}
-            type="button"
-          >
-            <MaterialIcon name="close" />
-          </button>
-        </div>
-        <label>
-          {cardset.card_name}
-          <textarea
+        <Text muted size="md">
+          This note is included when AI evaluates or reasons about this card in
+          the context of the deck.
+        </Text>
+        <Field label={cardset.card_name}>
+          <TextArea
+            aria-label={cardset.card_name}
             autoFocus
             maxLength={2000}
             onChange={(event) => {
@@ -68,21 +50,21 @@ export function CardNoteModal({
             placeholder="Add context for AI evaluation, combo lines, exclusions, or role expectations."
             value={note}
           />
-        </label>
-        <div className="button-row bulk-edit-actions">
-          <button
-            className="secondary-button"
+        </Field>
+        <Inline gap={2} justify="end">
+          <Button
             disabled={busy}
             onClick={close}
             type="button"
+            variant="secondary"
           >
             Cancel
-          </button>
-          <button disabled={busy} type="submit">
+          </Button>
+          <Button disabled={busy} type="submit">
             Save note
-          </button>
-        </div>
-      </form>
-    </div>
+          </Button>
+        </Inline>
+      </Stack>
+    </Dialog>
   );
 }

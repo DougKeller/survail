@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 
-import "./cardPresentation.css";
 import { InlineCardText, ClickableCardImage } from "./cardPresentationInline";
 import { CardDetailsModal } from "./cardPresentationModal";
 import {

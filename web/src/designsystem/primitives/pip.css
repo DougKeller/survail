@@ -1,0 +1,171 @@
+/* Wireframe .pip — 16px (default) / 22px circular badges — plus the mana
+   palette variants used by ManaPip and ManaCost. */
+
+.ds-pip {
+  align-items: center;
+  background: var(--color-surface);
+  border-radius: 50%;
+  color: var(--color-text);
+  display: inline-flex;
+  flex: none;
+  font-family: var(--font-body);
+  font-size: var(--text-3xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  width: 16px;
+}
+
+.ds-pip-lg {
+  font-size: var(--text-2xs);
+  height: 22px;
+  width: 22px;
+}
+
+.ds-pip-neutral {
+  background: var(--color-neutral-300);
+  color: var(--color-neutral-800);
+}
+
+.ds-pip-accent {
+  background: var(--color-accent-600);
+  color: var(--color-accent-100);
+}
+
+.ds-pip-accent-2 {
+  background: var(--color-accent-2-600);
+  color: var(--color-accent-2-100);
+}
+
+.ds-mana-w {
+  background: var(--mana-w);
+  color: var(--mana-w-ink);
+}
+
+.ds-mana-u {
+  background: var(--mana-u);
+  color: var(--mana-ink);
+}
+
+.ds-mana-b {
+  background: var(--mana-b);
+  color: var(--mana-ink);
+}
+
+.ds-mana-r {
+  background: var(--mana-r);
+  color: var(--mana-ink);
+}
+
+.ds-mana-g {
+  background: var(--mana-g);
+  color: var(--mana-ink);
+}
+
+.ds-mana-c,
+.ds-mana-generic {
+  background: var(--mana-c);
+  color: var(--mana-c-ink);
+}
+
+.ds-mana-hybrid-w-u,
+.ds-mana-hybrid-u-b,
+.ds-mana-hybrid-b-r,
+.ds-mana-hybrid-r-g,
+.ds-mana-hybrid-g-w,
+.ds-mana-hybrid-w-b,
+.ds-mana-hybrid-u-r,
+.ds-mana-hybrid-b-g,
+.ds-mana-hybrid-r-w,
+.ds-mana-hybrid-g-u {
+  color: var(--mana-c-ink);
+}
+
+.ds-mana-hybrid-w-u {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-w) 50%,
+    var(--mana-u) 50%
+  );
+}
+
+.ds-mana-hybrid-u-b {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-u) 50%,
+    var(--mana-b) 50%
+  );
+}
+
+.ds-mana-hybrid-b-r {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-b) 50%,
+    var(--mana-r) 50%
+  );
+}
+
+.ds-mana-hybrid-r-g {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-r) 50%,
+    var(--mana-g) 50%
+  );
+}
+
+.ds-mana-hybrid-g-w {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-g) 50%,
+    var(--mana-w) 50%
+  );
+}
+
+.ds-mana-hybrid-w-b {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-w) 50%,
+    var(--mana-b) 50%
+  );
+}
+
+.ds-mana-hybrid-u-r {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-u) 50%,
+    var(--mana-r) 50%
+  );
+}
+
+.ds-mana-hybrid-b-g {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-b) 50%,
+    var(--mana-g) 50%
+  );
+}
+
+.ds-mana-hybrid-r-w {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-r) 50%,
+    var(--mana-w) 50%
+  );
+}
+
+.ds-mana-hybrid-g-u {
+  background-image: linear-gradient(
+    135deg,
+    var(--mana-g) 50%,
+    var(--mana-u) 50%
+  );
+}
+
+.ds-mana-cost {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: calc(var(--space-1) * 0.5);
+}

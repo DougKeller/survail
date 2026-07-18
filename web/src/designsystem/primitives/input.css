@@ -1,0 +1,65 @@
+/* Organic .input / .field — pill text inputs, rounded-md textareas. */
+
+.ds-input,
+.ds-textarea {
+  background: var(--color-neutral-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.4;
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 0.15s ease;
+  width: 100%;
+}
+
+.ds-input {
+  min-height: 36px;
+}
+
+.ds-input::placeholder,
+.ds-textarea::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.ds-input:focus-visible,
+.ds-textarea:focus-visible {
+  border-color: var(--color-accent);
+}
+
+.ds-input:disabled,
+.ds-textarea:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.ds-textarea {
+  border-radius: var(--radius-md);
+  min-height: 120px;
+  resize: vertical;
+}
+
+.ds-textarea-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ds-field-label {
+  color: color-mix(in srgb, var(--color-text) 78%, transparent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ds-field-hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin: 0;
+}

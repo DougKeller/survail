@@ -1,16 +1,16 @@
-export interface AnalyticsBucket {
+interface AnalyticsBucket {
   key: string;
   label: string;
   quantity: number;
   percentage: number;
 }
 
-export interface MissingRoleEvaluationCard {
+interface MissingRoleEvaluationCard {
   oracle_id: string;
   card_name: string;
 }
 
-export interface RoleDistribution {
+interface RoleDistribution {
   available: boolean;
   complete: boolean;
   evaluated_cards: number;

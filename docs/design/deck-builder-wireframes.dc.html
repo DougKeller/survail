@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/organic-2238eae2-b2a9-4077-8bd1-8c47dd6ec790/styles.css">
+<script src="_ds/organic-2238eae2-b2a9-4077-8bd1-8c47dd6ec790/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#e7ddc9;font-family:var(--font-body),system-ui,sans-serif}
+a{color:var(--color-accent)}
+.dv-turn{padding:46px 52px 40px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#201e1d;color:#fff;border-radius:5px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#201e1d}
+.dv-sub{font:400 12.5px/1.55 system-ui,sans-serif;color:rgba(32,30,29,.55);margin:0 0 28px;max-width:640px}
+.dv-opts{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(32,30,29,.1);color:#201e1d;border-radius:6px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:9px;font:400 12px/1.35 system-ui,sans-serif;color:rgba(32,30,29,.62);max-width:340px}
+.dv-opt:target .dv-oid{background:#c67139;color:#fff}
+.dv-next{margin:34px 0 0;font:12.5px/1.7 system-ui,sans-serif;color:rgba(32,30,29,.55)}
+.dv-laws{display:flex;flex-wrap:wrap;gap:6px;margin:-3px 0 2px;max-width:360px}
+.lawchip{font:600 9.5px/1 var(--font-body);letter-spacing:.02em;padding:5px 9px;border-radius:999px;background:var(--color-accent-2-100);color:var(--color-accent-2-800);white-space:nowrap}
+.frame{background:var(--color-bg);border-radius:26px;box-shadow:var(--shadow-lg);overflow:hidden;border:1px solid rgba(32,30,29,.09);position:relative}
+.k{font:400 10px/1 var(--font-body);letter-spacing:.11em;text-transform:uppercase;color:color-mix(in srgb,var(--color-text) 52%,transparent);margin:0}
+.pip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font:700 8.5px/1 var(--font-body);flex:none}
+.crow{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:999px;background:var(--color-surface)}
+.grip{color:color-mix(in srgb,var(--color-text) 28%,transparent);flex:none;display:flex}
+.qty{width:14px;text-align:right;font:700 12px/1 var(--font-body);color:var(--color-accent);flex:none}
+.cn{flex:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col{width:236px;flex:none;display:flex;flex-direction:column;gap:7px}
+.colhd{display:flex;align-items:center;gap:7px;padding:0 5px 3px}
+.cnt{font:700 11px/1 var(--font-body);color:color-mix(in srgb,var(--color-text) 42%,transparent)}
+.addrow{display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:999px;border:1.5px dashed color-mix(in srgb,var(--color-text) 18%,transparent);font-size:12px;color:color-mix(in srgb,var(--color-text) 45%,transparent)}
+.art{background:var(--color-neutral-300);display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--color-text) 32%,transparent)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:999px;background:var(--color-surface)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Survail — deck-builder flow (Organic)</span></div>
+<p class="dv-sub">A full brewing flow for the Survail API, in the Organic look. Sign in with Discord, browse your decks, start fresh or import from Moxfield, then brew in the editor — fast card entry and drag-to-categorize across custom zones — with validation, revertible history, and an AI deck writeup on demand. Editor is <a class="dv-oid" href="#1d">1d</a>; responsive shell is <a class="dv-oid" href="#1h">1h</a>.</p>
+<div class="dv-opts">
+
+<!-- ══ 1a SIGN IN ══ -->
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Sign in · Discord OAuth</div>
+<div class="dv-laws"><span class="lawchip">Hick's Law</span><span class="lawchip">Choice Overload</span><span class="lawchip">Paradox of Active User</span></div>
+<div class="frame" style="width:400px;height:560px;display:flex;flex-direction:column">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 40px;gap:20px">
+    <div style="width:56px;height:56px;border-radius:18px;background:var(--color-accent);display:flex;align-items:center;justify-content:center;color:var(--color-bg)">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg>
+    </div>
+    <div>
+      <h1 style="font-size:40px;margin:0 0 6px">Survail</h1>
+      <p class="text-muted" style="font-size:14px;margin:0">Build, brew and tune your Magic decks — everything auto-saved and revertible.</p>
+    </div>
+    <a class="btn btn-primary btn-block" href="#1b" style="height:44px;margin-top:4px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4.4A16 16 0 0 0 16 3l-.3.5a12 12 0 0 1 3.6 1.2 11 11 0 0 0-9.6 0A12 12 0 0 1 13.3 3.5L13 3a16 16 0 0 0-4 1.4C6 9 5.3 13.4 5.6 17.7A16 16 0 0 0 9.7 20l.9-1.5a10 10 0 0 1-1.7-.9l.4-.3a11 11 0 0 0 9.4 0l.4.3c-.5.3-1.1.6-1.7.9L18.3 20a16 16 0 0 0 4.1-2.3c.4-5-.7-9.4-2.4-13.3zM9.7 15c-.8 0-1.4-.8-1.4-1.7 0-1 .6-1.7 1.4-1.7s1.4.8 1.4 1.7c0 1-.6 1.7-1.4 1.7zm4.6 0c-.8 0-1.4-.8-1.4-1.7 0-1 .6-1.7 1.4-1.7s1.4.8 1.4 1.7c0 1-.6 1.7-1.4 1.7z"/></svg>
+      Continue with Discord
+    </a>
+    <p class="text-muted" style="font-size:11px;text-align:center;margin:0">Sessions are revocable — sign out ends them everywhere.</p>
+  </div>
+  <div class="art washed" style="height:120px;border-top:1px solid var(--color-divider)"><span style="font-size:11px">deck imagery</span></div>
+</div>
+</div>
+
+<!-- ══ 1b MY DECKS ══ -->
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Your decks · dashboard</div>
+<div class="dv-laws"><span class="lawchip">Goal-Gradient</span><span class="lawchip">Zeigarnik Effect</span><span class="lawchip">Serial Position</span></div>
+<div class="frame" style="width:1080px;height:700px;display:flex;flex-direction:column">
+  <div class="nav" style="border-bottom:1px solid var(--color-divider)">
+    <span class="nav-brand">Survail</span>
+    <a href="#1b" aria-current="page">Decks</a>
+    <a href="#1d">Cards</a>
+    <a href="#1c">Import</a>
+    <div style="flex:1"></div>
+    <div class="chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span class="text-muted">Search cards…</span></div>
+    <div style="width:32px;height:32px;border-radius:50%;background:var(--color-accent-2-300)"></div>
+  </div>
+  <div style="flex:1;padding:26px 32px;overflow:hidden">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:18px">
+      <h2 style="margin:0">Your decks</h2>
+      <span class="text-muted" style="font-size:13px">7 decks</span>
+      <div style="flex:1"></div>
+      <div class="seg"><label class="seg-opt"><input type="radio" name="ff" checked/>All</label><label class="seg-opt"><input type="radio" name="ff"/>Commander</label><label class="seg-opt"><input type="radio" name="ff"/>Modern</label><label class="seg-opt"><input type="radio" name="ff"/>Draft</label></div>
+      <a class="btn btn-primary" href="#1c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New deck</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px">
+      <!-- deck card -->
+      <div class="card elev-sm" style="padding:0;overflow:hidden;gap:0">
+        <div class="art washed" style="height:120px"><span style="font-size:11px">commander art</span></div>
+        <div style="padding:13px 14px;display:flex;flex-direction:column;gap:8px">
+          <div class="card-title">Tessa's Toolbox</div>
+          <div style="display:flex;gap:6px"><span class="tag tag-accent">Commander</span><span class="tag tag-neutral">99 cards</span></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><div style="height:6px;border-radius:999px;background:var(--color-neutral-300);overflow:hidden"><div style="width:100%;height:100%;background:var(--color-accent-2-500)"></div></div><div class="card-meta">Ready to play · 99/99</div></div>
+        </div>
+      </div>
+      <div class="card elev-sm" style="padding:0;overflow:hidden;gap:0">
+        <div class="art washed" style="height:120px;background:var(--color-accent-2-200)"><span style="font-size:11px">commander art</span></div>
+        <div style="padding:13px 14px;display:flex;flex-direction:column;gap:8px">
+          <div class="card-title">Slivers, Assemble</div>
+          <div style="display:flex;gap:6px"><span class="tag tag-accent">Commander</span><span class="tag tag-neutral">100 cards</span></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><div style="height:6px;border-radius:999px;background:var(--color-neutral-300);overflow:hidden"><div style="width:100%;height:100%;background:var(--color-accent-2-500)"></div></div><div class="card-meta">Ready to play · 100/100</div></div>
+        </div>
+      </div>
+      <div class="card elev-sm" style="padding:0;overflow:hidden;gap:0">
+        <div class="art washed" style="height:120px;background:var(--color-accent-200)"><span style="font-size:11px">deck art</span></div>
+        <div style="padding:13px 14px;display:flex;flex-direction:column;gap:8px">
+          <div class="card-title">Boros Burn</div>
+          <div style="display:flex;gap:6px"><span class="tag tag-accent-2">Modern</span><span class="tag tag-neutral">75 cards</span></div>
+          <div style="display:flex;flex-direction:column;gap:5px"><div style="height:6px;border-radius:999px;background:var(--color-neutral-300);overflow:hidden"><div style="width:77%;height:100%;background:var(--color-accent-500)"></div></div><div class="card-meta" style="color:var(--color-accent-700)">Drafting · 58/75 · 17 to go</div></div>
+        </div>
+      </div>
+      <a class="card" href="#1c" style="align-items:center;justify-content:center;min-height:213px;border:2px dashed var(--color-divider);background:transparent;color:var(--color-accent);text-decoration:none;gap:10px">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span style="font-family:var(--font-heading);font-size:15px">New deck</span>
+      </a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:18px">
+      <div class="card elev-sm" style="padding:0;overflow:hidden;gap:0">
+        <div class="art washed" style="height:96px"><span style="font-size:11px">art</span></div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px"><div class="card-title" style="font-size:15px">Gruul Stompy</div><div style="display:flex;gap:6px"><span class="tag tag-accent-2">Pioneer</span></div></div>
+      </div>
+      <div class="card elev-sm" style="padding:0;overflow:hidden;gap:0">
+        <div class="art washed" style="height:96px;background:var(--color-neutral-300)"><span style="font-size:11px">art</span></div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px"><div class="card-title" style="font-size:15px">Mono-Black Devotion</div><div style="display:flex;gap:6px"><span class="tag tag-accent-2">Pioneer</span></div></div>
+      </div>
+      <div class="card elev-sm" style="padding:0;overflow:hidden;gap:0">
+        <div class="art washed" style="height:96px;background:var(--color-accent-2-200)"><span style="font-size:11px">art</span></div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px"><div class="card-title" style="font-size:15px">Cube Draft #12</div><div style="display:flex;gap:6px"><span class="tag tag-accent">Draft</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 1c NEW / IMPORT ══ -->
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Start fresh or import from Moxfield</div>
+<div class="dv-laws"><span class="lawchip">Postel's Law</span><span class="lawchip">Selective Attention</span></div>
+<div class="frame" style="width:900px;height:700px;display:flex;flex-direction:column">
+  <div class="nav" style="border-bottom:1px solid var(--color-divider)"><span class="nav-brand">Survail</span><a href="#1b">← Decks</a><div style="flex:1"></div><a class="btn btn-ghost" href="#1b">Cancel</a></div>
+  <div style="flex:1;display:grid;grid-template-columns:1fr 1.15fr;overflow:hidden">
+    <!-- start fresh -->
+    <div style="padding:28px 30px;display:flex;flex-direction:column;gap:16px">
+      <h3 style="margin:0">Start fresh</h3>
+      <div class="field"><label>Deck title</label><input class="input" value="Tessa's Toolbox"/></div>
+      <div class="field"><label>Format</label>
+        <div class="seg" style="width:100%"><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="nf" checked/>Commander</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="nf"/>Modern</label><label class="seg-opt" style="flex:1;justify-content:center"><input type="radio" name="nf"/>Draft</label></div>
+      </div>
+      <div class="field"><label>Commander</label>
+        <div style="position:relative"><input class="input" placeholder="Search a legendary creature…" value="Tessa Fatestitcher"/></div>
+      </div>
+      <div class="crow" style="background:var(--color-accent-2-100);align-self:flex-start"><div class="art" style="width:26px;height:36px;border-radius:5px;background:var(--color-accent-2-300)"></div><span style="font-size:12.5px">Tessa Fatestitcher</span><span class="pip" style="background:var(--color-accent);color:#fff">R</span></div>
+      <div style="flex:1"></div>
+      <a class="btn btn-primary btn-block" href="#1d" style="height:42px">Create deck</a>
+    </div>
+    <!-- import -->
+    <div style="padding:28px 30px;background:var(--color-surface);display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:9px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m0 0-4 4m4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><h3 style="margin:0">Import from Moxfield</h3></div>
+      <textarea class="input" style="min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.6">1 Sol Ring
+1 Arcane Signet
+1 Rhystic Study
+COMMANDER
+1 Tessa Fatestitcher
+SIDEBOARD
+1 Reprieve</textarea>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <label class="radio"><input type="checkbox" checked/><span class="dot"></span>Preserve tags</label>
+        <label class="radio"><input type="checkbox" checked/><span class="dot"></span>Prefer non-UB · cheapest</label>
+      </div>
+      <p class="k">Preview · 3 of 4 resolved</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="crow"><span class="pip" style="background:var(--color-accent-2-500);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span><span class="cn">Sol Ring · C21</span></div>
+        <div class="crow"><span class="pip" style="background:var(--color-accent-2-500);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span><span class="cn">Rhystic Study · commander</span></div>
+        <div class="crow" style="background:var(--color-accent-100)"><span class="pip" style="background:var(--color-accent-600);color:#fff">!</span><span class="cn" style="color:var(--color-accent-800)">Line 6 · “Reprieve” — no English printing found</span></div>
+      </div>
+      <div style="flex:1"></div>
+      <a class="btn btn-primary btn-block" href="#1e" style="height:42px">Import deck · fix 1 line first</a>
+      <p class="text-muted" style="font-size:11px;margin:0">Imports reject unresolved lines rather than creating a partial deck.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ 1d DECK EDITOR (MAIN) ══ -->
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a><b style="color:var(--color-accent);font-weight:600">The editor</b> — fast entry, drag-to-categorize across custom zones</div>
+<div class="dv-laws"><span class="lawchip">Miller's Law</span><span class="lawchip">Chunking</span><span class="lawchip">Fitts's Law</span><span class="lawchip">Doherty Threshold</span><span class="lawchip">Von Restorff</span></div>
+<div class="frame" style="width:1280px;height:820px;display:flex;flex-direction:column">
+  <!-- top bar -->
+  <div class="nav" style="border-bottom:1px solid var(--color-divider);gap:14px">
+    <a href="#1b" style="display:flex" title="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></a>
+    <span style="font-family:var(--font-heading);font-size:19px">Tessa's Toolbox</span>
+    <span class="tag tag-accent">Commander</span>
+    <span class="chip" style="background:transparent;color:color-mix(in srgb,var(--color-text) 45%,transparent);gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--color-accent-2-500);animation:dvpulse 2s infinite"></span>saved · rev 42</span>
+    <div style="flex:1"></div>
+    <a class="btn btn-secondary" href="#1e"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Validate</a>
+    <a class="btn btn-secondary btn-icon" href="#1f" title="History"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></a>
+    <a class="btn btn-primary" href="#1g"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><path d="m12 3 2 5.5 5.5 2-5.5 2L12 20l-2-5.5L4.5 12.5 10 10.5z"/></svg>Describe</a>
+  </div>
+  <!-- fast add bar -->
+  <div style="padding:12px 22px;border-bottom:1px solid var(--color-divider);position:relative;z-index:5">
+    <div style="position:relative;max-width:520px">
+      <div class="input" style="display:flex;align-items:center;gap:9px;height:40px;background:var(--color-surface)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="color-mix(in srgb,var(--color-text) 45%,transparent)" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:13.5px">counter</span><span style="width:1px;height:16px;background:var(--color-accent);margin-left:1px"></span></div>
+      <!-- autocomplete -->
+      <div class="frame" style="position:absolute;top:46px;left:0;right:0;box-shadow:var(--shadow-lg);border-radius:18px;padding:6px;display:flex;flex-direction:column;gap:2px;background:var(--color-bg)">
+        <div class="crow" style="background:var(--color-accent-100)"><span class="cn" style="font-weight:600">Counterspell</span><span class="pip" style="background:#6f86ab;color:#fff">U</span><span class="pip" style="background:#6f86ab;color:#fff">U</span><span class="text-muted" style="font-size:10px">MH2</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="crow" style="background:transparent"><span class="cn">Counterflux</span><span class="pip" style="background:#6f86ab;color:#fff">U</span><span class="pip" style="background:var(--color-accent);color:#fff">R</span><span class="text-muted" style="font-size:10px">RTR</span></div>
+        <div class="crow" style="background:transparent"><span class="cn">Countervailing Winds</span><span class="pip" style="background:#6f86ab;color:#fff">U</span><span class="text-muted" style="font-size:10px">XLN</span></div>
+      </div>
+    </div>
+    <p class="text-muted" style="font-size:11px;margin:6px 0 0">Type a name, hit Enter to add · Shift-Enter drops it in the last-used category · results appear in ~120ms</p>
+  </div>
+  <!-- board -->
+  <div style="flex:1;display:flex;overflow:hidden">
+    <!-- columns -->
+    <div style="flex:1;padding:20px 22px;display:flex;gap:18px;overflow-x:auto;align-items:flex-start">
+      <!-- Commander -->
+      <div class="col" style="width:214px">
+        <div class="colhd"><h5 style="margin:0;font-size:14px">Commander</h5><span class="cnt">1</span></div>
+        <div class="crow" style="background:var(--color-accent-2-100);padding:8px 10px"><div class="art" style="width:30px;height:42px;border-radius:6px;background:var(--color-accent-2-300)"></div><span class="cn" style="font-weight:600">Tessa Fatestitcher</span><span class="pip" style="background:var(--color-accent);color:#fff">R</span></div>
+      </div>
+      <!-- Ramp -->
+      <div class="col">
+        <div class="colhd"><h5 style="margin:0;font-size:14px">Ramp</h5><span class="cnt">11</span><div style="flex:1"></div><span class="grip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Sol Ring</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Arcane Signet</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Mind Stone</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Cultivate</span><span class="pip" style="background:var(--color-accent-2-500);color:#fff">G</span></div>
+        <div class="addrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>add to Ramp</div>
+      </div>
+      <!-- Card Advantage (drop target) -->
+      <div class="col">
+        <div class="colhd"><h5 style="margin:0;font-size:14px;color:var(--color-accent)">Card Advantage</h5><span class="cnt">9</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Rhystic Study</span><span class="pip" style="background:#d8cfbd;color:#5c554a">2</span><span class="pip" style="background:#6f86ab;color:#fff">U</span></div>
+        <!-- drop indicator -->
+        <div style="height:3px;border-radius:2px;background:var(--color-accent);margin:1px 6px"></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Phyrexian Arena</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span><span class="pip" style="background:#3f3b35;color:#fff">B</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Night's Whisper</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span><span class="pip" style="background:#3f3b35;color:#fff">B</span></div>
+        <div class="addrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>add to Card Advantage</div>
+      </div>
+      <!-- Removal -->
+      <div class="col">
+        <div class="colhd"><h5 style="margin:0;font-size:14px">Removal</h5><span class="cnt">8</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Swords to Plowshares</span><span class="pip" style="background:#efe9d6;color:#6b6455">W</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Go for the Throat</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span><span class="pip" style="background:#3f3b35;color:#fff">B</span></div>
+        <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Beast Within</span><span class="pip" style="background:#d8cfbd;color:#5c554a">2</span><span class="pip" style="background:var(--color-accent-2-500);color:#fff">G</span></div>
+        <div class="addrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>add to Removal</div>
+      </div>
+      <!-- new category ghost -->
+      <div class="col" style="width:184px">
+        <div class="addrow" style="justify-content:center;height:40px;border-radius:16px;color:var(--color-accent);border-color:var(--color-accent)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New category</div>
+      </div>
+    </div>
+    <!-- right rail -->
+    <div style="width:290px;flex:none;border-left:1px solid var(--color-divider);background:var(--color-surface);padding:20px 20px;display:flex;flex-direction:column;gap:18px;overflow:hidden">
+      <div class="art washed" style="height:260px;border-radius:16px"><span style="font-size:12px">Counterspell — card preview</span></div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <span class="chip" style="background:var(--color-bg)">Mainboard <b style="margin-left:3px">99</b></span>
+        <span class="chip" style="background:var(--color-bg)">Considering <b style="margin-left:3px">6</b></span>
+      </div>
+      <div><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><p class="k" style="margin:0">Deck completion</p><span style="font:700 12px/1 var(--font-body);color:var(--color-accent-2-700)">99 / 99</span></div><div style="height:8px;border-radius:999px;background:var(--color-neutral-300);overflow:hidden"><div style="width:100%;height:100%;background:var(--color-accent-2-500)"></div></div></div>
+      <div>
+        <p class="k" style="margin-bottom:10px">Mana curve</p>
+        <div style="display:flex;align-items:flex-end;gap:7px;height:64px">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:22px;background:var(--color-accent-300);border-radius:5px"></div><span class="text-muted" style="font-size:9px">0</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:52px;background:var(--color-accent-400);border-radius:5px"></div><span class="text-muted" style="font-size:9px">1</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:64px;background:var(--color-accent-500);border-radius:5px"></div><span class="text-muted" style="font-size:9px">2</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:40px;background:var(--color-accent-400);border-radius:5px"></div><span class="text-muted" style="font-size:9px">3</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:28px;background:var(--color-accent-300);border-radius:5px"></div><span class="text-muted" style="font-size:9px">4</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:16px;background:var(--color-accent-200);border-radius:5px"></div><span class="text-muted" style="font-size:9px">5+</span></div>
+        </div>
+      </div>
+      <div>
+        <p class="k" style="margin-bottom:8px">Color identity</p>
+        <div style="display:flex;gap:6px"><span class="pip" style="background:#efe9d6;color:#6b6455;width:22px;height:22px">W</span><span class="pip" style="background:#6f86ab;color:#fff;width:22px;height:22px">U</span><span class="pip" style="background:#3f3b35;color:#fff;width:22px;height:22px">B</span><span class="pip" style="background:var(--color-accent);color:#fff;width:22px;height:22px">R</span><span class="pip" style="background:var(--color-accent-2-500);color:#fff;width:22px;height:22px">G</span></div>
+      </div>
+      <div style="flex:1"></div>
+      <a class="chip" href="#1e" style="background:var(--color-accent-2-100);color:var(--color-accent-2-800);justify-content:center;text-decoration:none;padding:9px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Legal · 99 / 99</a>
+    </div>
+  </div>
+  <!-- floating drag card -->
+  <div class="crow elev-lg" style="position:absolute;left:566px;top:398px;width:214px;background:var(--color-bg);transform:rotate(-4deg);z-index:20;border:1px solid var(--color-accent)"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn" style="font-weight:600">Fact or Fiction</span><span class="pip" style="background:#d8cfbd;color:#5c554a">2</span><span class="pip" style="background:#6f86ab;color:#fff">U</span></div>
+</div>
+</div>
+
+<!-- ══ 1e VALIDATION ══ -->
+<div class="dv-opt" id="1e">
+<div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Validation — reports state, never blocks saving</div>
+<div class="dv-laws"><span class="lawchip">Von Restorff</span><span class="lawchip">Tesler's Law</span><span class="lawchip">Peak-End Rule</span></div>
+<div class="frame" style="width:560px;height:620px;display:flex;flex-direction:column">
+  <div style="padding:20px 24px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:11px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+    <h3 style="margin:0">Validation</h3>
+    <div style="flex:1"></div><span class="tag tag-accent-2">Commander</span>
+  </div>
+  <div style="padding:14px 20px;display:flex;flex-direction:column;gap:9px;overflow:auto">
+    <div class="crow" style="justify-content:space-between;background:var(--color-accent-2-100)"><span style="display:flex;align-items:center;gap:9px"><span class="pip" style="background:var(--color-accent-2-600);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span>Deck size</span><span class="text-muted" style="font-size:12px">99 / 99</span></div>
+    <div class="crow" style="justify-content:space-between;background:var(--color-accent-2-100)"><span style="display:flex;align-items:center;gap:9px"><span class="pip" style="background:var(--color-accent-2-600);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span>Commander count</span><span class="text-muted" style="font-size:12px">1</span></div>
+    <div class="crow" style="justify-content:space-between;background:var(--color-accent-2-100)"><span style="display:flex;align-items:center;gap:9px"><span class="pip" style="background:var(--color-accent-2-600);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span>Color identity</span><span class="text-muted" style="font-size:12px">within R U B W G</span></div>
+    <div class="crow" style="justify-content:space-between;background:var(--color-accent-2-100)"><span style="display:flex;align-items:center;gap:9px"><span class="pip" style="background:var(--color-accent-2-600);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span>Copy limits</span><span class="text-muted" style="font-size:12px">singleton ok</span></div>
+    <div class="crow" style="justify-content:space-between;background:var(--color-accent-100);align-items:flex-start"><span style="display:flex;align-items:flex-start;gap:9px"><span class="pip" style="background:var(--color-accent-600);color:#fff;margin-top:1px">!</span><span style="color:var(--color-accent-800);font-size:12.5px">Legality — <b>Sol Ring</b> is banned in your pod's house rules<br/><span style="opacity:.7;font-size:11px">2 cards flagged · review or override</span></span></span></div>
+    <div class="crow" style="justify-content:space-between;background:var(--color-accent-2-100)"><span style="display:flex;align-items:center;gap:9px"><span class="pip" style="background:var(--color-accent-2-600);color:#fff"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-11"/></svg></span>Sideboard</span><span class="text-muted" style="font-size:12px">0 (n/a)</span></div>
+    <div style="background:var(--color-surface);border-radius:16px;padding:13px 15px;margin-top:4px">
+      <p style="margin:0 0 4px;font-size:12.5px;font-weight:600">Building freely?</p>
+      <p class="text-muted" style="margin:0;font-size:12px">That's fine — validation only reports state and never blocks saving. The <b>Considering</b> zone is excluded from construction checks.</p>
+    </div>
+  </div>
+  <div style="padding:14px 20px;border-top:1px solid var(--color-divider);display:flex;gap:10px"><a class="btn btn-secondary" href="#1d" style="flex:1">Back to editor</a><a class="btn btn-primary" href="#1d" style="flex:1">Re-validate</a></div>
+</div>
+</div>
+
+<!-- ══ 1f HISTORY ══ -->
+<div class="dv-opt" id="1f">
+<div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>History — every operation is immutable & revertible</div>
+<div class="dv-laws"><span class="lawchip">Zeigarnik Effect</span><span class="lawchip">Serial Position</span><span class="lawchip">Mental Model</span></div>
+<div class="frame" style="width:560px;height:620px;display:flex;flex-direction:column">
+  <div style="padding:20px 24px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:11px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    <h3 style="margin:0">Operation history</h3><div style="flex:1"></div><span class="text-muted" style="font-size:12px">rev 42</span>
+  </div>
+  <div style="padding:16px 20px;display:flex;flex-direction:column;gap:0;overflow:auto">
+    <!-- op row -->
+    <div style="display:flex;gap:13px;padding-bottom:16px">
+      <div style="display:flex;flex-direction:column;align-items:center"><div style="width:30px;height:30px;border-radius:50%;background:var(--color-accent-2-300)"></div><div style="flex:1;width:2px;background:var(--color-divider);margin-top:4px"></div></div>
+      <div style="flex:1"><div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:13px">rev 42</b><span class="text-muted" style="font-size:11px">you · 2h ago</span></div><div style="display:flex;gap:6px;margin-top:5px"><span class="tag tag-accent-2" style="font-size:10px">+1 Fact or Fiction</span><span class="tag tag-accent-2" style="font-size:10px">→ Card Advantage</span></div></div>
+      <a class="btn btn-ghost" href="#1d" style="align-self:center;font-size:12px">Revert</a>
+    </div>
+    <div style="display:flex;gap:13px;padding-bottom:16px">
+      <div style="display:flex;flex-direction:column;align-items:center"><div style="width:30px;height:30px;border-radius:50%;background:var(--color-accent-2-300)"></div><div style="flex:1;width:2px;background:var(--color-divider);margin-top:4px"></div></div>
+      <div style="flex:1"><div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:13px">rev 41</b><span class="text-muted" style="font-size:11px">you · 2h ago</span></div><div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap"><span class="tag tag-accent-2" style="font-size:10px">+1 Rhystic Study</span><span class="tag tag-neutral" style="font-size:10px">−1 Mystic Remora</span></div></div>
+      <a class="btn btn-ghost" href="#1d" style="align-self:center;font-size:12px">Revert</a>
+    </div>
+    <div style="display:flex;gap:13px;padding-bottom:16px;opacity:.55">
+      <div style="display:flex;flex-direction:column;align-items:center"><div style="width:30px;height:30px;border-radius:50%;background:var(--color-neutral-300)"></div><div style="flex:1;width:2px;background:var(--color-divider);margin-top:4px"></div></div>
+      <div style="flex:1"><div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:13px">rev 40</b><span class="tag tag-neutral" style="font-size:10px">reverted</span></div><div style="display:flex;gap:6px;margin-top:5px"><span class="tag tag-neutral" style="font-size:10px;text-decoration:line-through">+4 Lightning Bolt</span></div></div>
+    </div>
+    <div style="display:flex;gap:13px">
+      <div style="display:flex;flex-direction:column;align-items:center"><div style="width:30px;height:30px;border-radius:50%;background:var(--color-accent-300)"></div></div>
+      <div style="flex:1"><div style="display:flex;align-items:baseline;gap:8px"><b style="font-size:13px">rev 1</b><span class="text-muted" style="font-size:11px">imported from Moxfield</span></div><div style="display:flex;gap:6px;margin-top:5px"><span class="tag tag-accent" style="font-size:10px">99 cards added</span></div></div>
+    </div>
+  </div>
+  <div style="padding:13px 20px;border-top:1px solid var(--color-divider)"><p class="text-muted" style="margin:0;font-size:11px">Operations are atomic & idempotent, guarded by optimistic revision checks — reverts are auditable inverse operations, never edits.</p></div>
+</div>
+</div>
+
+<!-- ══ 1g AI DESCRIPTION ══ -->
+<div class="dv-opt" id="1g">
+<div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>Generated deck description (OpenAI, cached by revision)</div>
+<div class="dv-laws"><span class="lawchip">Peak-End Rule</span><span class="lawchip">Chunking</span><span class="lawchip">Doherty Threshold</span></div>
+<div class="frame" style="width:560px;height:620px;display:flex;flex-direction:column">
+  <div style="padding:20px 24px;border-bottom:1px solid var(--color-divider);display:flex;align-items:center;gap:11px">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2.4" stroke-linejoin="round"><path d="m12 3 2 5.5 5.5 2-5.5 2L12 20l-2-5.5L4.5 12.5 10 10.5z"/></svg>
+    <h3 style="margin:0">Deck description</h3><div style="flex:1"></div><span class="chip"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent-2-500)"></span>cached · rev 42</span>
+  </div>
+  <div style="padding:8px 24px 4px;display:flex;flex-direction:column;gap:16px;overflow:auto">
+    <div><p class="k" style="color:var(--color-accent);margin-bottom:5px">The plan</p><p style="margin:0;font-size:13.5px;line-height:1.6">Tessa Fatestitcher untaps your rocks and reanimates suspend spells, pushing an artifact-heavy midrange deck toward explosive turns where a single ramp piece snowballs into free counters and card advantage.</p></div>
+    <div><p class="k" style="color:var(--color-accent);margin-bottom:5px">Synergies</p><p style="margin:0;font-size:13.5px;line-height:1.6">Sol Ring and Arcane Signet feed Tessa's untap trigger; Rhystic Study and Phyrexian Arena keep the grip full so removal is always available when the table turns on you.</p></div>
+    <div><p class="k" style="color:var(--color-accent);margin-bottom:5px">Interaction</p><p style="margin:0;font-size:13.5px;line-height:1.6">Swords to Plowshares, Go for the Throat and Beast Within cover creatures across colors; hold up counter mana once Tessa is online.</p></div>
+    <div><p class="k" style="color:var(--color-accent);margin-bottom:5px">Weaknesses</p><p style="margin:0;font-size:13.5px;line-height:1.6">Light on board wipes (3) and vulnerable to artifact removal — losing your mana rocks strands the reanimation plan a turn behind.</p></div>
+  </div>
+  <div style="padding:14px 20px;border-top:1px solid var(--color-divider);display:flex;gap:10px;align-items:center"><span class="text-muted" style="font-size:11px;flex:1">Unchanged decks reuse the cache</span><a class="btn btn-secondary" href="#1d">Close</a><a class="btn btn-primary" href="#1g">Regenerate</a></div>
+</div>
+</div>
+
+<!-- ══ 1h MOBILE ══ -->
+<div class="dv-opt" id="1h">
+<div class="dv-olabel"><a class="dv-oid" href="#1h">1h</a>Responsive — the editor on a phone</div>
+<div class="dv-laws"><span class="lawchip">Fitts's Law</span><span class="lawchip">Jakob's Law</span><span class="lawchip">Thumb-zone</span></div>
+<div class="frame" style="width:372px;height:760px;display:flex;flex-direction:column;border-radius:38px;padding:10px;background:var(--color-neutral-800)">
+  <div class="frame" style="flex:1;border-radius:30px;display:flex;flex-direction:column;box-shadow:none">
+    <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--color-divider)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <span style="font-family:var(--font-heading);font-size:16px;flex:1">Tessa's Toolbox</span>
+      <span class="tag tag-accent" style="font-size:9px">EDH</span>
+    </div>
+    <div style="padding:10px 14px;border-bottom:1px solid var(--color-divider)">
+      <div class="input" style="display:flex;align-items:center;gap:8px;height:46px;background:var(--color-surface)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="color-mix(in srgb,var(--color-text) 45%,transparent)" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="text-muted" style="font-size:13px">Add a card…</span></div>
+    </div>
+    <div style="padding:10px 14px;display:flex;gap:7px;overflow-x:auto;border-bottom:1px solid var(--color-divider)">
+      <span class="tag tag-accent" style="flex:none">Ramp 11</span><span class="tag tag-neutral" style="flex:none">Draw 9</span><span class="tag tag-neutral" style="flex:none">Removal 8</span><span class="tag tag-neutral" style="flex:none">Lands 37</span>
+    </div>
+    <div style="flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:7px;overflow:auto">
+      <div class="colhd" style="padding:0 2px"><h5 style="margin:0;font-size:14px">Ramp</h5><span class="cnt">11</span></div>
+      <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Sol Ring</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span></div>
+      <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Arcane Signet</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span></div>
+      <div class="crow" style="background:var(--color-accent-100);border:1px solid var(--color-accent)"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn" style="font-weight:600">Cultivate</span><span class="pip" style="background:var(--color-accent-2-500);color:#fff">G</span></div>
+      <div class="crow"><span class="grip"><svg width="14" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg></span><span class="qty">1</span><span class="cn">Mind Stone</span><span class="pip" style="background:#d8cfbd;color:#5c554a">1</span></div>
+      <div class="addrow"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>add to Ramp</div>
+    </div>
+    <div style="padding:11px 14px;border-top:1px solid var(--color-divider);display:flex;gap:9px">
+      <a class="chip" href="#1e" style="background:var(--color-accent-2-100);color:var(--color-accent-2-800);flex:1;justify-content:center;text-decoration:none;padding:0 14px;min-height:48px;font-size:13px">Legal · 99/99</a>
+      <a class="btn btn-primary btn-icon" href="#1g" title="Describe" style="width:48px;height:48px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="m12 3 2 5.5 5.5 2-5.5 2L12 20l-2-5.5L4.5 12.5 10 10.5z"/></svg></a>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "make <a class="dv-oid" href="#1d">1d</a> actually draggable" · "add a card-detail / printings picker screen" · "show the <b>Considering</b> zone in the editor" · "tighten <a class="dv-oid" href="#1b">1b</a> to a list view" · "new directions for the editor layout"</p>
+</section>
+<helmet><style>@keyframes dvpulse{0%,100%{opacity:.35}50%{opacity:1}}</style></helmet>
+</x-dc>
+</body>
+</html>

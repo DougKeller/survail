@@ -8,8 +8,10 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://127.0.0.1:4173",
+    colorScheme: "light",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
+    viewport: { width: 1280, height: 720 },
   },
   webServer: {
     command: "npm run dev -- --host 127.0.0.1 --port 4173",

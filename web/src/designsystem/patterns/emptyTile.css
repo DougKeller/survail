@@ -1,0 +1,26 @@
+.ds-ghost-tile {
+  align-items: center;
+  background: transparent;
+  border: 2px dashed var(--color-divider);
+  border-radius: var(--radius-xl);
+
+  /* accent-700, not accent: 15px label needs >=4.5:1 on the warm ground. */
+  color: var(--color-accent-700);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  justify-content: center;
+  padding: var(--space-6);
+  text-decoration: none;
+}
+
+.ds-ghost-tile:hover {
+  background: var(--color-accent-100);
+  border-color: var(--color-accent);
+}
+
+.ds-ghost-tile-label {
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+}

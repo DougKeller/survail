@@ -1,0 +1,36 @@
+/* Wireframe 1a — 400×560 frame centered on the warm ground. */
+
+.ds-auth-layout {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: clamp(var(--space-4), 4vw, var(--space-8));
+}
+
+.ds-auth-panel {
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-width: var(--size-auth-panel);
+  min-height: var(--size-auth-panel-min);
+  overflow: hidden;
+  width: 100%;
+}
+
+.ds-auth-panel-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  justify-content: center;
+  padding: var(--space-8);
+}
+
+.ds-auth-panel-footer {
+  border-top: 1px solid var(--color-divider);
+  flex: none;
+}

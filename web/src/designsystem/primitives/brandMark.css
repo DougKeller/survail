@@ -1,0 +1,13 @@
+/* Wireframe 1a brand tile — 56px accent square, bg-colored glyph. */
+
+.ds-brand-mark {
+  align-items: center;
+  background: var(--color-accent);
+  border-radius: var(--radius-md);
+  color: var(--color-bg);
+  display: inline-flex;
+  flex: none;
+  height: var(--size-brand-mark);
+  justify-content: center;
+  width: var(--size-brand-mark);
+}

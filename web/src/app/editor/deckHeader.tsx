@@ -1,121 +1,189 @@
-import { InlineCardText } from "../../modules/cards/ui/cardPresentation";
-import type { Validation } from "../../modules/decks/contracts";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  groupedValidationErrors,
-  MaterialIcon,
-  titleize,
-} from "../deckPrimitives";
+  ChevronLeft,
+  CircleCheck,
+  CircleAlert,
+  History,
+  ListPlus,
+  MessageSquare,
+  MoreVertical,
+  Sparkles,
+  SquarePen,
+  Trash2,
+} from "lucide-react";
 
-export function DeckHeader({
-  deckTitle,
-  deckFormat,
-  editorView,
-  onDelete,
-  onEdit,
-  onOpenAnnotations,
-  onOpenBulkEdit,
-  onOpenHistory,
-  onSelectView,
-  showAgent,
-  toggleAgent,
-  validation,
-}: {
-  deckTitle: string;
-  deckFormat: string;
-  editorView: "cards" | "scores" | "charts" | "info";
-  onDelete: () => Promise<void>;
-  onEdit: () => void;
-  onOpenAnnotations: () => void;
-  onOpenBulkEdit: () => void;
-  onOpenHistory: () => void;
-  onSelectView: (view: "cards" | "scores" | "charts" | "info") => void;
-  showAgent: boolean;
-  toggleAgent: () => void;
-  validation: Validation | null;
-}) {
+import { Button, IconButton } from "../../designsystem/primitives/button";
+import { Chip } from "../../designsystem/primitives/chip";
+import { NavBar, NavBrand, NavLink } from "../../designsystem/primitives/nav";
+import { Popover, PopoverAnchor } from "../../designsystem/primitives/popover";
+import { StatusDot } from "../../designsystem/primitives/statusDot";
+import { TabButton, TabNav } from "../../designsystem/primitives/tabs";
+import { Tag } from "../../designsystem/primitives/tag";
+import { FlexSpacer } from "../../designsystem/layout/inline";
+import { Stack } from "../../designsystem/layout/stack";
+import { titleize } from "../deckPrimitives";
+import { useDismissibleSurface } from "../deck/hooks";
+import {
+  useDeckAdvisorContext,
+  useDeckEditorContext,
+} from "./deckEditorContext";
+
+const ICON = { size: 15, strokeWidth: 2.75 } as const;
+
+function DeckActionsMenu() {
+  const {
+    actions: { handleDelete },
+    modals: { openBulkEdit, setShowEditDeck },
+  } = useDeckEditorContext();
+  const [open, setOpen] = useState(false);
+  const menuRef = useDismissibleSurface<HTMLDivElement>(
+    open,
+    () => {
+      setOpen(false);
+    },
+    { manageFocus: false },
+  );
+  const closeThen = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
+  return (
+    <PopoverAnchor ref={menuRef}>
+      <IconButton
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        label="More deck actions"
+        onClick={() => {
+          setOpen((current) => !current);
+        }}
+      >
+        <MoreVertical {...ICON} />
+      </IconButton>
+      {open && (
+        <Popover align="end" label="Deck actions">
+          <Stack gap={1}>
+            <Button
+              alignStart
+              block
+              icon={<SquarePen {...ICON} />}
+              onClick={closeThen(() => {
+                setShowEditDeck(true);
+              })}
+              variant="ghost"
+            >
+              Edit
+            </Button>
+            <Button
+              alignStart
+              block
+              icon={<ListPlus {...ICON} />}
+              onClick={closeThen(openBulkEdit)}
+              variant="ghost"
+            >
+              Bulk edit decklist
+            </Button>
+            <Button
+              alignStart
+              block
+              icon={<Trash2 {...ICON} />}
+              onClick={closeThen(() => void handleDelete())}
+              variant="ghost"
+            >
+              Delete deck
+            </Button>
+          </Stack>
+        </Popover>
+      )}
+    </PopoverAnchor>
+  );
+}
+
+export function DeckHeader() {
+  const navigate = useNavigate();
+  const {
+    data: { validation },
+    deck,
+    display: { editorView, setEditorView },
+    modals: { setOpenDialog },
+  } = useDeckEditorContext();
+  const { setShowAgent, showAgent } = useDeckAdvisorContext();
+  const valid = validation?.valid === true;
   return (
     <>
-      <div aria-label="Deck controls" className="deck-app-bar">
-        <div className="deck-readonly-details">
-          <strong>{deckTitle}</strong>
-          <span className="pill">{titleize(deckFormat)}</span>
-        </div>
-        <details className="validation-menu">
-          <summary
-            aria-label={`${validation?.valid === true ? "Valid deck" : "Deck needs attention"}, ${String(validation?.card_count ?? 0)} cards`}
-            className={
-              validation?.valid === true
-                ? "validation-summary valid"
-                : "validation-summary invalid"
-            }
-          >
-            <MaterialIcon
-              name={validation?.valid === true ? "check" : "error"}
-            />
-          </summary>
-          <div className="subheader-menu">
-            {validation?.errors.length === 0 && <p>No validation errors.</p>}
-            {groupedValidationErrors(validation).map((group) => (
-              <details className="validation-error-group" key={group.errorId}>
-                <summary>
-                  <strong>{titleize(group.errorId)}</strong>
-                  <span>{group.errors.length}</span>
-                </summary>
-                <div>
-                  {group.errors.map((validationError, index) => (
-                    <p key={`${validationError.error_id}-${String(index)}`}>
-                      <InlineCardText text={validationError.message} />
-                    </p>
-                  ))}
-                </div>
-              </details>
-            ))}
-          </div>
-        </details>
-        <button className="secondary-button labeled-action" onClick={onEdit}>
-          <MaterialIcon name="edit" /> Edit
-        </button>
-        <button className="secondary-button labeled-action" onClick={onOpenAnnotations}>
-          <MaterialIcon name="assignment" /> Annotations
-        </button>
-        <button
-          aria-pressed={showAgent}
-          className={`secondary-button labeled-action ${showAgent ? "selected" : ""}`}
-          onClick={toggleAgent}
+      <NavBar aria-label="Deck controls" divided>
+        <NavLink
+          aria-label="Back to decks"
+          href="/decks"
+          onClick={(event) => {
+            event.preventDefault();
+            void navigate("/decks");
+          }}
         >
-          <MaterialIcon name="forum" /> Advisor
-        </button>
-        <details className="overflow-menu">
-          <summary aria-label="More deck actions" className="icon-action">
-            <MaterialIcon name="more_vert" />
-          </summary>
-          <div className="subheader-menu action-menu">
-            <button onClick={onOpenBulkEdit}>
-              <MaterialIcon name="edit_note" /> Bulk edit decklist
-            </button>
-            <button onClick={onOpenHistory}>
-              <MaterialIcon name="history" /> History
-            </button>
-            <button className="danger" onClick={() => void onDelete()}>
-              <MaterialIcon name="delete" /> Delete deck
-            </button>
-          </div>
-        </details>
-      </div>
-      <nav aria-label="Deck views" className="editor-tabs">
+          <ChevronLeft size={18} strokeWidth={2.75} />
+        </NavLink>
+        <NavBrand>{deck.title}</NavBrand>
+        <Tag tone="accent">{titleize(deck.format)}</Tag>
+        <Chip icon={<StatusDot />}>saved · rev {deck.revision}</Chip>
+        <Chip
+          aria-label={`${valid ? "Valid deck" : "Deck needs attention"}, ${String(validation?.card_count ?? 0)} cards`}
+          icon={valid ? <CircleCheck {...ICON} /> : <CircleAlert {...ICON} />}
+          onClick={() => {
+            setOpenDialog("validation");
+          }}
+          title={valid ? "Valid deck" : "Deck needs attention"}
+        />
+        <FlexSpacer />
+        <Button
+          aria-pressed={showAgent}
+          icon={<MessageSquare {...ICON} />}
+          onClick={() => {
+            setShowAgent((current) => !current);
+          }}
+          variant="secondary"
+        >
+          Advisor
+        </Button>
+        <Button
+          icon={<CircleCheck {...ICON} />}
+          onClick={() => {
+            setOpenDialog("validation");
+          }}
+          variant="secondary"
+        >
+          Validate
+        </Button>
+        <IconButton
+          label="History"
+          onClick={() => {
+            setOpenDialog("history");
+          }}
+        >
+          <History size={16} strokeWidth={2.75} />
+        </IconButton>
+        <Button
+          icon={<Sparkles {...ICON} />}
+          onClick={() => {
+            setOpenDialog("describe");
+          }}
+        >
+          Describe
+        </Button>
+        <DeckActionsMenu />
+      </NavBar>
+      <TabNav label="Deck views">
         {(["cards", "scores", "charts", "info"] as const).map((view) => (
-          <button
-            aria-current={editorView === view ? "page" : undefined}
-            className={editorView === view ? "active" : ""}
+          <TabButton
+            current={editorView === view}
             key={view}
             onClick={() => {
-              onSelectView(view);
+              setEditorView(view);
             }}
           >
             {titleize(view)}
-          </button>
+          </TabButton>
         ))}
-      </nav>
+      </TabNav>
     </>
   );
 }

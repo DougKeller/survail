@@ -1,0 +1,5 @@
+.ds-identity-row {
+  align-items: center;
+  display: flex;
+  gap: calc(var(--space-1) * 1.4);
+}

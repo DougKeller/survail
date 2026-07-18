@@ -1,0 +1,27 @@
+/* Wireframe deck-completion meter — 6–8px pill track with a tonal fill.
+   The fill width is driven by the --ds-meter-fraction custom property set
+   by the Meter component (sanctioned style-prop usage in eslint.config.js). */
+
+.ds-meter {
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+  height: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ds-meter-sm {
+  height: 6px;
+}
+
+.ds-meter-fill {
+  background: var(--color-accent-500);
+  border-radius: inherit;
+  height: 100%;
+  transition: width 0.2s ease;
+  width: calc(var(--ds-meter-fraction, 0) * 100%);
+}
+
+.ds-meter-accent-2 .ds-meter-fill {
+  background: var(--color-accent-2-500);
+}

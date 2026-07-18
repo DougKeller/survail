@@ -1,0 +1,55 @@
+.ds-validation-item {
+  align-items: flex-start;
+  border-radius: var(--radius-full);
+  display: flex;
+  gap: var(--space-2);
+  padding: calc(var(--space-1) * 1.4) calc(var(--space-2) * 1.15);
+}
+
+.ds-validation-item-ok {
+  background: var(--color-accent-2-100);
+}
+
+.ds-validation-item-warn {
+  background: var(--color-accent-100);
+}
+
+.ds-validation-item-pip {
+  align-items: center;
+  border-radius: 50%;
+  display: inline-flex;
+  flex: none;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  height: var(--space-4);
+  justify-content: center;
+  line-height: 1;
+  margin-top: calc(var(--space-1) * 0.25);
+  width: var(--space-4);
+}
+
+.ds-validation-item-ok .ds-validation-item-pip {
+  background: var(--color-accent-2-600);
+  color: var(--color-neutral-100);
+}
+
+.ds-validation-item-warn .ds-validation-item-pip {
+  background: var(--color-accent-600);
+  color: var(--color-accent-100);
+}
+
+.ds-validation-item-label {
+  flex: 1;
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+
+.ds-validation-item-warn .ds-validation-item-label {
+  color: var(--color-accent-800);
+}
+
+.ds-validation-item-detail {
+  color: var(--color-text-muted);
+  flex: none;
+  font-size: var(--text-sm);
+}

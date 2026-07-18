@@ -486,10 +486,10 @@ def test_core_cards_are_limited_to_fifteen() -> None:
 
     with pytest.raises(DeckCoreCardLimitError, match="at most 15"):
         set_cardset_core(
-            FakeDb(),  # type: ignore[arg-type]
+            FakeDb(),
             deck.id,
             target.id,
-            actor,  # type: ignore[arg-type]
+            actor,
             core=True,
         )
 
@@ -517,10 +517,10 @@ def test_cardset_notes_are_trimmed_and_persisted() -> None:
             self.committed = True
 
     result = set_cardset_note(
-        FakeDb(),  # type: ignore[arg-type]
+        FakeDb(),
         deck.id,
         cardset.id,
-        actor,  # type: ignore[arg-type]
+        actor,
         note="  keep for post-wipe rebuild  ",
     )
 

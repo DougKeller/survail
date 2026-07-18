@@ -1,0 +1,31 @@
+.ds-board-layout {
+  align-items: stretch;
+  display: flex;
+  min-width: 0;
+}
+
+.ds-board {
+  align-items: flex-start;
+  display: flex;
+  flex: 1;
+  gap: var(--space-4);
+  min-width: 0;
+  overflow-x: auto;
+  padding: var(--space-4) var(--space-4) var(--space-6);
+}
+
+.ds-board-column {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: calc(var(--space-2) * 0.8);
+  width: var(--size-board-col);
+}
+
+.ds-board-column-narrow {
+  width: var(--size-board-col-narrow);
+}
+
+.ds-board-column-ghost {
+  width: var(--size-board-col-ghost);
+}

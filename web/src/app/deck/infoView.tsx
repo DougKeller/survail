@@ -1,11 +1,37 @@
+import { Pencil, RefreshCw } from "lucide-react";
+
+import { Button } from "../../designsystem/primitives/button";
+import { Card, CardKicker } from "../../designsystem/primitives/card";
+import { Notice } from "../../designsystem/primitives/notice";
+import { Divided } from "../../designsystem/layout/divided";
+import { Grid } from "../../designsystem/layout/grid";
+import { Inline } from "../../designsystem/layout/inline";
+import { PageHeader } from "../../designsystem/layout/page";
+import { Stack } from "../../designsystem/layout/stack";
+import { Heading, Kicker, Text } from "../../designsystem/layout/typography";
+
 import type { Deck, Validation } from "../../modules/decks/contracts";
 
-import {
-  GeneratedDescription,
-  MaterialIcon,
-  RichTextBlock,
-  titleize,
-} from "./text";
+import { GeneratedDescription, RichTextBlock, titleize } from "./text";
+
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <Inline gap={4} justify="between">
+      <Text as="span" muted size="md">
+        {label}
+      </Text>
+      <Text as="span" size="md">
+        <strong>{value}</strong>
+      </Text>
+    </Inline>
+  );
+}
 
 export function DeckInfoView({
   deck,
@@ -29,89 +55,99 @@ export function DeckInfoView({
     : null;
 
   return (
-    <section aria-labelledby="deck-info-title" className="info-view">
-      <div className="view-heading">
-        <div>
-          <span className="eyebrow">Deck information</span>
-          <h2 id="deck-info-title">Purpose and overview</h2>
-        </div>
-        <button className="secondary-button" onClick={edit}>
-          <MaterialIcon name="edit" /> Edit deck info
-        </button>
-      </div>
-      <div className="info-grid">
-        <article className="info-card prominent">
-          <span className="eyebrow">Goal / North Star</span>
-          {deck.goal === "" ? (
-            <p className="muted">
-              Define what this deck should consistently accomplish.
-            </p>
-          ) : (
-            <RichTextBlock cards={deck.cardsets} text={deck.goal} />
-          )}
-        </article>
-        <article className="info-card">
-          <span className="eyebrow">About this deck</span>
-          {deck.description === "" ? (
-            <p className="muted">No user description yet.</p>
-          ) : (
-            <RichTextBlock cards={deck.cardsets} text={deck.description} />
-          )}
-        </article>
-        <article className="info-card ai-overview">
-          <div className="info-card-heading">
-            <span className="eyebrow">AI-generated overview</span>
-            <button
-              className="text-button"
-              disabled={busy}
-              onClick={refreshOverview}
-            >
-              <MaterialIcon name="refresh" /> Refresh overview
-            </button>
-          </div>
-          {generatedDescription === null ? (
-            <p className="muted" role="status">
-              {busy
-                ? "Generating an overview…"
-                : "An overview will be generated when this view opens."}
-            </p>
-          ) : (
-            <GeneratedDescription
-              cards={deck.cardsets}
-              description={generatedDescription}
-            />
-          )}
-        </article>
-        <article className="info-card details-card">
-          <span className="eyebrow">Deck details</span>
-          <dl>
-            <div>
-              <dt>Format</dt>
-              <dd>{titleize(deck.format)}</dd>
-            </div>
-            <div>
-              <dt>Cards</dt>
-              <dd>
-                {validation?.card_count ??
+    <Stack as="section" gap={6} labelledBy="deck-info-title">
+      <PageHeader
+        actions={
+          <Button
+            icon={<Pencil size={15} strokeWidth={2.75} />}
+            onClick={edit}
+            variant="secondary"
+          >
+            Edit deck info
+          </Button>
+        }
+      >
+        <Stack gap={1}>
+          <Kicker>Deck information</Kicker>
+          <Heading id="deck-info-title" level={2} size="2xl">
+            Purpose and overview
+          </Heading>
+        </Stack>
+      </PageHeader>
+      <Grid gap={4}>
+        <Card as="article" elevation="sm">
+          <Stack gap={2}>
+            <CardKicker>Goal / North Star</CardKicker>
+            {deck.goal === "" ? (
+              <Text muted>
+                Define what this deck should consistently accomplish.
+              </Text>
+            ) : (
+              <RichTextBlock cards={deck.cardsets} text={deck.goal} />
+            )}
+          </Stack>
+        </Card>
+        <Card as="article">
+          <Stack gap={2}>
+            <CardKicker>About this deck</CardKicker>
+            {deck.description === "" ? (
+              <Text muted>No user description yet.</Text>
+            ) : (
+              <RichTextBlock cards={deck.cardsets} text={deck.description} />
+            )}
+          </Stack>
+        </Card>
+        <Card as="article">
+          <Stack gap={2}>
+            <Inline gap={3} justify="between">
+              <CardKicker>AI-generated overview</CardKicker>
+              <Button
+                disabled={busy}
+                icon={<RefreshCw size={15} strokeWidth={2.75} />}
+                onClick={refreshOverview}
+                variant="ghost"
+              >
+                Refresh overview
+              </Button>
+            </Inline>
+            {generatedDescription === null ? (
+              <Notice role="status">
+                {busy
+                  ? "Generating an overview…"
+                  : "An overview will be generated when this view opens."}
+              </Notice>
+            ) : (
+              <GeneratedDescription
+                cards={deck.cardsets}
+                description={generatedDescription}
+              />
+            )}
+          </Stack>
+        </Card>
+        <Card as="article">
+          <Stack gap={2}>
+            <CardKicker>Deck details</CardKicker>
+            <Divided>
+              <DetailRow label="Format" value={titleize(deck.format)} />
+              <DetailRow
+                label="Cards"
+                value={
+                  validation?.card_count ??
                   deck.cardsets.reduce(
                     (total, card) => total + card.quantity,
                     0,
-                  )}
-              </dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>
-                {validation?.valid === true ? "Valid" : "Needs attention"}
-              </dd>
-            </div>
-            <div>
-              <dt>Version</dt>
-              <dd>{deck.revision}</dd>
-            </div>
-          </dl>
-        </article>
-      </div>
-    </section>
+                  )
+                }
+              />
+              <DetailRow
+                label="Status"
+                value={validation?.valid === true ? "Valid" : "Needs attention"}
+              />
+              <DetailRow label="Version" value={deck.revision} />
+            </Divided>
+          </Stack>
+        </Card>
+      </Grid>
+    </Stack>
   );
 }

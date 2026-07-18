@@ -1,0 +1,86 @@
+/* Organic .dialog-backdrop / .dialog — scrimmed, over-rounded modal. */
+
+.ds-dialog-backdrop {
+  align-items: center;
+  background: var(--color-scrim);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: var(--space-4);
+  position: fixed;
+  z-index: var(--layer-modal);
+}
+
+.ds-dialog {
+  background: var(--color-bg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  max-width: 560px;
+  outline: none;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ds-dialog-wide {
+  max-width: min(58rem, 100%);
+}
+
+.ds-dialog-head {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--color-divider);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+}
+
+.ds-dialog-head-copy {
+  min-width: 0;
+}
+
+.ds-dialog-title {
+  font-size: var(--text-2xl);
+  margin: 0;
+  padding: 0;
+}
+
+.ds-dialog-description {
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+  margin: var(--space-1) 0 0;
+}
+
+.ds-dialog-close {
+  align-items: center;
+  background: var(--color-surface);
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: calc(var(--space-8) * 0.9);
+  justify-content: center;
+  width: calc(var(--space-8) * 0.9);
+}
+
+.ds-dialog-close:hover {
+  background: var(--color-neutral-300);
+}
+
+.ds-dialog-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-4) var(--space-6);
+}
+
+.ds-dialog-actions {
+  border-top: 1px solid var(--color-divider);
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  padding: var(--space-3) var(--space-4);
+}

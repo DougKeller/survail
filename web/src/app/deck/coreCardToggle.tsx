@@ -1,4 +1,4 @@
-import { MaterialIcon } from "./text";
+import { StarToggle } from "../../designsystem/primitives/starToggle";
 
 export function CoreCardToggle({
   active,
@@ -12,15 +12,12 @@ export function CoreCardToggle({
   onClick: () => void;
 }) {
   return (
-    <button
-      aria-label={`${active ? "Unstar" : "Star"} ${label} as a core card`}
-      className={`core-card-toggle${active ? " active" : ""}`}
+    <StarToggle
+      active={active}
       disabled={disabled}
+      label={`${active ? "Unstar" : "Star"} ${label} as a core card`}
       onClick={onClick}
       title={active ? "Unstar core card" : "Star core card"}
-      type="button"
-    >
-      <MaterialIcon name={active ? "star" : "star_outline"} />
-    </button>
+    />
   );
 }

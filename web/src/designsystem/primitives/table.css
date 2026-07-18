@@ -1,0 +1,60 @@
+/* Organic .table — quiet dividers, uppercase micro headers. */
+
+.ds-table {
+  border-collapse: collapse;
+  color: var(--color-text);
+  font-size: var(--text-md);
+  width: 100%;
+}
+
+.ds-table-scroll {
+  overflow-x: auto;
+}
+
+.ds-table th {
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ds-table td {
+  border-bottom: 1px solid var(--color-divider);
+  padding: var(--space-2) var(--space-3);
+}
+
+.ds-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.ds-table-sort {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: calc(var(--space-1) * 0.5);
+  letter-spacing: inherit;
+  padding: 0;
+  text-align: inherit;
+  text-transform: inherit;
+}
+
+.ds-table-sort:hover {
+  color: var(--color-text);
+}
+
+.ds-table-sort-active {
+  color: var(--color-accent-700);
+}
+
+.ds-table-sort-arrow {
+  font-size: var(--text-3xs);
+  line-height: 1;
+}

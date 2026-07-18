@@ -1,0 +1,46 @@
+/* Popover action menu (deck-tile kebab). Anchored to the trigger's corner. */
+
+.ds-menu {
+  display: inline-flex;
+  position: relative;
+}
+
+.ds-menu-popover {
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: var(--size-menu-min);
+  padding: var(--space-1);
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-1));
+  z-index: var(--layer-overlay);
+}
+
+.ds-menu-item {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+.ds-menu-item:hover {
+  background: var(--color-neutral-200);
+}
+
+.ds-menu-item-danger {
+  color: var(--color-accent-700);
+}
+
+.ds-menu-item-danger:hover {
+  background: var(--color-accent-100);
+}

@@ -1,0 +1,57 @@
+.ds-timeline-item {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.ds-timeline-item-dimmed {
+  opacity: 0.55;
+}
+
+.ds-timeline-item-rail {
+  align-items: center;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+}
+
+.ds-timeline-item-dot {
+  background: var(--color-accent-2-300);
+  border-radius: 50%;
+  flex: none;
+  height: var(--size-timeline-dot);
+  width: var(--size-timeline-dot);
+}
+
+.ds-timeline-item-dot-accent {
+  background: var(--color-accent-300);
+}
+
+.ds-timeline-item-dot-neutral {
+  background: var(--color-neutral-300);
+}
+
+.ds-timeline-item-line {
+  background: var(--color-divider);
+  flex: 1;
+  margin-top: var(--space-1);
+  width: 2px;
+}
+
+.ds-timeline-item:last-child .ds-timeline-item-line {
+  display: none;
+}
+
+.ds-timeline-item-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: var(--space-4);
+}
+
+.ds-timeline-item:last-child .ds-timeline-item-body {
+  padding-bottom: 0;
+}
+
+.ds-timeline-item-action {
+  align-self: center;
+  flex: none;
+}

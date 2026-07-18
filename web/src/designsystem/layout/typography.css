@@ -1,0 +1,106 @@
+.ds-heading {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ds-heading-4xl {
+  font-size: var(--text-4xl);
+}
+
+.ds-heading-3xl {
+  font-size: var(--text-3xl);
+}
+
+.ds-heading-2xl {
+  font-size: var(--text-2xl);
+}
+
+.ds-heading-xl {
+  font-size: var(--text-xl);
+}
+
+.ds-heading-lg {
+  font-size: var(--text-lg);
+}
+
+.ds-heading-md {
+  font-size: var(--text-md);
+}
+
+.ds-heading-base {
+  font-size: var(--text-base);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ds-text {
+  margin: 0;
+}
+
+.ds-text-muted {
+  color: var(--color-text-muted);
+}
+
+.ds-text-2xs {
+  font-size: var(--text-2xs);
+}
+
+.ds-text-xs {
+  font-size: var(--text-xs);
+}
+
+.ds-text-sm {
+  font-size: var(--text-sm);
+}
+
+.ds-text-md {
+  font-size: var(--text-md);
+}
+
+.ds-text-base {
+  font-size: var(--text-base);
+}
+
+.ds-text-body {
+  font-size: var(--text-body);
+}
+
+.ds-kicker {
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  letter-spacing: 0.11em;
+  line-height: 1;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.ds-kicker-accent {
+  color: var(--color-accent-700);
+}
+
+.ds-text-pre {
+  white-space: pre-line;
+}
+
+.ds-mark {
+  background: var(--color-accent-200);
+  border-radius: var(--radius-sm);
+  color: inherit;
+}
+
+.ds-code-block {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  margin: 0;
+  max-height: 24rem;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: var(--space-3);
+  white-space: pre-wrap;
+}

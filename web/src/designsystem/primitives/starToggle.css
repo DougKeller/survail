@@ -1,0 +1,27 @@
+/* Icon-only star toggle — quiet until starred, then accent-filled. */
+
+.ds-star-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  padding: var(--space-1);
+}
+
+.ds-star-toggle:hover {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.ds-star-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ds-star-toggle-active {
+  color: var(--color-accent);
+}

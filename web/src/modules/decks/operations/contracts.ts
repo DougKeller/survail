@@ -1,6 +1,6 @@
 import type { CardFinish, CardZone, DeckOperationResult } from "../contracts";
 
-export interface DeckOperationProposalChange {
+interface DeckOperationProposalChange {
   printing_id: string;
   quantity_delta: number;
   zone: CardZone;
@@ -8,7 +8,7 @@ export interface DeckOperationProposalChange {
   tags?: string[] | null;
 }
 
-export interface DeckOperationProposal {
+interface DeckOperationProposal {
   id: string;
   deck_id: string;
   expected_revision: number;

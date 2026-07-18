@@ -4,11 +4,7 @@ import type { CardSet, Deck } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
 import { createDeckScoreContext, rankScores } from "./scoreHelpers";
 
-function cardset(
-  id: string,
-  name: string,
-  core: boolean,
-): CardSet {
+function cardset(id: string, name: string, core: boolean): CardSet {
   return {
     id,
     quantity: 1,
@@ -87,9 +83,8 @@ describe("rankScores", () => {
     ]);
     const context = createDeckScoreContext(deck);
 
-    expect(context.rows(new Map<string, CardRoleEvaluation>())[0]?.zones).toEqual([
-      "mainboard",
-      "considering",
-    ]);
+    expect(
+      context.rows(new Map<string, CardRoleEvaluation>())[0]?.zones,
+    ).toEqual(["mainboard", "considering"]);
   });
 });

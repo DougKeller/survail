@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext } from "react";
 
 import type { CardRoleEvaluation } from "../../decks/evaluations/contracts";
 import type { CardSet } from "../../decks/contracts";
@@ -20,6 +20,14 @@ export interface DeckCardEvaluationContext {
   deckId: string;
   deckRevision: number;
   scores: ReadonlyMap<string, CardRoleEvaluation>;
+  /**
+   * Injected by the app layer (dependency inversion): the cards module must
+   * not call the decks module's evaluation API directly.
+   */
+  evaluateCards: (
+    deckId: string,
+    oracleIds: string[],
+  ) => Promise<CardRoleEvaluation[]>;
 }
 
 export const CardPresentationContext =
@@ -46,26 +54,6 @@ export function oracleId(source: CardPresentationSource): string {
 export function imageSource(card: ScryfallCard): string | null {
   return (
     card.image_uris?.normal ?? card.card_faces[0]?.image_uris?.normal ?? null
-  );
-}
-
-export function focusableElements(container: HTMLElement): HTMLElement[] {
-  return [
-    ...container.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    ),
-  ];
-}
-
-export function displayPrice(
-  label: string,
-  value: string | null | undefined,
-): ReactNode {
-  return value === null || value === undefined ? null : (
-    <span>
-      <dt>{label}</dt>
-      <dd>{value}</dd>
-    </span>
   );
 }
 

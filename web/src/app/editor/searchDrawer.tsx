@@ -1,9 +1,14 @@
-import type { RefObject } from "react";
+import { Plus } from "lucide-react";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type { ScryfallCard } from "../../modules/cards/contracts";
 import type { CardZone } from "../../modules/decks/contracts";
-import { MaterialIcon } from "../deckPrimitives";
+import { IconButton } from "../../designsystem/primitives/button";
+import { ManaCost } from "../../designsystem/primitives/pip";
+import { Notice } from "../../designsystem/primitives/notice";
+import { Popover } from "../../designsystem/primitives/popover";
+import { Text } from "../../designsystem/layout/typography";
+import { CardRow } from "../../designsystem/patterns/cardRow";
 
 function addZoneLabel(zone: CardZone): string {
   return zone === "commander"
@@ -15,46 +20,42 @@ export function SearchDrawer({
   addResult,
   busy,
   results,
-  searchDrawerRef,
   targetZone,
 }: {
   addResult: (card: ScryfallCard) => void;
   busy: boolean;
   results: ScryfallCard[];
-  searchDrawerRef: RefObject<HTMLDivElement | null>;
   targetZone: CardZone;
 }) {
   return (
-    <div
-      aria-label="Search results"
-      className="search-drawer"
-      ref={searchDrawerRef}
-      role="dialog"
-    >
+    <Popover align="stretch" label="Search results">
       {results.length === 0 ? (
-        <p className="muted search-drawer-empty" role="status">
-          No cards matched this search.
-        </p>
+        <Notice role="status">No cards matched this search.</Notice>
       ) : (
-        <div className="search-drawer-grid">
-          {results.slice(0, 60).map((card) => (
-            <article className="search-result" key={card.id}>
-              <ClickableCardImage card={card} className="search-image" />
-              <button
-                aria-label={`Add ${card.name} to ${addZoneLabel(targetZone)}`}
-                className="search-result-add"
-                disabled={busy}
-                onClick={() => {
-                  addResult(card);
-                }}
-                type="button"
-              >
-                <MaterialIcon name="add" /> Add to {addZoneLabel(targetZone)}
-              </button>
-            </article>
-          ))}
-        </div>
+        results.slice(0, 60).map((card) => (
+          <CardRow
+            key={card.id}
+            leading={<ClickableCardImage card={card} />}
+            name={card.name}
+          >
+            <ManaCost cost={card.mana_cost} />
+            <Text as="span" muted size="2xs">
+              {card.set.toUpperCase()}
+            </Text>
+            <IconButton
+              disabled={busy}
+              label={`Add ${card.name} to ${addZoneLabel(targetZone)}`}
+              onClick={() => {
+                addResult(card);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <Plus size={15} strokeWidth={2.75} />
+            </IconButton>
+          </CardRow>
+        ))
       )}
-    </div>
+    </Popover>
   );
 }

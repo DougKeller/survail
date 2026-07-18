@@ -14,6 +14,7 @@ import {
   editorViewFromSearchParams,
   messageFor,
   PriceProviderContext,
+  storeDeckDisplayPreferences,
   storedDeckDisplayPreferences,
   storedImportPreferences,
 } from "../deckPrimitives";
@@ -21,6 +22,7 @@ import {
 import type { ScryfallCard } from "../../modules/cards/contracts";
 import type {
   CardSet,
+  CardZone,
   Deck,
   DeckOperation,
   Validation,
@@ -30,6 +32,9 @@ import type { DeckDisplayPreferences, EditorView } from "../deck/constants";
 import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
 import { useDeckActions } from "./useDeckActions";
 import { useDeckScoring } from "./useDeckScoring";
+
+/** Editor-level dialogs opened from the top bar (wireframes 1e/1f/1g). */
+export type EditorDialog = "describe" | "history" | "validation";
 
 export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const priceProvider = useContext(PriceProviderContext);
@@ -54,7 +59,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const [printingPreferences] = useState<ImportPreferences>(
     storedImportPreferences,
   );
-  const [showHistory, setShowHistory] = useState(false);
+  const [openDialog, setOpenDialog] = useState<EditorDialog | null>(null);
   const [showEditDeck, setShowEditDeck] = useState(false);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkDecklist, setBulkDecklist] = useState("");
@@ -89,10 +94,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   }, [loadDeck]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "survail.deck-display-preferences",
-      JSON.stringify(displayPreferences),
-    );
+    storeDeckDisplayPreferences(displayPreferences);
   }, [displayPreferences]);
 
   const loadAnalytics = useCallback(async (): Promise<void> => {
@@ -102,48 +104,50 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
       setAnalytics(await api.deckAnalytics(id));
     } catch (reason) {
       setAnalyticsError(
-        reason instanceof Error ? reason.message : "Could not load deck analytics",
+        reason instanceof Error
+          ? messageFor(reason)
+          : "Could not load deck analytics",
       );
     } finally {
       setAnalyticsLoading(false);
     }
   }, [id]);
 
+  // Derive updates from window.location, which history updates synchronously.
+  // Render-time search params (even via the functional setter, which resolves
+  // against them) go stale when consecutive changes land within one render,
+  // letting the later update clobber the earlier one.
   const setDisplayPreferences = useCallback(
     (update: SetStateAction<DeckDisplayPreferences>) => {
-      const next =
-        typeof update === "function" ? update(displayPreferences) : update;
-      const nextSearchParams = new URLSearchParams(searchParams);
+      const nextSearchParams = new URLSearchParams(window.location.search);
+      const current = deckDisplayPreferencesFromSearchParams(
+        nextSearchParams,
+        initialDisplayPreferences.current,
+      );
+      const next = typeof update === "function" ? update(current) : update;
       nextSearchParams.set("view", next.view);
       nextSearchParams.set("group", next.groupBy);
       nextSearchParams.set("sort", next.sortBy);
       setSearchParams(nextSearchParams, { replace: true });
     },
-    [displayPreferences, searchParams, setSearchParams],
+    [setSearchParams],
   );
 
   const setEditorView = useCallback(
     (view: EditorView) => {
-      const nextSearchParams = new URLSearchParams(searchParams);
+      const nextSearchParams = new URLSearchParams(window.location.search);
       nextSearchParams.set("tab", view);
       setSearchParams(nextSearchParams, { replace: true });
     },
-    [searchParams, setSearchParams],
+    [setSearchParams],
   );
 
   const {
-    annotationLoading,
-    annotationQueue,
     evaluationProgress,
     evaluateCard,
     evaluateCurrentDeck,
-    loadAnnotationQueue,
     loadCachedScores,
     refreshingOracleIds,
-    runSandbox,
-    sandboxRun,
-    sandboxRunning,
-    saveAnnotationLabel,
     scoring,
     scores,
   } = useDeckScoring({ deck, setAnnouncement, setError });
@@ -186,6 +190,16 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     title,
   });
 
+  function addCardFromSearch(card: ScryfallCard, zone: CardZone): void {
+    addSearchResult(card, zone);
+    setShowSearchResults(false);
+    setResults([]);
+    setQuery("");
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }
+
   useEffect(() => {
     if (editorView !== "cards") return;
     if (query.trim() === "") {
@@ -207,75 +221,82 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   }, [deck?.revision, editorView, loadAnalytics, scores.size]);
 
   return {
-    addSearchResult,
-    analytics,
-    analyticsError,
-    analyticsLoading,
-    announcement,
-    annotationLoading,
-    annotationQueue,
-    applyBulkEdit,
-    busy,
-    bulkDecklist,
-    bulkEditErrors,
-    changeQuantity,
-    deck,
-    description,
-    displayPreferences,
-    editorView,
-    error,
-    evaluationProgress,
-    evaluateCard,
-    evaluateCurrentDeck,
-    handleDelete,
-    handleGenerateDescription,
-    handleRevert,
-    handleSaveDetails,
-    handleSearch,
-    loadAnalytics,
-    loadAnnotationQueue,
-    loadCachedScores,
-    loadDeck,
-    goal,
-    markAsCommander,
-    moveCardToZone,
-    openBulkEdit,
-    operations,
-    priceProvider,
-    query,
-    refreshingOracleIds,
-    results,
-    runSandbox,
-    sandboxRun,
-    sandboxRunning,
-    saveAnnotationLabel,
-    activeCardNote,
-    scoring,
-    scores,
-    searchInputRef,
-    setAnnouncement,
-    setBulkDecklist,
-    setActiveCardNote,
-    setDeck,
-    setDescription,
-    setDisplayPreferences,
-    setEditorView,
-    setError,
-    setGoal,
-    setQuery,
-    setResults,
-    setShowBulkEdit,
-    setShowEditDeck,
-    setShowHistory,
-    setShowSearchResults,
-    setTitle,
-    showBulkEdit,
-    showEditDeck,
-    showHistory,
-    showSearchResults,
-    title,
-    toggleCoreCard,
-    updateCardNote,
-    validation,
+    actions: {
+      changeQuantity,
+      handleDelete,
+      handleRevert,
+      markAsCommander,
+      moveCardToZone,
+      toggleCoreCard,
+      updateCardNote,
+    },
+    analytics: {
+      analytics,
+      analyticsError,
+      analyticsLoading,
+      loadAnalytics,
+    },
+    data: {
+      announcement,
+      busy,
+      deck,
+      error,
+      loadDeck,
+      operations,
+      setAnnouncement,
+      setError,
+      validation,
+    },
+    details: {
+      description,
+      goal,
+      handleGenerateDescription,
+      handleSaveDetails,
+      setDescription,
+      setGoal,
+      setTitle,
+      title,
+    },
+    display: {
+      displayPreferences,
+      editorView,
+      priceProvider,
+      setDisplayPreferences,
+      setEditorView,
+    },
+    modals: {
+      activeCardNote,
+      applyBulkEdit,
+      bulkDecklist,
+      bulkEditErrors,
+      openBulkEdit,
+      openDialog,
+      setActiveCardNote,
+      setBulkDecklist,
+      setOpenDialog,
+      setShowBulkEdit,
+      setShowEditDeck,
+      showBulkEdit,
+      showEditDeck,
+    },
+    scoring: {
+      evaluateCard,
+      evaluateCurrentDeck,
+      evaluationProgress,
+      loadCachedScores,
+      refreshingOracleIds,
+      scores,
+      scoring,
+    },
+    search: {
+      addCardFromSearch,
+      handleSearch,
+      query,
+      results,
+      searchInputRef,
+      setQuery,
+      setShowSearchResults,
+      showSearchResults,
+    },
   };
 }

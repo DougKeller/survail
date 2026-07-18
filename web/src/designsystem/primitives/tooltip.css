@@ -1,0 +1,16 @@
+/* Floating tooltip surface — soft shadow, over-rounded, non-interactive. */
+
+.ds-tooltip-surface {
+  display: block;
+  filter: drop-shadow(var(--shadow-lg));
+  pointer-events: none;
+  position: fixed;
+  width: min(15rem, calc(100vw - var(--space-8)));
+  z-index: var(--layer-tooltip);
+}
+
+.ds-tooltip-surface img {
+  border-radius: var(--radius-md);
+  display: block;
+  width: 100%;
+}

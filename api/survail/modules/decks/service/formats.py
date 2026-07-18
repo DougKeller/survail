@@ -101,13 +101,24 @@ class CommanderStrategy(FormatStrategy):
         return (
             "Meet Commander legality, singleton, deck-size, commander, and color-identity "
             "requirements.",
-            "Include enough mana sources for the curve. As a rule of thumb, lands plus mana ramp "
-            "should total about 50, adjusted for mana value, card selection, and land utility.",
-            "Include card advantage, mana ramp, targeted removal, and board wipes in quantities "
-            "appropriate to the deck's plan.",
-            "Diversify removal by permanent type and effect. Balance board wipes against the "
-            "deck's own board: creature-heavy decks usually favor fewer, asymmetric, or "
-            "noncreature wipes.",
+            "Start from the baseline template and adjust through play: about 38 lands, 10 to 12 "
+            "mana ramp, 12 card advantage, 12 targeted disruption, 6 mass disruption, and "
+            "roughly 30 plan cards split among enablers, payoffs, and enhancers. These targets "
+            "exceed 100 because strong cards fill several roles at once; prefer overlap such as "
+            "modal double-faced lands and flexible removal.",
+            "Count roles strictly: card advantage must net extra cards, so cantrips and pure "
+            "selection do not count toward the 12, and one-shot ritual mana does not count as "
+            "ramp. Missing land drops is the easiest way to lose, so cut lands last.",
+            "Diversify disruption by permanent type and effect, and vary mass disruption "
+            "across creatures, artifacts and enchantments, and graveyards. Balance board wipes "
+            "against the deck's own board: creature-heavy decks usually favor fewer, "
+            "asymmetric, or noncreature wipes.",
+            "Skew the curve low: roughly 9 one-drops, 18 two-drops, 15 threes, 10 fours, and "
+            "about five each at five and at six-plus mana value, adjusted around the "
+            "commander's cost.",
+            "Balance plan cards around the commander's own role. A payoff or enhancer "
+            "commander wants a deck dense with enablers; an enabler commander frees slots for "
+            "payoffs. Keep enhancers scarce because they do nothing without the plan.",
             "Judge every recommendation against the current deck composition so it fills a need "
             "without creating an imbalance.",
         )

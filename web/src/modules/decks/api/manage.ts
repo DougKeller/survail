@@ -1,5 +1,6 @@
 import { request } from "../../../core/http/client";
-import { metadataFor } from "../../imports/api/preferences";
+
+import { metadataFor } from "./metadata";
 
 import type {
   Deck,

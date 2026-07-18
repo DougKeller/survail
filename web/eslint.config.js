@@ -22,6 +22,31 @@ const configFiles = [
 ];
 const jsFiles = ["**/*.{js,cjs,mjs}"];
 
+// Modules must stay self-contained: one zone per module forbids importing any
+// sibling module's code. Contracts files are excepted because they may be
+// imported type-only across module boundaries and this plugin cannot tell
+// type-only imports apart; .dependency-cruiser.cjs enforces the stricter
+// runtime rule (modules-must-not-import-other-modules). Add new modules and
+// contracts files to these lists.
+const moduleNames = ["agent", "auth", "cards", "decks", "imports"];
+const moduleContracts = [
+  "./agent/contracts.ts",
+  "./auth/contracts.ts",
+  "./cards/contracts.ts",
+  "./decks/contracts.ts",
+  "./decks/analytics/contracts.ts",
+  "./decks/evaluations/contracts.ts",
+  "./decks/guidance/contracts.ts",
+  "./decks/operations/contracts.ts",
+  "./imports/contracts.ts",
+];
+const crossModuleZones = moduleNames.map((name) => ({
+  target: `./src/modules/${name}`,
+  from: "./src/modules",
+  except: [`./${name}`, ...moduleContracts],
+  message: `modules must stay self-contained; ${name} may only import other modules' contracts (type-only).`,
+}));
+
 export default tseslint.config(
   {
     ignores: [
@@ -93,8 +118,66 @@ export default tseslint.config(
       "import/no-cycle": "error",
       "import/no-default-export": "error",
       "import/no-named-as-default": "off",
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./src/core",
+              from: "./src/app",
+              message: "core is foundational and must not depend on app.",
+            },
+            {
+              target: "./src/core",
+              from: "./src/modules",
+              message: "core is foundational and must not depend on modules.",
+            },
+            {
+              target: "./src/modules",
+              from: "./src/app",
+              message: "modules must not depend on app.",
+            },
+            {
+              target: "./src/designsystem",
+              from: "./src/app",
+              message:
+                "the design system is standalone and must not depend on app.",
+            },
+            {
+              target: "./src/designsystem",
+              from: "./src/modules",
+              message:
+                "the design system is standalone and must not depend on modules.",
+            },
+            {
+              target: "./src/designsystem",
+              from: "./src/core",
+              message:
+                "the design system is standalone and must not depend on core.",
+            },
+            ...crossModuleZones,
+          ],
+        },
+      ],
       "import/no-unresolved": ["error", { ignore: ["\\.css$"] }],
       "import/order": "off",
+      "react/forbid-dom-props": [
+        "error",
+        {
+          forbid: [
+            {
+              propName: "style",
+              message:
+                "Style with stylesheets and design tokens; runtime-computed styles belong in the files exempted in eslint.config.js.",
+            },
+            {
+              propName: "className",
+              message:
+                "App code composes design-system components; classNames belong inside src/designsystem.",
+            },
+          ],
+        },
+      ],
       "jsx-a11y/no-autofocus": "off",
       "react/prop-types": "off",
       "react-hooks/refs": "off",
@@ -120,6 +203,7 @@ export default tseslint.config(
   {
     files: testFiles,
     rules: {
+      "import/no-restricted-paths": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-call": "off",
@@ -162,11 +246,67 @@ export default tseslint.config(
     },
   },
   {
+    // The design system owns classNames; DOM style stays banned so all
+    // presentation lives in the component stylesheets.
+    files: ["src/designsystem/**/*.{ts,tsx}"],
+    rules: {
+      "react/forbid-dom-props": [
+        "error",
+        {
+          forbid: [
+            {
+              propName: "style",
+              message:
+                "Design-system presentation belongs in the component stylesheet; runtime-computed styles are exempted per file in eslint.config.js.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Sanctioned runtime-computed DOM style: the progress meter width.
+    files: ["src/designsystem/primitives/progress.tsx"],
+    rules: {
+      "react/forbid-dom-props": "off",
+    },
+  },
+  {
+    // Sanctioned className outside the design system: the .sr-only utility
+    // from src/designsystem/base.css for the announcement live region.
+    files: ["src/app/screens/EditorScreen.tsx"],
+    rules: {
+      "react/forbid-dom-props": [
+        "error",
+        {
+          forbid: [
+            {
+              propName: "style",
+              message:
+                "Style with stylesheets and design tokens; runtime-computed styles belong in the files exempted in eslint.config.js.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["src/**/*.{ts,tsx,js,mjs}"],
     rules: {
       "max-lines": [
         "error",
         { max: 300, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
+  {
+    // These orchestration modules are intentionally cohesive; component and hook
+    // extraction is enforced elsewhere by architecture and complexity checks.
+    files: ["src/app/deck/chartsView.tsx", "src/app/editor/useDeckActions.ts"],
+    rules: {
+      "max-lines": [
+        "error",
+        { max: 420, skipBlankLines: true, skipComments: true },
       ],
     },
   },

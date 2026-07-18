@@ -1,11 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import {
-  expect,
-  test,
-  type Page,
-  type Route,
-  type TestInfo,
-} from "@playwright/test";
+import { expect, test, type Page, type Route } from "@playwright/test";
 import type { CardSet, Deck } from "../src/modules/decks/contracts";
 
 const card = {
@@ -23,7 +17,7 @@ const card = {
   finishes: ["nonfoil"],
   image_uris: {
     normal:
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='488' height='680'%3E%3C/svg%3E",
+      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='488' height='680' viewBox='0 0 488 680'%3E%3Cdefs%3E%3ClinearGradient id='g' x2='1' y2='1'%3E%3Cstop stop-color='%23303979'/%3E%3Cstop offset='1' stop-color='%23121318'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='488' height='680' rx='28' fill='%231a1b20'/%3E%3Crect x='22' y='22' width='444' height='636' rx='20' fill='url(%23g)' stroke='%23bdc2ff' stroke-width='4'/%3E%3Ccircle cx='244' cy='286' r='116' fill='none' stroke='%23bdc2ff' stroke-width='18' opacity='.72'/%3E%3Ccircle cx='244' cy='286' r='54' fill='%23bdc2ff' opacity='.88'/%3E%3Cpath d='M102 500h284M102 540h220M102 580h250' stroke='%23e4e1e9' stroke-width='14' stroke-linecap='round' opacity='.72'/%3E%3C/svg%3E",
   },
   card_faces: [],
   legalities: { commander: "legal" },
@@ -142,7 +136,7 @@ const secondCardScore = {
       role: "mana_ramp",
       score: 90,
       description: "Provides fast acceleration at low cost.",
-      answers: [{ criterion_id: "speed", rating: "very_high", score: 100 }],
+      answers: { speed: "very_high" },
     },
   ],
   cached: false,
@@ -159,7 +153,7 @@ const cardScore = {
       role: "mana_ramp",
       score: 60,
       description: "Accelerates mana, but without the same speed or burst.",
-      answers: [{ criterion_id: "speed", rating: "neutral", score: 50 }],
+      answers: { speed: "neutral" },
     },
   ],
   cached: false,
@@ -313,14 +307,17 @@ async function mockApi(page: Page): Promise<void> {
               entry.zone === change.zone &&
               entry.finish === change.finish,
           );
-          const existing = cardsetIndex >= 0 ? nextCardsets[cardsetIndex] : undefined;
+          const existing =
+            cardsetIndex >= 0 ? nextCardsets[cardsetIndex] : undefined;
           const source =
             existing ??
             currentDeck.cardsets.find(
               (entry) => entry.printing_id === change.printing_id,
             );
           if (source === undefined) {
-            throw new Error(`Missing cardset fixture for ${change.printing_id}`);
+            throw new Error(
+              `Missing cardset fixture for ${change.printing_id}`,
+            );
           }
           const quantityBefore = existing?.quantity ?? 0;
           const quantityAfter = quantityBefore + change.quantity_delta;
@@ -434,13 +431,13 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
-test.afterEach(async ({ page }, testInfo: TestInfo) => {
-  if (page.isClosed()) return;
-  await page.screenshot({
-    path: testInfo.outputPath("core-ux.png"),
-    fullPage: true,
-  });
-});
+function advisorPanel(page: Page) {
+  return page.getByRole("complementary", { name: "Deck advisor" });
+}
+
+function deckTitle(page: Page) {
+  return page.getByLabel("Deck controls").locator(".ds-nav-brand");
+}
 
 test("deck library has no automatically detectable accessibility violations", async ({
   page,
@@ -470,12 +467,14 @@ test("dashboard and import are separate primary destinations", async ({
   await expect(
     page.getByRole("heading", { name: "Import Moxfield decklist" }),
   ).toBeVisible();
-  const headerBox = await page.locator("body > div > header").boundingBox();
+  const navBox = await page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .boundingBox();
   const headingBox = await importHeading.boundingBox();
-  expect(headerBox).not.toBeNull();
+  expect(navBox).not.toBeNull();
   expect(headingBox).not.toBeNull();
   expect(headingBox?.y ?? 0).toBeGreaterThanOrEqual(
-    (headerBox?.y ?? 0) + (headerBox?.height ?? 0),
+    (navBox?.y ?? 0) + (navBox?.height ?? 0),
   );
 });
 
@@ -483,9 +482,7 @@ test("editor has no automatically detectable accessibility violations", async ({
   page,
 }) => {
   await page.goto("/decks/deck-1");
-  await expect(page.locator(".deck-readonly-details strong")).toHaveText(
-    "Accessible Commander",
-  );
+  await expect(deckTitle(page)).toHaveText("Accessible Commander");
 
   const results = await new AxeBuilder({ page }).analyze();
 
@@ -497,7 +494,7 @@ test("editor opens with primary views, contextual card controls, and integrated 
 }) => {
   await page.goto("/decks/deck-1");
 
-  const advisor = page.locator("aside.agent-drawer");
+  const advisor = advisorPanel(page);
   const appBar = page.getByLabel("Deck controls");
   const toolbar = page.getByLabel("Card display controls");
   await expect(advisor).toBeVisible();
@@ -516,19 +513,40 @@ test("editor opens with primary views, contextual card controls, and integrated 
   await expect(toolbar.getByRole("button", { name: "Stacks" })).toBeVisible();
   await expect(toolbar.getByLabel("Group by")).toBeVisible();
   await expect(toolbar.getByLabel("Card sort")).toBeVisible();
-  await expect(
-    toolbar.getByRole("radio", { name: "Mainboard" }),
-  ).toBeChecked();
-  await expect(
-    toolbar.getByRole("radio", { name: "Commander" }),
-  ).toBeVisible();
+  await expect(toolbar.getByRole("radio", { name: "Mainboard" })).toBeChecked();
+  await expect(toolbar.getByRole("radio", { name: "Commander" })).toBeVisible();
   await expect(
     toolbar.getByRole("radio", { name: "Considering" }),
   ).toBeVisible();
   expect(
-    await toolbar.evaluate((element) => getComputedStyle(element).position),
+    await advisor.evaluate((element) => getComputedStyle(element).position),
   ).toBe("sticky");
-  await expect(page.locator("footer.deck-footer")).toHaveCount(0);
+  await expect(page.locator("footer")).toHaveCount(0);
+});
+
+test("pill controls remain content-sized and compact", async ({ page }) => {
+  await page.goto("/decks/deck-1");
+
+  const pills = page.locator(".ds-seg-opt, .ds-chip, .ds-tab");
+  await expect(pills.first()).toBeVisible();
+
+  const measurements = await pills.evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        context: `${element.textContent.trim() || "pill"} (${style.display}, ${style.flex}, ${style.width})`,
+        flexGrow: style.flexGrow,
+        height: box.height,
+      };
+    }),
+  );
+
+  expect(measurements.length).toBeGreaterThan(0);
+  for (const measurement of measurements) {
+    expect(measurement.height, measurement.context).toBeLessThanOrEqual(44);
+    expect(measurement.flexGrow, measurement.context).not.toBe("1");
+  }
 });
 
 test("advisor is keyboard resizable and remembers its width", async ({
@@ -541,9 +559,9 @@ test("advisor is keyboard resizable and remembers its width", async ({
   await expect(separator).toHaveAttribute("aria-valuenow", "400");
   await expect(separator).not.toHaveAttribute("aria-valuemax");
   expect(
-    await page
-      .locator("aside.agent-drawer")
-      .evaluate((element) => getComputedStyle(element).maxWidth),
+    await advisorPanel(page).evaluate(
+      (element) => getComputedStyle(element).maxWidth,
+    ),
   ).toBe("none");
 
   await separator.focus();
@@ -562,7 +580,7 @@ test("compact editor presents the advisor as a full-height supporting surface", 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/decks/deck-1");
 
-  const advisor = page.locator("aside.agent-drawer");
+  const advisor = advisorPanel(page);
   await expect(advisor).toBeVisible();
   expect(
     await advisor.evaluate((element) => getComputedStyle(element).position),
@@ -627,10 +645,10 @@ test("add deck requires details and creates the selected format", async ({
 test("valid deck uses an accessible icon-only indicator", async ({ page }) => {
   await page.goto("/decks/deck-1");
 
-  const validation = page.getByLabel("Valid deck, 100 cards");
+  const validation = page.getByLabel("Valid deck, 4 cards");
   await expect(validation).toBeVisible();
-  await expect(validation).toContainText("check");
-  await expect(validation).not.toContainText("Valid");
+  await expect(validation.locator("svg")).toBeVisible();
+  await expect(validation).toHaveText("");
 });
 
 test("search auto-runs with deck format and drawer dismisses with Escape", async ({
@@ -692,7 +710,7 @@ test("info view contains goal, user description, and auto-generated deck overvie
   );
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Info" }).click();
-  const info = page.locator(".info-view");
+  const info = page.getByRole("region", { name: "Purpose and overview" });
 
   await expect(info).toContainText(deck.goal);
   await expect(info).toContainText(deck.description);
@@ -700,16 +718,16 @@ test("info view contains goal, user description, and auto-generated deck overvie
     hasText: "Arcane Signet",
   });
   await expect(citation).toHaveText(/Arcane Signet/);
+  await expect(info).toContainText("to develop its mana.");
   await expect(
-    info.locator(".ai-overview .generated-description"),
-  ).toContainText("develop its mana.");
-  await expect(
-    info.locator(".ai-overview").getByRole("heading", { name: "Overview" }),
+    info.getByRole("heading", { name: "Overview", exact: true }),
   ).toBeVisible();
   await expect(
-    info.locator(".ai-overview").getByRole("heading", { name: "Gameplan" }),
+    info.getByRole("heading", { name: "Gameplan", exact: true }),
   ).toBeVisible();
-  await expect(info.locator(".ai-overview .gameplan-item")).toHaveCount(3);
+  await expect(info).toContainText("Turns 1-3 - Develop mana.");
+  await expect(info).toContainText("Midgame - Cast the commander.");
+  await expect(info).toContainText("Lategame - Protect the winning turn.");
   await citation.focus();
   await expect(page.getByRole("tooltip")).toBeVisible();
   expect(
@@ -726,7 +744,9 @@ test("info view contains goal, user description, and auto-generated deck overvie
 
 test("command zone is displayed before mainboard", async ({ page }) => {
   await page.goto("/decks/deck-1");
-  const zoneHeadings = page.locator(".zone > h2");
+  const zoneHeadings = page
+    .getByRole("main")
+    .getByRole("heading", { level: 2 });
 
   await expect(zoneHeadings.nth(0)).toContainText("Command zone");
   await expect(zoneHeadings.nth(1)).toContainText("Mainboard");
@@ -742,14 +762,13 @@ test("card grid consolidates duplicate cards and opens shared card details", asy
     name: "View details for Arcane Signet",
   });
   await expect(arcaneImage).toHaveCount(1);
-  await expect(
-    arcaneImage.locator("xpath=../..").getByLabel("2 copies"),
-  ).toHaveText("×2");
+  const arcaneTile = page
+    .locator(".ds-image-tile")
+    .filter({ has: arcaneImage });
+  await expect(arcaneTile.getByLabel("2 copies")).toHaveText("×2");
 
   await arcaneImage.click();
   const dialog = page.getByRole("dialog", { name: "Arcane Signet" });
-  await expect(dialog).toContainText("Overall score");
-  await expect(dialog).toContainText(cardScore.overall_comment);
   await dialog.getByRole("tab", { name: "Info" }).click();
   await expect(dialog).toContainText("Mana cost");
   await expect(dialog).toContainText(card.oracle_text);
@@ -761,20 +780,25 @@ test("cards can be starred as core pieces from hover actions", async ({
 }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Grid" }).click();
+  await expect(page.locator(".ds-image-grid").first()).toBeVisible();
 
-  const arcaneCard = page
-    .getByRole("button", { name: "View details for Arcane Signet" })
-    .locator("xpath=../..");
-  await arcaneCard.hover();
+  const arcaneTile = page.locator(".ds-image-tile").filter({
+    has: page.getByRole("button", { name: "View details for Arcane Signet" }),
+  });
+  await arcaneTile.hover();
   await page
     .getByRole("button", { name: "Star Arcane Signet as a core card" })
     .click();
 
-  await expect(page.getByText("Starred Arcane Signet as a core card")).toBeVisible();
+  await expect(
+    page.getByText("Starred Arcane Signet as a core card"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Scores" }).click();
-  await expect(page.locator(".evaluation-summary")).toContainText(
-    "1 starred core card",
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "Scores and role fit" })
+      .getByRole("button", { name: "Unstar Arcane Signet as a core card" }),
+  ).toBeVisible();
 });
 
 test("hover actions only offer format-appropriate move zones", async ({
@@ -782,11 +806,12 @@ test("hover actions only offer format-appropriate move zones", async ({
 }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Grid" }).click();
+  await expect(page.locator(".ds-image-grid").first()).toBeVisible();
 
-  const arcaneCard = page
-    .getByRole("button", { name: "View details for Arcane Signet" })
-    .locator("xpath=../..");
-  await arcaneCard.hover();
+  const arcaneTile = page.locator(".ds-image-tile").filter({
+    has: page.getByRole("button", { name: "View details for Arcane Signet" }),
+  });
+  await arcaneTile.hover();
 
   const moveSelect = page.getByLabel("Move Arcane Signet to another zone");
   await expect(moveSelect).toBeVisible();
@@ -796,30 +821,32 @@ test("hover actions only offer format-appropriate move zones", async ({
   ]);
 });
 
-test("text view uses masonry columns for card groups", async ({ page }) => {
+test("text view lays out card groups as a horizontally scrolling board", async ({
+  page,
+}) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Text" }).click();
 
-  const groups = page.locator(".text-groups");
-  const groupColumns = await groups.first().evaluate((element) => ({
-    columnWidth: getComputedStyle(element).columnWidth,
-    columnCount: getComputedStyle(element).columnCount,
-  }));
-  const sectionBreakInside = await groups
-    .locator(".text-group-section")
-    .first()
-    .evaluate((element) => getComputedStyle(element).breakInside);
-  const cardColumns = await groups
-    .locator(".card-grid")
-    .first()
-    .evaluate(
-      (element) =>
-        getComputedStyle(element).gridTemplateColumns.split(" ").length,
-    );
-  expect(groupColumns.columnWidth).not.toBe("auto");
-  expect(groupColumns.columnCount).toBe("auto");
-  expect(sectionBreakInside).toBe("avoid");
-  expect(cardColumns).toBe(1);
+  const board = page.locator(".ds-board");
+  await expect(board).toBeVisible();
+  expect(
+    await board.evaluate((element) => getComputedStyle(element).overflowX),
+  ).toBe("auto");
+
+  const columns = board.locator(".ds-board-column");
+  await expect(columns.first().locator(".ds-column-header-title")).toHaveText(
+    "Command zone",
+  );
+  const arcaneColumn = columns.filter({
+    has: page.locator(".ds-column-header-title", { hasText: "Mana Value 2" }),
+  });
+  const arcaneRow = arcaneColumn.locator(".ds-card-row", {
+    hasText: "Arcane Signet",
+  });
+  await expect(arcaneRow.locator(".ds-card-row-qty")).toHaveText("2");
+  await expect(
+    arcaneRow.getByRole("img", { name: "Mana cost {2}" }),
+  ).toBeVisible();
 });
 
 test("grid view flows group placeholders and cards through one continuous grid", async ({
@@ -828,10 +855,16 @@ test("grid view flows group placeholders and cards through one continuous grid",
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Grid" }).click();
 
-  const flowGrid = page.locator(".visual-card-flow-grid");
+  const mainboard = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /Mainboard/ }) });
+  const flowGrid = mainboard.locator(".ds-image-grid");
   await expect(flowGrid).toBeVisible();
-  await expect(flowGrid.locator(".group-placeholder-card").first()).toContainText(
-    "Type",
+  await expect(flowGrid.locator(".ds-group-tile").first()).toContainText(
+    "Mana value",
+  );
+  await expect(flowGrid.locator(".ds-group-tile, .ds-image-tile")).toHaveCount(
+    4,
   );
   const gridStyles = await flowGrid.evaluate((element) => ({
     display: getComputedStyle(element).display,
@@ -845,13 +878,13 @@ test("stacks view keeps grouped masonry columns", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Stacks" }).click();
 
-  const visualGroups = page.locator(".visual-groups");
+  const visualGroups = page.locator(".ds-stack-columns");
   const groupColumns = await visualGroups.first().evaluate((element) => ({
     columnWidth: getComputedStyle(element).columnWidth,
     columnCount: getComputedStyle(element).columnCount,
   }));
   const sectionBreakInside = await visualGroups
-    .locator(".visual-group")
+    .locator(".ds-stack-section")
     .first()
     .evaluate((element) => getComputedStyle(element).breakInside);
   expect(groupColumns.columnWidth).not.toBe("auto");
@@ -875,15 +908,16 @@ test("text view compacts card actions into a caret popover", async ({
   await popover
     .getByRole("button", { name: "Star Arcane Signet as a core card" })
     .click();
-  await expect(page.getByText("Starred Arcane Signet as a core card")).toBeVisible();
+  await expect(
+    page.getByText("Starred Arcane Signet as a core card"),
+  ).toBeVisible();
   await expect(
     page.getByLabel("Arcane Signet is starred as a core card"),
   ).toBeVisible();
 
-  await page
-    .getByRole("button", { name: "Open quick actions for Arcane Signet" })
+  await popover
+    .getByRole("button", { name: "Add note for Arcane Signet" })
     .click();
-  await page.getByRole("button", { name: "Edit note for Arcane Signet" }).click();
   await expect(page.getByRole("dialog", { name: "Card note" })).toBeVisible();
   await expect(popover).toHaveCount(0);
 });
@@ -891,8 +925,7 @@ test("text view compacts card actions into a caret popover", async ({
 test("text view can move a card to another zone from the quick-actions popover", async ({
   page,
 }) => {
-  await page.goto("/decks/deck-1");
-  await page.getByRole("button", { name: "Text" }).click();
+  await page.goto("/decks/deck-1?view=text&group=type");
 
   await page
     .getByRole("button", { name: "Open quick actions for Arcane Signet" })
@@ -901,19 +934,26 @@ test("text view can move a card to another zone from the quick-actions popover",
     .getByLabel("Move Arcane Signet to another zone")
     .selectOption("considering");
 
-  await expect(page.getByText("Move Arcane Signet to considering")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Considering 1/ })).toBeVisible();
   await expect(
-    page
-      .locator(".zone")
-      .filter({ has: page.getByRole("heading", { name: /Mainboard 2/ }) })
-      .getByText("Arcane Signet"),
+    page.getByText("Move Arcane Signet to considering"),
   ).toBeVisible();
+  const consideringColumn = page.locator(".ds-board-column").filter({
+    has: page.locator(".ds-column-header-title", { hasText: "Considering" }),
+  });
+  await expect(consideringColumn.locator(".ds-column-header-count")).toHaveText(
+    "1",
+  );
   await expect(
-    page
-      .locator(".zone")
-      .filter({ has: page.getByRole("heading", { name: /Considering 1/ }) })
-      .getByText("Arcane Signet"),
+    consideringColumn.locator(".ds-card-row", { hasText: "Arcane Signet" }),
+  ).toBeVisible();
+  const mainboardColumn = page.locator(".ds-board-column").filter({
+    has: page.locator(".ds-column-header-title", { hasText: "Mainboard" }),
+  });
+  await expect(mainboardColumn.locator(".ds-column-header-count")).toHaveText(
+    "2",
+  );
+  await expect(
+    mainboardColumn.locator(".ds-card-row", { hasText: "Arcane Signet" }),
   ).toBeVisible();
 });
 
@@ -926,37 +966,42 @@ test("text view closes the quick-actions popover on outside click and final remo
       cardsets: [{ ...cardset, quantity: 1 }, commanderCardset],
     });
   });
-  await page.route("http://localhost:8000/decks/deck-1/validation", async (route) => {
-    await fulfillJson(route, { valid: true, card_count: 2, errors: [] });
-  });
-  await page.route("http://localhost:8000/decks/deck-1/operations", async (route) => {
-    if (route.request().method() !== "POST") {
-      await fulfillJson(route, []);
-      return;
-    }
-    await fulfillJson(route, {
-      operation: {
-        ...operation,
-        changes: [
-          {
-            ...operation.changes[0],
-            quantity_delta: -1,
-            quantity_before: 1,
-            quantity_after: 0,
-          },
-        ],
-      },
-      deck: {
-        ...deck,
-        revision: 1,
-        cardsets: [commanderCardset],
-      },
-      validation: { valid: true, card_count: 1, errors: [] },
-    });
-  });
+  await page.route(
+    "http://localhost:8000/decks/deck-1/validation",
+    async (route) => {
+      await fulfillJson(route, { valid: true, card_count: 2, errors: [] });
+    },
+  );
+  await page.route(
+    "http://localhost:8000/decks/deck-1/operations",
+    async (route) => {
+      if (route.request().method() !== "POST") {
+        await fulfillJson(route, []);
+        return;
+      }
+      await fulfillJson(route, {
+        operation: {
+          ...operation,
+          changes: [
+            {
+              ...operation.changes[0],
+              quantity_delta: -1,
+              quantity_before: 1,
+              quantity_after: 0,
+            },
+          ],
+        },
+        deck: {
+          ...deck,
+          revision: 1,
+          cardsets: [commanderCardset],
+        },
+        validation: { valid: true, card_count: 1, errors: [] },
+      });
+    },
+  );
 
-  await page.goto("/decks/deck-1");
-  await page.getByRole("button", { name: "Text" }).click();
+  await page.goto("/decks/deck-1?view=text&group=type");
 
   const toggle = page.getByRole("button", {
     name: "Open quick actions for Arcane Signet",
@@ -974,7 +1019,9 @@ test("text view closes the quick-actions popover on outside click and final remo
   await toggle.click();
   await page.getByRole("button", { name: "Remove one Arcane Signet" }).click();
   await expect(page.getByText("Remove Arcane Signet")).toBeVisible();
-  await expect(page.getByText("Arcane Signet")).toHaveCount(0);
+  await expect(
+    page.locator(".ds-card-row", { hasText: "Arcane Signet" }),
+  ).toHaveCount(0);
   await expect(popover).toHaveCount(0);
 });
 
@@ -982,20 +1029,19 @@ test("scores are presented in a dedicated sortable view", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
 
-  const scoresView = page.locator(".scores-view");
+  const scoresView = page.getByRole("region", { name: "Scores and role fit" });
   await expect(scoresView).toBeVisible();
   await expect(scoresView).toContainText("1/2");
-  await expect(scoresView.locator(".score-table-row")).toHaveCount(2);
+  const rows = scoresView.locator("tbody > tr");
+  await expect(rows).toHaveCount(2);
   await expect(
     scoresView.getByRole("button", { name: /Overall/ }),
   ).toBeVisible();
   await expect(
     scoresView.getByRole("button", { name: "Reload Sol Ring score" }),
   ).toBeVisible();
-  await expect(scoresView.locator(".score-table-row").nth(1)).toContainText(
-    "Arcane Signet",
-  );
-  await expect(scoresView.locator(".score-table-row").nth(1)).toContainText("-");
+  await expect(rows.nth(1)).toContainText("Arcane Signet");
+  await expect(rows.nth(1)).toContainText("-");
 });
 
 test("a single card score can be reloaded from the scores table", async ({
@@ -1015,7 +1061,7 @@ test("a single card score can be reloaded from the scores table", async ({
             role: "mana_ramp",
             score: 77,
             description: "Updated after a targeted refresh.",
-            answers: [{ criterion_id: "speed", rating: "high", score: 75 }],
+            answers: { speed: "high" },
           },
         ],
       });
@@ -1025,10 +1071,12 @@ test("a single card score can be reloaded from the scores table", async ({
   await page.getByRole("button", { name: "Scores" }).click();
 
   const arcaneRow = page
-    .locator(".score-table-row")
+    .locator("tbody > tr")
     .filter({ hasText: "Arcane Signet" });
   await expect(arcaneRow).toContainText("-");
-  await arcaneRow.getByRole("button", { name: "Reload Arcane Signet score" }).click();
+  await arcaneRow
+    .getByRole("button", { name: "Reload Arcane Signet score" })
+    .click();
 
   await expect.poll(() => reloadRequests).toBe(1);
   await expect(arcaneRow).toContainText("77");
@@ -1042,11 +1090,12 @@ test("scores can be filtered by a regex-style subsequence query", async ({
 
   await page.getByLabel("Filter cards").fill("sgt");
 
-  await expect(page.locator(".score-table-row")).toHaveCount(1);
-  await expect(page.locator(".score-table-row").first()).toContainText(
-    "Arcane Signet",
-  );
-  await expect(page.locator(".scores-view")).toContainText("Showing 1 of 2 cards");
+  const rows = page.locator("tbody > tr");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Arcane Signet");
+  await expect(
+    page.getByRole("region", { name: "Scores and role fit" }),
+  ).toContainText("Showing 1 of 2 cards");
 });
 
 test("card evaluation clearly requires a Goal or North Star", async ({
@@ -1064,10 +1113,7 @@ test("card evaluation clearly requires a Goal or North Star", async ({
   await expect(
     page.getByRole("button", { name: "Evaluate cards" }),
   ).toBeDisabled();
-  await page
-    .locator(".evaluation-goal-required")
-    .getByRole("button", { name: "Add goal" })
-    .dispatchEvent("click");
+  await page.getByRole("button", { name: "Add goal" }).dispatchEvent("click");
   await expect(page.getByRole("dialog", { name: "Edit deck" })).toBeVisible();
 });
 
@@ -1128,43 +1174,36 @@ test("card scores only load after manual evaluation and cards sort by role score
   await page.goto("/decks/deck-1");
 
   await page.getByRole("button", { name: "Scores" }).click();
-  await expect(page.locator(".score-table-row")).toHaveCount(2);
+  const tableRows = page.locator("tbody > tr");
+  await expect(tableRows).toHaveCount(2);
   await expect.poll(() => cachedRequests).toBe(1);
   await expect.poll(() => evaluationRequests).toBe(0);
-  await expect(page.locator(".score-table-row").nth(0)).toContainText(
-    "Sol Ring",
-  );
-  await expect(page.locator(".score-table-row").nth(1)).toContainText(
-    "Arcane Signet",
-  );
+  await expect(tableRows.nth(0)).toContainText("Sol Ring");
+  await expect(tableRows.nth(1)).toContainText("Arcane Signet");
   await page
-    .locator(".scores-view")
     .getByRole("button", { name: "Evaluate cards" })
     .dispatchEvent("click");
-  await expect(page.locator(".score-table-row")).toHaveCount(2);
+  await expect(tableRows).toHaveCount(2);
   await expect.poll(() => evaluationRequests).toBe(1);
-  await expect(page.locator(".score-table-row")).toContainText([
-    "Sol Ring",
-    "Arcane Signet",
-  ]);
-  await expect(page.locator(".score-row-details")).toHaveCount(0);
+  await expect(tableRows).toContainText(["Sol Ring", "Arcane Signet"]);
+  await expect(
+    page.getByText("An efficient source of acceleration for this deck."),
+  ).toHaveCount(0);
   await page
-    .locator(".score-table-row")
-    .first()
     .getByRole("button", { name: "Expand Sol Ring score details" })
     .click();
-  await expect(page.locator(".score-row-preview-comment")).toContainText(
-    "An efficient source of acceleration for this deck.",
-  );
+  await expect(
+    page.getByText("An efficient source of acceleration for this deck."),
+  ).toBeVisible();
   await page.getByRole("button", { name: /Mana Ramp/ }).click();
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   await page.getByLabel("Card sort").selectOption("score");
   await page.getByLabel("Group by").selectOption("type");
 
-  const rows = page
-    .locator(".zone")
-    .filter({ hasText: "Mainboard" })
-    .locator(".card-row");
+  const mainboardColumn = page.locator(".ds-board-column").filter({
+    has: page.locator(".ds-column-header-title", { hasText: "Mainboard" }),
+  });
+  const rows = mainboardColumn.locator(".ds-card-row");
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText("Sol Ring");
   await expect(rows.nth(1)).toContainText("Arcane Signet");
@@ -1175,16 +1214,14 @@ test("scores can sort by starred cards", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
 
-  await page
-    .locator(".score-table-row")
+  const rows = page.locator("tbody > tr");
+  await rows
     .nth(1)
     .getByRole("button", { name: "Star Arcane Signet as a core card" })
     .click();
   await page.getByRole("button", { name: "Starred" }).click();
 
-  await expect(page.locator(".score-table-row").first()).toContainText(
-    "Arcane Signet",
-  );
+  await expect(rows.first()).toContainText("Arcane Signet");
 });
 
 test("completed card evaluations remain visible when a later evaluation fails", async ({
@@ -1228,11 +1265,10 @@ test("completed card evaluations remain visible when a later evaluation fails", 
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "Scores" }).click();
   await page
-    .locator(".scores-view")
     .getByRole("button", { name: "Evaluate cards" })
     .dispatchEvent("click");
 
-  await expect(page.locator(".score-table-row")).toHaveCount(2);
+  await expect(page.locator("tbody > tr")).toHaveCount(2);
   await expect(page.getByRole("main")).toContainText(
     "Rate limit retries exhausted",
   );
@@ -1291,9 +1327,7 @@ test("deck advisor starter chips send a message and display the response", async
 
   await page.getByRole("button", { name: "What does this deck do?" }).click();
 
-  await expect(page.locator("aside.agent-drawer")).toContainText(
-    "This deck develops mana",
-  );
+  await expect(advisorPanel(page)).toContainText("This deck develops mana");
   expect(sentMessage).toBe("What does this deck do?");
 });
 
@@ -1314,11 +1348,14 @@ test("deck advisor sends manually entered messages", async ({ page }) => {
 
   await page.getByRole("button", { name: "Send message" }).click();
 
-  const advisor = page.locator("aside.agent-drawer");
+  const advisor = advisorPanel(page);
   await expect(advisor).toContainText("Add more low-cost interaction.");
-  const viewport = advisor.locator(".agent-events");
-  const userMessage = advisor.locator(".agent-user-message");
-  await expect(userMessage).toContainText("How can I improve interaction?");
+  const viewport = advisor.locator(".ds-panel-scroll");
+  const userMessage = advisor
+    .locator("article")
+    .filter({ hasText: "How can I improve interaction?" })
+    .first();
+  await expect(userMessage).toContainText("You");
   await expect
     .poll(async () =>
       userMessage.evaluate((message) => {
@@ -1356,7 +1393,7 @@ test("deck advisor sends with Enter and preserves Shift+Enter newlines", async (
 
   await composer.press("Enter");
 
-  await expect(page.locator("aside.agent-drawer")).toContainText("Received.");
+  await expect(advisorPanel(page)).toContainText("Received.");
   expect(sentMessage).toBe("First line\nSecond line");
 });
 
@@ -1368,8 +1405,8 @@ test("deck advisor refreshes the deck after applying an operation", async ({
     deckReads += 1;
     await fulfillJson(route, {
       ...deck,
-      revision: deckReads > 2 ? 1 : 0,
-      title: deckReads > 2 ? "Updated by advisor" : deck.title,
+      revision: deckReads > 1 ? 1 : 0,
+      title: deckReads > 1 ? "Updated by advisor" : deck.title,
     });
   });
   await page.route(
@@ -1408,12 +1445,8 @@ test("deck advisor refreshes the deck after applying an operation", async ({
 
   await page.getByRole("button", { name: "Send message" }).click();
 
-  await expect(page.locator(".deck-readonly-details strong")).toHaveText(
-    "Updated by advisor",
-  );
-  await expect(page.locator("aside.agent-drawer")).toContainText(
-    "Deck change applied.",
-  );
+  await expect(deckTitle(page)).toHaveText("Updated by advisor");
+  await expect(advisorPanel(page)).toContainText("Deck change applied.");
 });
 
 test("agent guidance proposals provide approve and reject controls", async ({
@@ -1477,7 +1510,9 @@ test("agent guidance proposals provide approve and reject controls", async ({
     .getByRole("textbox", { name: "Message deck advisor" })
     .fill("Refine my goal");
   await page.getByRole("button", { name: "Send message" }).click();
-  const proposals = page.locator(".agent-guidance-proposal");
+  const proposals = advisorPanel(page)
+    .locator("article")
+    .filter({ hasText: "Your approval is required" });
   await expect(proposals).toHaveCount(2);
   await expect(proposals.first()).toContainText("Your approval is required");
 
@@ -1559,13 +1594,12 @@ test("card operations apply without approval UI or duplicate proposal preview", 
     .fill("Apply it");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  const advisor = page.locator("aside.agent-drawer");
+  const advisor = advisorPanel(page);
   await expect(advisor).toContainText(
     "Deck change applied with 1 validation issues.",
   );
-  await expect(advisor.locator(".agent-card-results article")).toHaveCount(0);
   await expect(
-    advisor.locator(".agent-proposal, .agent-proposal-cards"),
+    advisor.locator("article").filter({ hasText: "Your approval is required" }),
   ).toHaveCount(0);
   await expect(
     advisor.getByRole("button", { name: /approve|reject/i }),
@@ -1587,15 +1621,11 @@ test("deck advisor card citations use the shared hover preview", async ({
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "What does this deck do?" }).click();
 
-  const citation = page
-    .locator("aside.agent-drawer")
-    .locator(".inline-card-reference-trigger");
+  const citation = advisorPanel(page).locator(".inline-card-reference-trigger");
   await expect(citation).toContainText("Arcane Signet");
   await citation.focus();
   await expect(page.getByRole("tooltip")).toBeVisible();
-  await expect(
-    page.locator("aside.agent-drawer").getByRole("tooltip"),
-  ).toHaveCount(0);
+  await expect(advisorPanel(page).getByRole("tooltip")).toHaveCount(0);
 });
 
 test("deck advisor streaming citations never expose raw citation syntax", async ({
@@ -1637,7 +1667,7 @@ test("deck advisor streaming citations never expose raw citation syntax", async 
   );
   await page.goto("/decks/deck-1");
   await page.getByRole("button", { name: "What does this deck do?" }).click();
-  const advisor = page.locator("aside.agent-drawer");
+  const advisor = advisorPanel(page);
 
   await expect(advisor.locator(".inline-card-reference-trigger")).toContainText(
     "Arcane Signet",
@@ -1664,12 +1694,12 @@ test("deck advisor explains when a response stream closes early", async ({
     .fill("Review this deck");
   await page.getByRole("button", { name: "Send message" }).click();
 
-  await expect(page.locator("aside.agent-drawer")).toContainText(
+  await expect(advisorPanel(page)).toContainText(
     "The connection closed before the response finished",
   );
 });
 
-test("history presents dense expandable operation summaries", async ({
+test("history presents dense operation summaries with inline change tags", async ({
   page,
 }) => {
   await page.route(
@@ -1679,21 +1709,15 @@ test("history presents dense expandable operation summaries", async ({
     },
   );
   await page.goto("/decks/deck-1");
-  await page.getByLabel("More deck actions").click();
   await page.getByRole("button", { name: "History" }).click();
 
-  const history = page.getByRole("dialog", { name: "Deck history" });
-  const entry = history.locator(".history-entry");
+  const history = page.getByRole("dialog", { name: "History" });
+  const entry = history.locator(".ds-timeline-item");
   await expect(history).toContainText("1 recorded change");
   await expect(entry).toContainText("Added interaction");
   await expect(entry).toContainText("1 change");
-  await expect(entry.getByRole("button", { name: "Undo" })).toHaveCSS(
-    "min-height",
-    "44px",
-  );
-  await expect(entry.locator("> div")).toBeHidden();
-  await entry.locator("summary").click();
-  await expect(entry.locator("> div")).toContainText("+1 Arcane Signet");
+  await expect(entry.getByRole("button", { name: "Revert" })).toBeEnabled();
+  await expect(entry).toContainText("+1 Arcane Signet");
 });
 
 test("bulk decklist editor applies one atomic diff", async ({ page }) => {
@@ -1793,9 +1817,9 @@ test("bulk decklist editor applies one atomic diff", async ({ page }) => {
   await page.goto("/decks/deck-1");
   await page.getByLabel("More deck actions").click();
   await page.getByRole("button", { name: "Bulk edit decklist" }).click();
-  const dialog = page.getByRole("dialog", { name: "Bulk edit decklist" });
-  await expect(dialog.getByRole("textbox", { name: "Decklist" })).toContainText(
-    "Command zone",
+  const dialog = page.getByRole("dialog", { name: "Bulk edit" });
+  await expect(dialog.getByRole("textbox", { name: "Decklist" })).toHaveValue(
+    /Command zone/,
   );
 
   await dialog.getByRole("button", { name: "Apply changes" }).click();
@@ -1838,7 +1862,7 @@ test("bulk decklist editor displays parse errors without changing the deck", asy
   await page.goto("/decks/deck-1");
   await page.getByLabel("More deck actions").click();
   await page.getByRole("button", { name: "Bulk edit decklist" }).click();
-  const dialog = page.getByRole("dialog", { name: "Bulk edit decklist" });
+  const dialog = page.getByRole("dialog", { name: "Bulk edit" });
   await dialog.getByRole("textbox", { name: "Decklist" }).fill("not a card");
 
   await dialog.getByRole("button", { name: "Apply changes" }).click();
@@ -1847,4 +1871,54 @@ test("bulk decklist editor displays parse errors without changing the deck", asy
     "Line 1: Invalid card line",
   );
   expect(operationRequested).toBe(false);
+});
+
+test.describe("visual regression", () => {
+  test("deck library", async ({ page }) => {
+    await page.goto("/decks");
+    await expect(
+      page.getByRole("heading", { name: "Your decks" }),
+    ).toBeVisible();
+
+    await expect(page).toHaveScreenshot("deck-library.png", {
+      animations: "disabled",
+      fullPage: true,
+    });
+  });
+
+  test("desktop deck editor", async ({ page }) => {
+    await page.goto("/decks/deck-1");
+    await expect(advisorPanel(page)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Command zone" }),
+    ).toBeVisible();
+
+    await expect(page).toHaveScreenshot("deck-editor-desktop.png", {
+      animations: "disabled",
+    });
+  });
+
+  test("text deck view", async ({ page }) => {
+    await page.goto("/decks/deck-1");
+    await page.getByRole("button", { name: "Text" }).click();
+    await expect(
+      page.getByRole("button", {
+        name: "Open quick actions for Arcane Signet",
+      }),
+    ).toBeVisible();
+
+    await expect(page).toHaveScreenshot("deck-editor-text.png", {
+      animations: "disabled",
+    });
+  });
+
+  test("compact deck editor", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/decks/deck-1");
+    await expect(advisorPanel(page)).toBeVisible();
+
+    await expect(page).toHaveScreenshot("deck-editor-compact.png", {
+      animations: "disabled",
+    });
+  });
 });

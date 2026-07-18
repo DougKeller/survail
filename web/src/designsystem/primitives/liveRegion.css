@@ -1,0 +1,13 @@
+/* Visually hidden but exposed to assistive tech (sr-only treatment). */
+
+.ds-live-region {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -0.0625rem;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

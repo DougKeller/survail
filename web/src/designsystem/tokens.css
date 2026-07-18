@@ -1,0 +1,150 @@
+/* Survail design system — Organic theme tokens.
+   Derived from the Organic design system (docs/design/organic-styles.css);
+   extended with a type ramp, z-layers, and the MTG mana palette so every
+   stylesheet in src/designsystem can be fully token-driven.
+   This is the only place raw color/size values may appear. */
+@import url("https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap");
+
+:root {
+  color-scheme: light;
+
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-text: #201e1d;
+  --color-accent: #c67139;
+  --color-accent-2: #7a8a5e;
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  /* Tonal ramps — OKLCH-derived, shared perceptual lightness per step. */
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-400: #c0b6a5;
+  --color-neutral-500: #a19786;
+  --color-neutral-600: #82796a;
+  --color-neutral-700: #645c50;
+  --color-neutral-800: #474238;
+  --color-neutral-900: #2e2b25;
+  --color-accent-100: #fff2eb;
+  --color-accent-200: #ffe1d0;
+  --color-accent-300: #ffc6a5;
+  --color-accent-400: #f6a06b;
+  --color-accent-500: #d67f48;
+  --color-accent-600: #b2622d;
+  --color-accent-700: #8c491a;
+  --color-accent-800: #643312;
+  --color-accent-900: #402310;
+  --color-accent-2-100: #f0fae1;
+  --color-accent-2-200: #e1eecc;
+  --color-accent-2-300: #ccdbb2;
+  --color-accent-2-400: #aebf92;
+  --color-accent-2-500: #8fa073;
+  --color-accent-2-600: #728157;
+  --color-accent-2-700: #56633f;
+  --color-accent-2-800: #3d472b;
+  --color-accent-2-900: #272e1b;
+  --font-heading: "Caprasimo", system-ui, sans-serif;
+  --font-heading-weight: 400;
+  --font-body: "Figtree", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", menlo, consolas, monospace;
+
+  /* Spacing — Organic's 1.10x density scale. */
+  --space-1: 4.4px;
+  --space-2: 8.8px;
+  --space-3: 13.2px;
+  --space-4: 17.6px;
+  --space-6: 26.4px;
+  --space-8: 35.2px;
+
+  /* Radii — over-rounded containers, pill controls. */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-xl: calc(var(--radius-lg) * 1.15);
+  --radius-full: 999px;
+
+  /* Elevation — soft ink-tinted shadows tuned to the warm ground. */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+
+  /* Type ramp — Organic's sizes, normalized. Headings use --font-heading. */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-base: 14px;
+  --text-body: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 25px;
+  --text-3xl: 32px;
+  --text-4xl: 42px;
+
+  /* Z layers. */
+  --layer-raised: 2;
+  --layer-sticky: 10;
+  --layer-overlay: 20;
+  --layer-modal: 100;
+  --layer-tooltip: 110;
+
+  /* MTG mana palette — pip fills and their ink, per the wireframes. */
+  --mana-w: #efe9d6;
+  --mana-w-ink: #6b6455;
+  --mana-u: #6f86ab;
+  --mana-b: #3f3b35;
+  --mana-r: var(--color-accent);
+  --mana-g: var(--color-accent-2-500);
+  --mana-c: #d8cfbd;
+  --mana-c-ink: #5c554a;
+  --mana-ink: #ffffff;
+
+  /* Ink emphasis mixes — appended for the layout/pattern layers. The
+     wireframes fade body ink to ~55/45/30% for meta text, kickers/counts,
+     and drag grips respectively; tokenized so component CSS stays literal-free.
+     Muted ink runs at 68% (not the wireframes' 55%) so 12-14px meta text
+     keeps a >=4.5:1 WCAG AA ratio on the surface tint (#ebddc5). */
+  --color-text-muted: color-mix(in srgb, var(--color-text) 68%, transparent);
+  --color-text-subtle: color-mix(in srgb, var(--color-text) 45%, transparent);
+  --color-text-faint: color-mix(in srgb, var(--color-text) 30%, transparent);
+
+  /* Structural sizes — appended for the layout/pattern layers (wireframes
+     1b/1d/1f): page shell, editor board columns, right rail, dashboard
+     tiles, mana-curve block, and history timeline dots. */
+  --size-page-max: 1280px;
+  --size-board-col: 236px;
+  --size-board-col-narrow: 214px;
+  --size-board-col-ghost: 184px;
+  --size-rail: 290px;
+  --size-tile-min: 220px;
+  --size-curve: 64px;
+  --size-timeline-dot: 30px;
+
+  /* Modal scrim behind .ds-dialog, ink-tinted to match the shadow ramp. */
+  --color-scrim: color-mix(in srgb, #2e2b25 44%, transparent);
+
+  /* Micro glyph size — wireframe pips render their glyphs at 700 8.5px. */
+  --text-3xs: 8.5px;
+
+  /* Art placeholder preset heights (wireframes 1b: 96/120, 1d rail: 260). */
+  --art-height-sm: 96px;
+  --art-height-md: 120px;
+  --art-height-lg: 260px;
+
+  /* Auth panel (wireframe 1a sign-in frame: 400×560). */
+  --size-auth-panel: 400px;
+  --size-auth-panel-min: 560px;
+
+  /* Brand mark square (wireframe 1a: 56px accent tile). */
+  --size-brand-mark: 56px;
+
+  /* Popover menu minimum width (deck-tile actions menu). */
+  --size-menu-min: 160px;
+
+  /* Visual card gallery (stacks/grid deck views): grid tile minimums,
+     masonry column width, and the overlapping card-stack width. */
+  --size-image-tile: 145px;
+  --size-image-tile-sm: 90px;
+  --size-stack-column: 200px;
+  --size-card-stack: 190px;
+}

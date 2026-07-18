@@ -18,8 +18,11 @@ api/.venv/
 build/
 dist/
 .vscode/
+.claude/settings.local.json
 
 # Frontend placeholder
+/node_modules/
+/package-lock.json
 web/node_modules/
 web/coverage/
 web/playwright-report/

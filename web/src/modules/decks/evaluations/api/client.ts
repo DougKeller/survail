@@ -1,13 +1,6 @@
-import { ApiError, API, request } from "../../../../core/http/client";
+import { ApiError, request, stream } from "../../../../core/http/client";
 
-import type {
-  CardEvaluationProgress,
-  CardRoleEvaluation,
-  RoleAnnotationCapture,
-  RoleAnnotationLabel,
-  RoleAnnotationQueue,
-  SandboxRun,
-} from "../contracts";
+import type { CardEvaluationProgress, CardRoleEvaluation } from "../contracts";
 
 type EvaluationStreamEvent =
   | { type: "progress"; payload: CardEvaluationProgress }
@@ -34,7 +27,9 @@ export function evaluateCurrentDeck(
 export function cachedDeckEvaluation(
   deckId: string,
 ): Promise<CardRoleEvaluation[]> {
-  return request<CardRoleEvaluation[]>(`/decks/${deckId}/card-evaluations/current/cached`);
+  return request<CardRoleEvaluation[]>(
+    `/decks/${deckId}/card-evaluations/current/cached`,
+  );
 }
 
 export async function streamCurrentDeckEvaluation(
@@ -42,16 +37,14 @@ export async function streamCurrentDeckEvaluation(
   onProgress: (progress: CardEvaluationProgress) => void,
   onResult: (result: CardRoleEvaluation) => void,
 ): Promise<CardRoleEvaluation[]> {
-  const response = await fetch(
-    `${API}/decks/${deckId}/card-evaluations/current/stream`,
+  const response = await stream(
+    `/decks/${deckId}/card-evaluations/current/stream`,
     {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
       body: "{}",
     },
   );
-  if (!response.ok || response.body === null) {
+  if (response.body === null) {
     throw new ApiError("Could not evaluate cards", response.status);
   }
   const reader = response.body.getReader();
@@ -106,32 +99,4 @@ export function evaluateCard(
       body: "{}",
     },
   );
-}
-
-export function annotationQueue(deckId: string): Promise<RoleAnnotationQueue> {
-  return request<RoleAnnotationQueue>(`/decks/${deckId}/card-evaluation-annotations`);
-}
-
-export function labelAnnotationCapture(
-  deckId: string,
-  captureId: string,
-  label: RoleAnnotationLabel,
-): Promise<RoleAnnotationCapture> {
-  return request<RoleAnnotationCapture>(
-    `/decks/${deckId}/card-evaluation-annotations/${captureId}/label`,
-    {
-      method: "PUT",
-      body: JSON.stringify(label),
-    },
-  );
-}
-
-export function runAnnotationSandbox(
-  deckId: string,
-  payload: { system_prompt: string; model: string },
-): Promise<SandboxRun> {
-  return request<SandboxRun>(`/decks/${deckId}/card-evaluation-annotations/sandbox`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
 }

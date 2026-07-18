@@ -29,17 +29,16 @@ export const TYPE_SWATCHES: Record<string, string> = {
   Unknown: "#8f95b2",
 };
 
-export const ROLE_SWATCHES: Record<string, string> = {
+const ROLE_SWATCHES: Record<string, string> = {
   land: "#6fc17b",
   mana_ramp: "#5ec67a",
   card_advantage: "#4da3ff",
-  selection_tutor: "#7bc5ff",
-  interaction: "#ff8a5b",
-  board_control: "#ff6f91",
-  protection: "#ffd166",
-  engine_enabler: "#d78bff",
-  engine_support: "#b8c0cc",
+  card_selection: "#7bc5ff",
+  targeted_disruption: "#ff8a5b",
+  mass_disruption: "#ff6f91",
+  enabler: "#d78bff",
   payoff: "#7ee0d4",
+  enhancer: "#b8c0cc",
   unscored: "#8f95b2",
 };
 
@@ -54,7 +53,9 @@ export function groupSwatch(groupBy: GroupBy, label: string): string {
   if (groupBy === "color") return COLOR_SWATCHES[label] ?? "#8ca1b3";
   if (groupBy === "type") return TYPE_SWATCHES[label] ?? "#8f95b2";
   if (groupBy === "role")
-    return ROLE_SWATCHES[label.toLocaleLowerCase().replaceAll(" ", "_")] ?? "#8f95b2";
+    return (
+      ROLE_SWATCHES[label.toLocaleLowerCase().replaceAll(" ", "_")] ?? "#8f95b2"
+    );
   return manaValueSwatch(label);
 }
 
