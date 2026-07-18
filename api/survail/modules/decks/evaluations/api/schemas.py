@@ -1,3 +1,4 @@
+import uuid
 from typing import Literal
 
 from pydantic import Field, field_validator
@@ -32,3 +33,19 @@ class CardRoleEvaluationRequest(StrictModel):
         if any(not oracle_id or len(oracle_id) > 40 for oracle_id in cleaned):
             raise ValueError("oracle_ids must be non-blank and at most 40 characters")
         return list(dict.fromkeys(cleaned))
+
+
+class EvaluationFeedbackRequest(StrictModel):
+    oracle_id: str = Field(min_length=1, max_length=40)
+    scope: str = Field(min_length=1, max_length=40)
+    verdict: Literal["up", "down"]
+    reason: str = Field(default="", max_length=4000)
+    expected_added_roles: list[str] = Field(default_factory=list)
+    expected_removed_roles: list[str] = Field(default_factory=list)
+    expected_criteria: dict[str, Literal["very_low", "low", "neutral", "high", "very_high"]] = (
+        Field(default_factory=dict)
+    )
+
+
+class EvaluationFeedbackRead(StrictModel):
+    id: uuid.UUID

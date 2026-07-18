@@ -12,6 +12,13 @@ from survail.core.dependencies import CurrentUser, DbSession
 from survail.modules.decks.evaluations.api.schemas import (
     CardRoleEvaluationRead,
     CardRoleEvaluationRequest,
+    EvaluationFeedbackRead,
+    EvaluationFeedbackRequest,
+)
+from survail.modules.decks.evaluations.service.feedback import (
+    FeedbackEvaluationNotFoundError,
+    FeedbackValidationError,
+    submit_feedback,
 )
 from survail.modules.decks.evaluations.service.evaluator import EvaluationProgress
 from survail.modules.decks.evaluations.service.run import (
@@ -156,3 +163,24 @@ async def evaluate_card(
         raise _error(exc) from exc
     except (APIConnectionError, APITimeoutError, APIStatusError) as exc:
         raise _temporary_openai_error(exc) from exc
+
+
+@router.post("/feedback", response_model=EvaluationFeedbackRead, status_code=201)
+async def submit_card_evaluation_feedback(
+    deck_id: uuid.UUID,
+    request: EvaluationFeedbackRequest,
+    db: DbSession,
+    user: CurrentUser,
+) -> EvaluationFeedbackRead:
+    """Record a thumbs verdict with expected-diff labels for a displayed evaluation."""
+    try:
+        feedback = submit_feedback(db, user, deck_id, request)
+    except EvaluationDeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FeedbackEvaluationNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except EvaluationGoalRequiredError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except FeedbackValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return EvaluationFeedbackRead(id=feedback.id)

@@ -363,6 +363,38 @@ class CardRoleEvaluation(TimestampMixin, Base):
     deck: Mapped[Deck] = relationship(back_populates="role_evaluations")
 
 
+class CardEvaluationFeedback(TimestampMixin, Base):
+    """A user's verdict on a displayed card evaluation, stored as a labeled example.
+
+    `actual` is the evaluation as shown; `expected` holds only the user's
+    corrections (role toggles or criterion re-ranks) so unreviewed values never
+    read as endorsements; `evaluation_context` is the verbatim judge input
+    needed to re-simulate the evaluation.
+    """
+
+    __tablename__ = "card_evaluation_feedback"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    deck_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"), index=True
+    )
+    deck_revision: Mapped[int] = mapped_column(Integer)
+    oracle_id: Mapped[str] = mapped_column(String(40), index=True)
+    card_name: Mapped[str] = mapped_column(String(200))
+    context_key: Mapped[str] = mapped_column(String(64), index=True)
+    evaluator_version: Mapped[str] = mapped_column(String(40), index=True)
+    evaluation_model: Mapped[str] = mapped_column(String(80))
+    scope: Mapped[str] = mapped_column(String(40))
+    verdict: Mapped[str] = mapped_column(String(8))
+    reason: Mapped[str] = mapped_column(Text, default="")
+    actual: Mapped[JsonObject] = mapped_column(JSONB)
+    expected: Mapped[JsonObject] = mapped_column(JSONB)
+    evaluation_context: Mapped[JsonObject] = mapped_column(JSONB)
+
+
 class DeckGuidanceProposal(TimestampMixin, Base):
     __tablename__ = "deck_guidance_proposals"
 
