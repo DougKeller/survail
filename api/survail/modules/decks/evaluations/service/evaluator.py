@@ -34,13 +34,14 @@ from survail.modules.decks.evaluations.service.role_rubrics import (
 )
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v9"
+EVALUATOR_VERSION = "roles-v10"
 MAX_ATTEMPTS = 8
 MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
 ROLE_JUDGE_MAX_TEXT_LENGTH = 600
 MAX_ROLE_JUDGE_OUTPUT_TOKENS = 1000
 OVERALL_SCORE_WEIGHTING_EXPONENT = 2.5
+SECONDARY_ROLE_BASELINE = 50
 logger = logging.getLogger(__name__)
 ProgressCallback = Callable[["EvaluationProgress"], Awaitable[None]]
 ResultCallback = Callable[[CardRoleEvaluationRead], Awaitable[None]]
@@ -260,28 +261,42 @@ def _evaluation_instructions() -> str:
         f"all configured roles: {role_list}. Apply each role's definition strictly, "
         "including its exclusions: replacement draw is card_selection rather than "
         "card_advantage, one-shot burst mana is not mana_ramp, and effects that protect "
-        "this deck's own plan are enabler rather than disruption. Decide between "
-        "targeted_disruption and mass_disruption with the parity test in their "
-        "definitions. Strong cards often fill several roles, so mark every role the card "
-        "materially fulfills, including the spell half of a modal land. For each role the "
-        'card does not materially fulfill, return exactly "N/A". Marking a role '
+        "this deck's own plan are enabler rather than any kind of disruption. Decide "
+        "between targeted_disruption and mass_disruption with the parity test in their "
+        "definitions. A card can fill several roles, including the spell half of a modal "
+        "land, but never assign two roles for the same underlying behavior — pick the one "
+        "definition that best captures it and return N/A for the rest. Most cards "
+        "materially fulfill one or two roles; returning N/A for every role is a correct "
+        "answer for a card whose only contributions are generic staple work. For each "
+        'role the card does not materially fulfill, return exactly "N/A". Marking a role '
         "applicable claims the card genuinely performs that job in this deck: if most of "
         'a role\'s criteria would rate low or very_low, return "N/A" for that role '
         "instead of rating it. For each applicable "
         "role, return exactly one concise sentence describing how well the card fulfills "
         'that role and why, plus an "answers" object whose keys exactly match that '
         "role's rubric criterion IDs and whose values are qualitative ratings using "
-        "only: very_low, low, neutral, high, or very_high. Aim for about "
+        "only: very_low, low, neutral, high, or very_high. Rate each criterion against "
+        "all cards of this format that play the role, not against an empty slot: "
+        "very_high means among the best printed examples of that criterion, high means "
+        "clearly above average, neutral means typical, low and very_low mean below "
+        "average or barely applicable. If every answer for a role is high or better, "
+        "re-examine — most real cards have at least one typical or weak criterion. "
+        "Ground every claim: only cite mechanics that appear in the card's rules text, "
+        "and only cite synergies with cards or counts actually present in this deck's "
+        "shape and referenced cards — never assume fetch lands, self-mill, discard, or "
+        "token counts the deck does not show. Aim for about "
         f"{ROLE_JUDGE_TARGET_WORDS} per applicable role description. Do not calculate "
         "numbers. Only mark land as applicable when the card's type line explicitly "
         "includes Land. Treat incidental or negligible functionality as inapplicable. "
         "Use the deck shape to judge whether mass or symmetric effects would spare or "
         "hurt this deck's own board. Then return exactly one concise overall_summary "
         "sentence describing what the card does for this deck through its strongest "
-        "applicable roles, plus any important limitation within those roles. The "
-        "summary must not mention any role you did not rate highly: never write "
-        "phrases like 'offers no', 'does not provide', or 'lacks' about ramp, draw, "
-        "selection, disruption, or any other job the card is not meant to do."
+        "applicable roles, plus any important limitation within those roles. Describe "
+        "only the jobs the card does: never mention a role you rated N/A or low, and "
+        "never use the phrases 'offers no', 'does not provide', 'lacks', 'adds no', "
+        "'not a', 'just a', 'merely', or 'rather than' anywhere in any description or "
+        "summary — state what the card does well and any limitation within its own "
+        "roles, without contrasting against jobs it does not do."
     )
 
 
@@ -582,11 +597,21 @@ def _is_land_card_context(card_context: str) -> bool:
 
 
 def _role_json(result: StructuredRoleScore) -> JsonObject:
-    numeric_scores = [RATING_SCORES[rating] for rating in result.answers.values()]
+    # The gate criterion defines the role, so it must not be cancelled out by a
+    # single off-axis rating (e.g. Sol Ring's colorless "fixing" dragging down
+    # otherwise-perfect ramp): weight it double in the mean.
+    gate = ROLE_GATE_CRITERIA.get(result.role)
+    weights = {
+        criterion_id: 2 if criterion_id == gate else 1 for criterion_id in result.answers
+    }
+    weighted_total = sum(
+        RATING_SCORES[rating] * weights[criterion_id]
+        for criterion_id, rating in result.answers.items()
+    )
     return json_object(
         {
             "role": result.role,
-            "score": round(sum(numeric_scores) / len(numeric_scores)),
+            "score": round(weighted_total / sum(weights.values())),
             "description": result.description,
             "answers": json_object(
                 {
@@ -637,13 +662,19 @@ def _calculate_overall_score(role_scores: list[CardRoleScoreRead]) -> int:
     if not role_scores:
         return 0
 
-    sorted_scores = sorted(role_scores, key=lambda item: item.score, reverse=True)
-    final_score = sum(
-        float(role_score.score) / math.pow(index + 1, OVERALL_SCORE_WEIGHTING_EXPONENT)
-        for index, role_score in enumerate(sorted_scores)
+    # The best role sets the base; secondary roles only fill a rank-tapered
+    # fraction of the remaining headroom to 100, counted above the neutral
+    # baseline. This keeps the overall bounded at 100 and stops marginal
+    # secondary roles from outweighing primary-role quality.
+    scores = sorted((float(item.score) for item in role_scores), reverse=True)
+    best = scores[0]
+    bonus_fraction = sum(
+        max(0.0, score - SECONDARY_ROLE_BASELINE)
+        / (100.0 - SECONDARY_ROLE_BASELINE)
+        / math.pow(rank, OVERALL_SCORE_WEIGHTING_EXPONENT)
+        for rank, score in enumerate(scores[1:], start=2)
     )
-
-    return round(final_score)
+    return round(best + (100.0 - best) * bonus_fraction)
 
 
 def _assign_role_centralities(

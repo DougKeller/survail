@@ -169,7 +169,7 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
         deck_id=deck.id,
         deck_revision=3,
         context_key=_context_key(deck, "0", _brief("0"), "None"),
-        evaluator_version="roles-v9",
+        evaluator_version="roles-v10",
         oracle_id="0",
         overall_comment="Cached comment.",
         roles=[
@@ -476,36 +476,35 @@ def test_card_brief_includes_cardset_note_context() -> None:
     assert "Notes:\n- Only keep if the deck stays spell-heavy." in brief
 
 
-def test_overall_score_uses_shared_weighting_exponent_without_upper_clamp() -> None:
-    role_scores = [
-        CardRoleScoreRead.model_validate(
-            {
-                "role": role,
-                "score": 100,
-                "description": description,
-                "answers": {},
-            }
-        )
-        for role, description in (
-            ("card_advantage", "Primary"),
-            ("mass_disruption", "Secondary"),
-            ("payoff", "Tertiary"),
-            ("enabler", "Quaternary"),
-            ("enhancer", "Quinary"),
-        )
-    ]
-
-    expected = round(
-        sum(
-            role_score.score / ((index + 1) ** OVERALL_SCORE_WEIGHTING_EXPONENT)
-            for index, role_score in enumerate(
-                sorted(role_scores, key=lambda item: item.score, reverse=True)
-            )
-        )
+def _role_score(role: str, score: int, description: str) -> CardRoleScoreRead:
+    return CardRoleScoreRead.model_validate(
+        {"role": role, "score": score, "description": description, "answers": {}}
     )
 
-    assert expected > 100
-    assert _calculate_overall_score(role_scores) == expected
+
+def test_overall_score_is_bounded_and_led_by_the_best_role() -> None:
+    perfect_everywhere = [
+        _role_score(role, 100, "Perfect")
+        for role in ("card_advantage", "mass_disruption", "payoff", "enabler", "enhancer")
+    ]
+    assert _calculate_overall_score(perfect_everywhere) == 100
+
+    strong_pair = [
+        _role_score("card_advantage", 90, "Primary"),
+        _role_score("mass_disruption", 80, "Secondary"),
+    ]
+    expected_bonus = ((80 - 50) / 50) / (2**OVERALL_SCORE_WEIGHTING_EXPONENT)
+    assert _calculate_overall_score(strong_pair) == round(90 + (100 - 90) * expected_bonus)
+    assert _calculate_overall_score(strong_pair) == 91
+
+
+def test_overall_score_ignores_secondary_roles_at_or_below_the_neutral_baseline() -> None:
+    padded = [
+        _role_score("card_advantage", 90, "Primary"),
+        _role_score("enabler", 50, "Baseline secondary"),
+        _role_score("enhancer", 35, "Weak tertiary"),
+    ]
+    assert _calculate_overall_score(padded) == 90
 
 
 def test_role_gate_drops_roles_whose_defining_criterion_rates_low() -> None:

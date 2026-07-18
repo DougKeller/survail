@@ -41,19 +41,27 @@ ROLE_DEFINITIONS: dict[str, str] = {
     "mass_disruption": (
         "One card that sets back many opponent cards or whole turns at once: board wipes, "
         "mass artifact or enchantment removal, mass graveyard exile, fogs, Propaganda-style "
-        "attack taxes, stax or silence pieces, and full-turn negation such as Teferi's "
-        "Protection. Rule of thumb: after it resolves you sit at card parity or better "
-        "against the table; a one-for-one trade is targeted_disruption instead."
+        "attack taxes, stax or silence pieces, and full-turn lockouts that stop opponents "
+        "from acting. An effect that only shields your own permanents or plan — even from a "
+        "board wipe (Heroic Intervention, or Teferi's Protection used defensively) — is the "
+        "enabler role, never disruption of any kind. Rule of thumb: after it resolves your "
+        "opponents have lost cards or turns; a one-for-one trade is targeted_disruption "
+        "instead."
     ),
     "enabler": (
         "A card that does plan-specific work the deck's core plan cannot function without: "
         "creating, fueling, or assembling the plan, recursion that rebuilds it, and "
         "protection (hexproof, indestructible, regeneration, haste, flash) that keeps key "
-        "pieces alive. Apply the staple test before marking this role: if the card would "
+        "pieces alive. Protection means shielding your own cards; removing or answering "
+        "opponents' cards is disruption, never enabler work, even when doing so protects "
+        "the plan indirectly — score that mode once, as disruption. Apply the staple test before marking this role: if the card would "
         "contribute the same way in any deck of these colors — any land whose contribution "
         "is producing or fixing mana (basics, fetches, duals), a generic mana rock like "
-        "Sol Ring, generic removal or card draw — it is NOT an enabler here, even when the "
-        "plan uses lands, mana, or the graveyard."
+        "Sol Ring, generic ramp spells and mana dorks, one-shot burst mana, generic "
+        "removal, or generic card draw and filtering — it is NOT an enabler here, even "
+        "when the plan uses lands, mana, or the graveyard. A synergy that every card of "
+        "its class provides equally (every land or ramp spell triggers landfall, every "
+        "draw spell fills the graveyard) does not make a staple an enabler."
     ),
     "payoff": (
         "A card that rewards the plan once it is happening, cashing the assembled plan in "
@@ -88,13 +96,19 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         "speed": "How early does it come down and start accelerating the deck's mana?",
         "permanence": (
             "How repeatable and permanent is the acceleration across future turns, as opposed "
-            "to a one-shot burst?"
+            "to a one-shot burst? A permanent or land that produces mana every turn "
+            "indefinitely is very_high."
         ),
         "efficiency": (
             "How favorable is the mana, card, and tempo investment compared with the "
             "acceleration gained?"
         ),
-        "fixing": "How well does it produce, find, or enable the colors this deck needs?",
+        "fixing": (
+            "How well does its mana output fit this deck's actual color requirements? "
+            "Perfect fixing for the deck's colors is very_high; colorless output is a real "
+            "drawback only in a color-hungry deck — in a deck with modest color needs "
+            "rate colorless acceleration neutral, never low or very_low."
+        ),
         "curve_fit": (
             "How well does the acceleration line up with the commander's cost and the deck's "
             "key turns?"
@@ -116,7 +130,12 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
     },
     "card_selection": {
-        "access": "How directly does it find, filter toward, or select the cards this deck wants?",
+        "access": (
+            "How directly does it let this deck choose, filter, or order the cards it "
+            "draws or finds? Rate very_low for raw draw with no choice, filtering, or "
+            "ordering — drawing extra cards without selecting is card_advantage, not "
+            "selection."
+        ),
         "efficiency": (
             "How favorable is the mana, timing, and card investment for the selection provided?"
         ),
@@ -167,7 +186,15 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
     },
     "enabler": {
-        "directness": "How directly does it create, fuel, or unlock the deck's core plan?",
+        "directness": (
+            "How directly does it do plan-specific work that a generic staple of these "
+            "colors would not do? Rate very_low — regardless of how much the plan uses "
+            "lands, mana, or interaction — if the card would contribute identically in any "
+            "deck of these colors: basic and fetch lands, generic mana rocks, ramp spells, "
+            "mana dorks, burst mana, generic removal or countermagic, generic card draw or "
+            "filtering. A synergy that every card of its class provides equally (every "
+            "land or ramp spell triggers landfall) does not count as plan-specific work."
+        ),
         "reliability": "How consistently can this deck deploy it and have it matter?",
         "resilience": (
             "How well does it protect, recur, or rebuild the plan against removal and "
