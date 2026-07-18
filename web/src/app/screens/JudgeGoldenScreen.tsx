@@ -56,11 +56,18 @@ export function JudgeGoldenScreen() {
       <PageHeader>
         <Stack gap={2}>
           <Heading level={1} size="3xl">
-            {reference.deck_title}
+            Judge reference
           </Heading>
-          <Text muted size="md">
-            {reference.deck_goal}
-          </Text>
+          {reference.decks.map((deck) => (
+            <Stack gap={1} key={deck.title}>
+              <Heading level={2} size="lg">
+                {deck.title}
+              </Heading>
+              <Text muted size="md">
+                {deck.goal}
+              </Text>
+            </Stack>
+          ))}
           <Inline gap={2} wrap>
             <StatusDot pulse={false} tone={healthTone} />
             <Text as="span" size="md">
@@ -80,7 +87,10 @@ export function JudgeGoldenScreen() {
       </PageHeader>
       <Stack gap={4}>
         {sortFailuresFirst(reference.cards).map((card) => (
-          <GoldenCardView card={card} key={card.name} />
+          <GoldenCardView
+            card={card}
+            key={`${card.deck_title}: ${card.name}`}
+          />
         ))}
       </Stack>
     </Page>

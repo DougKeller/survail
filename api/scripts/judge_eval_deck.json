@@ -1,74 +1,561 @@
 {
-  "title": "Tatyova Lands Value",
-  "format": "commander",
-  "goal": "Simic lands-matter value deck: ramp aggressively with permanent mana sources and extra land drops, convert landfall into card advantage, protect the engine, and close the game with a massive Craterhoof Behemoth or Avenger of Zendikar swing. Prefers instant-speed interaction that protects our own board and flexible answers to any permanent type.",
-  "commander": [{ "name": "Tatyova, Benthic Druid", "quantity": 1 }],
-  "mainboard": [
-    { "name": "Sol Ring", "quantity": 1 },
-    { "name": "Simic Signet", "quantity": 1 },
-    { "name": "Rampant Growth", "quantity": 1 },
-    { "name": "Cultivate", "quantity": 1 },
-    { "name": "Lotus Petal", "quantity": 1 },
-    { "name": "Sakura-Tribe Elder", "quantity": 1 },
-    { "name": "Rhystic Study", "quantity": 1 },
-    { "name": "Harmonize", "quantity": 1 },
-    { "name": "Ponder", "quantity": 1 },
-    { "name": "Brainstorm", "quantity": 1 },
-    { "name": "Sylvan Library", "quantity": 1 },
-    { "name": "Oracle of Mul Daya", "quantity": 1 },
-    { "name": "Ramunap Excavator", "quantity": 1 },
-    { "name": "Beast Within", "quantity": 1 },
-    { "name": "Counterspell", "quantity": 1 },
-    { "name": "Cyclonic Rift", "quantity": 1 },
-    { "name": "Heroic Intervention", "quantity": 1 },
-    { "name": "Craterhoof Behemoth", "quantity": 1 },
-    { "name": "Avenger of Zendikar", "quantity": 1 },
-    { "name": "Zendikar Resurgent", "quantity": 1 },
-    { "name": "Command Tower", "quantity": 1 },
-    { "name": "Reliquary Tower", "quantity": 1 },
-    { "name": "Evolving Wilds", "quantity": 1 },
-    { "name": "Boseiju, Who Endures", "quantity": 1 },
-    { "name": "Elvish Visionary", "quantity": 1 },
-    { "name": "Eternal Witness", "quantity": 1 },
-    { "name": "Regrowth", "quantity": 1 },
-    { "name": "Solemn Simulacrum", "quantity": 1 },
-    { "name": "Midnight Tilling", "quantity": 1 },
-    { "name": "Hullbreaker Horror", "quantity": 1 },
-    { "name": "Forest", "quantity": 15 },
-    { "name": "Island", "quantity": 10 }
-  ],
-  "evaluate": [
-    "Tatyova, Benthic Druid",
-    "Sol Ring",
-    "Simic Signet",
-    "Rampant Growth",
-    "Cultivate",
-    "Lotus Petal",
-    "Sakura-Tribe Elder",
-    "Rhystic Study",
-    "Harmonize",
-    "Ponder",
-    "Brainstorm",
-    "Sylvan Library",
-    "Oracle of Mul Daya",
-    "Ramunap Excavator",
-    "Beast Within",
-    "Counterspell",
-    "Cyclonic Rift",
-    "Heroic Intervention",
-    "Craterhoof Behemoth",
-    "Avenger of Zendikar",
-    "Zendikar Resurgent",
-    "Command Tower",
-    "Reliquary Tower",
-    "Evolving Wilds",
-    "Boseiju, Who Endures",
-    "Elvish Visionary",
-    "Eternal Witness",
-    "Regrowth",
-    "Solemn Simulacrum",
-    "Midnight Tilling",
-    "Hullbreaker Horror",
-    "Forest"
+  "decks": [
+    {
+      "title": "Tatyova Lands Value",
+      "format": "commander",
+      "goal": "Simic lands-matter value deck: ramp aggressively with permanent mana sources and extra land drops, convert landfall into card advantage, protect the engine, and close the game with a massive Craterhoof Behemoth or Avenger of Zendikar swing. Prefers instant-speed interaction that protects our own board and flexible answers to any permanent type.",
+      "commander": [
+        {
+          "name": "Tatyova, Benthic Druid",
+          "quantity": 1
+        }
+      ],
+      "mainboard": [
+        {
+          "name": "Sol Ring",
+          "quantity": 1
+        },
+        {
+          "name": "Simic Signet",
+          "quantity": 1
+        },
+        {
+          "name": "Rampant Growth",
+          "quantity": 1
+        },
+        {
+          "name": "Cultivate",
+          "quantity": 1
+        },
+        {
+          "name": "Lotus Petal",
+          "quantity": 1
+        },
+        {
+          "name": "Sakura-Tribe Elder",
+          "quantity": 1
+        },
+        {
+          "name": "Rhystic Study",
+          "quantity": 1
+        },
+        {
+          "name": "Harmonize",
+          "quantity": 1
+        },
+        {
+          "name": "Ponder",
+          "quantity": 1
+        },
+        {
+          "name": "Brainstorm",
+          "quantity": 1
+        },
+        {
+          "name": "Sylvan Library",
+          "quantity": 1
+        },
+        {
+          "name": "Oracle of Mul Daya",
+          "quantity": 1
+        },
+        {
+          "name": "Ramunap Excavator",
+          "quantity": 1
+        },
+        {
+          "name": "Beast Within",
+          "quantity": 1
+        },
+        {
+          "name": "Counterspell",
+          "quantity": 1
+        },
+        {
+          "name": "Cyclonic Rift",
+          "quantity": 1
+        },
+        {
+          "name": "Heroic Intervention",
+          "quantity": 1
+        },
+        {
+          "name": "Craterhoof Behemoth",
+          "quantity": 1
+        },
+        {
+          "name": "Avenger of Zendikar",
+          "quantity": 1
+        },
+        {
+          "name": "Zendikar Resurgent",
+          "quantity": 1
+        },
+        {
+          "name": "Command Tower",
+          "quantity": 1
+        },
+        {
+          "name": "Reliquary Tower",
+          "quantity": 1
+        },
+        {
+          "name": "Evolving Wilds",
+          "quantity": 1
+        },
+        {
+          "name": "Boseiju, Who Endures",
+          "quantity": 1
+        },
+        {
+          "name": "Elvish Visionary",
+          "quantity": 1
+        },
+        {
+          "name": "Eternal Witness",
+          "quantity": 1
+        },
+        {
+          "name": "Regrowth",
+          "quantity": 1
+        },
+        {
+          "name": "Solemn Simulacrum",
+          "quantity": 1
+        },
+        {
+          "name": "Midnight Tilling",
+          "quantity": 1
+        },
+        {
+          "name": "Hullbreaker Horror",
+          "quantity": 1
+        },
+        {
+          "name": "Forest",
+          "quantity": 15
+        },
+        {
+          "name": "Island",
+          "quantity": 10
+        }
+      ],
+      "evaluate": [
+        "Tatyova, Benthic Druid",
+        "Sol Ring",
+        "Simic Signet",
+        "Rampant Growth",
+        "Cultivate",
+        "Lotus Petal",
+        "Sakura-Tribe Elder",
+        "Rhystic Study",
+        "Harmonize",
+        "Ponder",
+        "Brainstorm",
+        "Sylvan Library",
+        "Oracle of Mul Daya",
+        "Ramunap Excavator",
+        "Beast Within",
+        "Counterspell",
+        "Cyclonic Rift",
+        "Heroic Intervention",
+        "Craterhoof Behemoth",
+        "Avenger of Zendikar",
+        "Zendikar Resurgent",
+        "Command Tower",
+        "Reliquary Tower",
+        "Evolving Wilds",
+        "Boseiju, Who Endures",
+        "Elvish Visionary",
+        "Eternal Witness",
+        "Regrowth",
+        "Solemn Simulacrum",
+        "Midnight Tilling",
+        "Hullbreaker Horror",
+        "Forest"
+      ]
+    },
+    {
+      "title": "Teval Graveyard Value",
+      "format": "commander",
+      "goal": "This deck aims to use self-mill and land recursion through its commander, [[Teval, the Balanced Scale]] to build a powerful value engine that ramps lands, reanimates creatures, and compounds graveyard-based synergies.\n\nEarly game is spent ramping with synergistic ramp spells such as [[Skull Prophet]] and [[Harrow]], ramping quickly into Teval. Once Teval is out, begin building the engine through leave-the-graveyard effects such as [[Teval's Judgment]] and [[Kheru Goldkeeper]], or establish more self-mill and leave-graveyard-enabling effects such as [[Ripples of Undeath]], [[Colossal Grave-Reaver]] and [[Overlord of the Balemurk]].\n\nZombie tokens can optionally be used for sac fodder for enabling more powerful effects such as [[Victimize]] or other effects requiring a creature sacrifice, or become mana dorks through cards like [[Insidious Roots]].\n\nSimple highly-synergistic clusters of cards such as [[Life from the Loam]] and cycling lands ([[Lonely Sandbar]] , [[Tranquil Thicket]] , and [[Barren Moor]]) provide cheap access to efficient draw engines.\n\nWin through going wide with zombies, tall with a big Teval or heavy beaters like [[Archon of Cruelty]], or through infinite combos such as [[Kheru Goldkeeper]] and [[Tortured Existence]] for infinite zombies through Teval, or through infinite recursion effects like [[Gravecrawler]], [[Warren Soultrader]], and [[Cauldron of Essence]] to whittle all opponents down at once.\n\nWhile the deck has a number of play patterns with various win conditions, it values interactive games where it can apply pressure to opponents through disruption and counterspell effects over outright winning through uninteractive solitaire.",
+      "commander": [
+        {
+          "name": "Teval, the Balanced Scale",
+          "quantity": 1
+        }
+      ],
+      "mainboard": [
+        {
+          "name": "Aftermath Analyst",
+          "quantity": 1
+        },
+        {
+          "name": "Arcane Signet",
+          "quantity": 1
+        },
+        {
+          "name": "Archon of Cruelty",
+          "quantity": 1
+        },
+        {
+          "name": "Assassin's Trophy",
+          "quantity": 1
+        },
+        {
+          "name": "Avenger of Zendikar",
+          "quantity": 1
+        },
+        {
+          "name": "Awaken the Honored Dead",
+          "quantity": 1
+        },
+        {
+          "name": "Bear Umbra",
+          "quantity": 1
+        },
+        {
+          "name": "Beast Within",
+          "quantity": 1
+        },
+        {
+          "name": "Bitter Triumph",
+          "quantity": 1
+        },
+        {
+          "name": "Bojuka Bog",
+          "quantity": 1
+        },
+        {
+          "name": "Cauldron of Essence",
+          "quantity": 1
+        },
+        {
+          "name": "Colossal Grave-Reaver",
+          "quantity": 1
+        },
+        {
+          "name": "Command Tower",
+          "quantity": 1
+        },
+        {
+          "name": "Conduit of Worlds",
+          "quantity": 1
+        },
+        {
+          "name": "Damnation",
+          "quantity": 1
+        },
+        {
+          "name": "Death Begets Life",
+          "quantity": 1
+        },
+        {
+          "name": "Disciple of Freyalise // Garden of Freyalise",
+          "quantity": 1
+        },
+        {
+          "name": "Diviner of Mist",
+          "quantity": 1
+        },
+        {
+          "name": "Drana, the Last Bloodchief",
+          "quantity": 1
+        },
+        {
+          "name": "Dread Return",
+          "quantity": 1
+        },
+        {
+          "name": "Eldritch Evolution",
+          "quantity": 1
+        },
+        {
+          "name": "Emergence Zone",
+          "quantity": 1
+        },
+        {
+          "name": "Eternal Witness",
+          "quantity": 1
+        },
+        {
+          "name": "Fabled Passage",
+          "quantity": 1
+        },
+        {
+          "name": "Farseek",
+          "quantity": 1
+        },
+        {
+          "name": "Flooded Strand",
+          "quantity": 1
+        },
+        {
+          "name": "Foreboding Landscape",
+          "quantity": 1
+        },
+        {
+          "name": "Forest",
+          "quantity": 8
+        },
+        {
+          "name": "Formidable Speaker",
+          "quantity": 1
+        },
+        {
+          "name": "Golgari Charm",
+          "quantity": 1
+        },
+        {
+          "name": "Gravecrawler",
+          "quantity": 1
+        },
+        {
+          "name": "Grave Researcher // Reanimate",
+          "quantity": 1
+        },
+        {
+          "name": "Harrow",
+          "quantity": 1
+        },
+        {
+          "name": "Hedge Shredder",
+          "quantity": 1
+        },
+        {
+          "name": "Hermit Druid",
+          "quantity": 1
+        },
+        {
+          "name": "Hydroelectric Specimen // Hydroelectric Laboratory",
+          "quantity": 1
+        },
+        {
+          "name": "Insidious Roots",
+          "quantity": 1
+        },
+        {
+          "name": "Island",
+          "quantity": 3
+        },
+        {
+          "name": "Kheru Goldkeeper",
+          "quantity": 1
+        },
+        {
+          "name": "Life from the Loam",
+          "quantity": 1
+        },
+        {
+          "name": "Lightning Greaves",
+          "quantity": 1
+        },
+        {
+          "name": "Lost Monarch of Ifnir",
+          "quantity": 1
+        },
+        {
+          "name": "Lotus Field",
+          "quantity": 1
+        },
+        {
+          "name": "Lotuslight Dancers",
+          "quantity": 1
+        },
+        {
+          "name": "Maelstrom Pulse",
+          "quantity": 1
+        },
+        {
+          "name": "Memorial to Folly",
+          "quantity": 1
+        },
+        {
+          "name": "Muldrotha, the Gravetide",
+          "quantity": 1
+        },
+        {
+          "name": "Naga Fleshcrafter",
+          "quantity": 1
+        },
+        {
+          "name": "Nature's Lore",
+          "quantity": 1
+        },
+        {
+          "name": "Nature's Rhythm",
+          "quantity": 1
+        },
+        {
+          "name": "Negate",
+          "quantity": 1
+        },
+        {
+          "name": "Neoform",
+          "quantity": 1
+        },
+        {
+          "name": "Opulent Palace",
+          "quantity": 1
+        },
+        {
+          "name": "Otawara, Soaring City",
+          "quantity": 1
+        },
+        {
+          "name": "Overlord of the Balemurk",
+          "quantity": 1
+        },
+        {
+          "name": "Polluted Delta",
+          "quantity": 1
+        },
+        {
+          "name": "Rain-Slicked Copse",
+          "quantity": 1
+        },
+        {
+          "name": "Sakura-Tribe Elder",
+          "quantity": 1
+        },
+        {
+          "name": "Shifting Woodland",
+          "quantity": 1
+        },
+        {
+          "name": "Sidisi, Brood Tyrant",
+          "quantity": 1
+        },
+        {
+          "name": "Six",
+          "quantity": 1
+        },
+        {
+          "name": "Skull Prophet",
+          "quantity": 1
+        },
+        {
+          "name": "Sol Ring",
+          "quantity": 1
+        },
+        {
+          "name": "Springbloom Druid",
+          "quantity": 1
+        },
+        {
+          "name": "Stitcher's Supplier",
+          "quantity": 1
+        },
+        {
+          "name": "Swamp",
+          "quantity": 3
+        },
+        {
+          "name": "Swiftfoot Boots",
+          "quantity": 1
+        },
+        {
+          "name": "Tatyova, Benthic Druid",
+          "quantity": 1
+        },
+        {
+          "name": "Tectonic Edge",
+          "quantity": 1
+        },
+        {
+          "name": "Terramorphic Expanse",
+          "quantity": 1
+        },
+        {
+          "name": "Teval's Judgment",
+          "quantity": 1
+        },
+        {
+          "name": "The Dross Pits",
+          "quantity": 1
+        },
+        {
+          "name": "The Gitrog Monster",
+          "quantity": 1
+        },
+        {
+          "name": "The Scarab God",
+          "quantity": 1
+        },
+        {
+          "name": "Three Visits",
+          "quantity": 1
+        },
+        {
+          "name": "Timeless Witness",
+          "quantity": 1
+        },
+        {
+          "name": "Titans' Nest",
+          "quantity": 1
+        },
+        {
+          "name": "Tortured Existence",
+          "quantity": 1
+        },
+        {
+          "name": "Toxic Deluge",
+          "quantity": 1
+        },
+        {
+          "name": "Undercity Sewers",
+          "quantity": 1
+        },
+        {
+          "name": "Uro, Titan of Nature's Wrath",
+          "quantity": 1
+        },
+        {
+          "name": "Vernal Fen",
+          "quantity": 1
+        },
+        {
+          "name": "Victimize",
+          "quantity": 1
+        },
+        {
+          "name": "Warren Soultrader",
+          "quantity": 1
+        },
+        {
+          "name": "Watery Grave",
+          "quantity": 1
+        },
+        {
+          "name": "Windswept Heath",
+          "quantity": 1
+        },
+        {
+          "name": "Witherbloom Charm",
+          "quantity": 1
+        },
+        {
+          "name": "World Shaper",
+          "quantity": 1
+        },
+        {
+          "name": "Rakshasa's Bargain",
+          "quantity": 1
+        }
+      ],
+      "evaluate": [
+        "Teval, the Balanced Scale",
+        "The Gitrog Monster",
+        "The Scarab God",
+        "Kheru Goldkeeper",
+        "Death Begets Life",
+        "Naga Fleshcrafter",
+        "Bojuka Bog",
+        "Undercity Sewers",
+        "Rakshasa's Bargain",
+        "Sol Ring",
+        "Overlord of the Balemurk"
+      ]
+    }
   ]
 }

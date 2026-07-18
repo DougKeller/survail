@@ -30,11 +30,13 @@ export interface JudgeGoldenExpectation {
   must_roles: string[];
   forbid_roles: string[];
   role_score_ranges: Record<string, number[]>;
+  role_criteria: Record<string, Record<string, string[]>>;
   overall_range: number[];
 }
 
 export interface JudgeReferenceCard {
   name: string;
+  deck_title: string;
   image_uri: string | null;
   mana_cost: string | null;
   type_line: string | null;
@@ -57,6 +59,7 @@ export interface JudgeReference {
   total_cards: number;
   deck_title: string;
   deck_goal: string;
+  decks: { title: string; goal: string }[];
   cards: JudgeReferenceCard[];
 }
 

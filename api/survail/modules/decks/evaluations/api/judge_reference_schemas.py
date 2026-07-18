@@ -7,6 +7,7 @@ class JudgeGoldenExpectationRead(StrictModel):
     must_roles: list[str] = Field(default_factory=list)
     forbid_roles: list[str] = Field(default_factory=list)
     role_score_ranges: dict[str, list[int]] = Field(default_factory=dict)
+    role_criteria: dict[str, dict[str, list[str]]] = Field(default_factory=dict)
     overall_range: list[int] = Field(default_factory=lambda: [0, 100])
 
 
@@ -25,6 +26,7 @@ class JudgeResultRead(StrictModel):
 
 class JudgeReferenceCardRead(StrictModel):
     name: str
+    deck_title: str
     image_uri: str | None = None
     mana_cost: str | None = None
     type_line: str | None = None
@@ -32,6 +34,11 @@ class JudgeReferenceCardRead(StrictModel):
     result: JudgeResultRead | None = None
     passed: bool
     failures: list[str] = Field(default_factory=list)
+
+
+class JudgeReferenceDeckRead(StrictModel):
+    title: str
+    goal: str
 
 
 class JudgeReferenceRead(StrictModel):
@@ -43,4 +50,5 @@ class JudgeReferenceRead(StrictModel):
     total_cards: int
     deck_title: str
     deck_goal: str
+    decks: list[JudgeReferenceDeckRead]
     cards: list[JudgeReferenceCardRead]

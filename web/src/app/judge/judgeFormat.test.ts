@@ -14,6 +14,7 @@ import type { JudgeReferenceCard } from "../../modules/decks/evaluations/contrac
 function goldenCard(name: string, passed: boolean): JudgeReferenceCard {
   return {
     name,
+    deck_title: "Tatyova Lands Value",
     image_uri: null,
     mana_cost: null,
     type_line: null,
@@ -21,6 +22,7 @@ function goldenCard(name: string, passed: boolean): JudgeReferenceCard {
       must_roles: [],
       forbid_roles: [],
       role_score_ranges: {},
+      role_criteria: {},
       overall_range: [0, 100],
     },
     result: null,
@@ -63,6 +65,19 @@ describe("failureText", () => {
     );
     expect(failureText("overall 91 outside [70, 94]")).toBe(
       "Overall 91 outside [70, 94]",
+    );
+  });
+
+  it("humanizes quoted criterion names and ratings", () => {
+    expect(
+      failureText(
+        "mass_disruption criterion 'timing' answered 'very_high' (allowed 'very_low', 'low', 'neutral')",
+      ),
+    ).toBe(
+      "Mass Disruption criterion 'Timing' answered 'Very High' (allowed 'Very Low', 'Low', 'Neutral')",
+    );
+    expect(failureText("land criterion 'utility' missing from answers")).toBe(
+      "Land criterion 'Utility' missing from answers",
     );
   });
 });

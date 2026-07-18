@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict
 from survail.modules.decks.evaluations.api.judge_reference_schemas import (
     JudgeGoldenExpectationRead,
     JudgeReferenceCardRead,
+    JudgeReferenceDeckRead,
     JudgeReferenceRead,
     JudgeResultRead,
     JudgeRoleRead,
@@ -25,11 +26,16 @@ class JudgeReferenceUnavailableError(Exception):
     pass
 
 
+class _GoldenDeck(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    cards: dict[str, JudgeGoldenExpectationRead]
+
+
 class _GoldenFile(BaseModel):
     model_config = ConfigDict(extra="ignore")
     evaluator_version: str
     min_pass_rate: float = 0.9
-    cards: dict[str, JudgeGoldenExpectationRead]
+    decks: dict[str, _GoldenDeck]
 
 
 class _RoleEntry(BaseModel):
@@ -57,7 +63,7 @@ class _ResultEntry(BaseModel):
 class _ResultsFile(BaseModel):
     model_config = ConfigDict(extra="ignore")
     model: str
-    results: dict[str, _ResultEntry]
+    decks: dict[str, dict[str, _ResultEntry]]
 
 
 class _SnapshotCard(BaseModel):
@@ -71,6 +77,11 @@ class _DeckSpec(BaseModel):
     model_config = ConfigDict(extra="ignore")
     title: str
     goal: str
+
+
+class _DeckSpecFile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    decks: list[_DeckSpec]
 
 
 def _load(name: str) -> object:
@@ -96,6 +107,19 @@ def _expectation_failures(
     for role, (low, high) in expectation.role_score_ranges.items():
         if role in roles and not low <= roles[role] <= high:
             failures.append(f"{role} score {roles[role]} outside [{low}, {high}]")
+    answers = {entry.role: entry.answers for entry in result.roles}
+    for role, criteria in expectation.role_criteria.items():
+        if role not in roles:
+            continue  # absence is must_roles' concern, not the criteria's
+        for criterion, allowed in criteria.items():
+            actual = answers[role].get(criterion)
+            if actual is None:
+                failures.append(f"{role} criterion '{criterion}' missing from answers")
+            elif actual not in allowed:
+                allowed_text = ", ".join(f"'{value}'" for value in allowed)
+                failures.append(
+                    f"{role} criterion '{criterion}' answered '{actual}' (allowed {allowed_text})"
+                )
     low, high = expectation.overall_range
     if not low <= result.overall_score <= high:
         failures.append(f"overall {result.overall_score} outside [{low}, {high}]")
@@ -105,7 +129,9 @@ def _expectation_failures(
 def load_judge_reference() -> JudgeReferenceRead:
     golden = _GoldenFile.model_validate(_load("judge_eval_golden.json"))
     results = _ResultsFile.model_validate(_load("judge_eval_results.json"))
-    deck = _DeckSpec.model_validate(_load("judge_eval_deck.json"))
+    spec = _DeckSpecFile.model_validate(_load("judge_eval_deck.json"))
+    if not spec.decks:
+        raise JudgeReferenceUnavailableError("judge_eval_deck.json lists no decks")
     snapshots = {
         name: _SnapshotCard.model_validate(payload)
         for name, payload in _snapshot_payloads(_load("judge_eval_snapshots.json")).items()
@@ -113,27 +139,31 @@ def load_judge_reference() -> JudgeReferenceRead:
 
     cards: list[JudgeReferenceCardRead] = []
     passed_count = 0
-    for name, expectation in sorted(golden.cards.items()):
-        entry = results.results.get(name)
-        result = entry.read() if entry is not None else None
-        failures = _expectation_failures(expectation, result)
-        passed = not failures
-        passed_count += int(passed)
-        snapshot = snapshots.get(name)
-        image_uris = snapshot.image_uris if snapshot is not None else None
-        cards.append(
-            JudgeReferenceCardRead(
-                name=name,
-                image_uri=image_uris.get("normal") if image_uris is not None else None,
-                mana_cost=snapshot.mana_cost if snapshot is not None else None,
-                type_line=snapshot.type_line if snapshot is not None else None,
-                expectation=expectation,
-                result=result,
-                passed=passed,
-                failures=failures,
+    for deck_title, golden_deck in golden.decks.items():
+        deck_results = results.decks.get(deck_title, {})
+        for name, expectation in sorted(golden_deck.cards.items()):
+            entry = deck_results.get(name)
+            result = entry.read() if entry is not None else None
+            failures = _expectation_failures(expectation, result)
+            passed = not failures
+            passed_count += int(passed)
+            snapshot = snapshots.get(name)
+            image_uris = snapshot.image_uris if snapshot is not None else None
+            cards.append(
+                JudgeReferenceCardRead(
+                    name=name,
+                    deck_title=deck_title,
+                    image_uri=image_uris.get("normal") if image_uris is not None else None,
+                    mana_cost=snapshot.mana_cost if snapshot is not None else None,
+                    type_line=snapshot.type_line if snapshot is not None else None,
+                    expectation=expectation,
+                    result=result,
+                    passed=passed,
+                    failures=failures,
+                )
             )
-        )
     total = len(cards)
+    first = spec.decks[0]
     return JudgeReferenceRead(
         evaluator_version=golden.evaluator_version,
         model=results.model,
@@ -141,8 +171,9 @@ def load_judge_reference() -> JudgeReferenceRead:
         pass_rate=passed_count / total if total else 0.0,
         passed_cards=passed_count,
         total_cards=total,
-        deck_title=deck.title,
-        deck_goal=deck.goal,
+        deck_title=first.title,
+        deck_goal=first.goal,
+        decks=[JudgeReferenceDeckRead(title=deck.title, goal=deck.goal) for deck in spec.decks],
         cards=cards,
     )
 

@@ -2,20 +2,37 @@ ROLE_DEFINITIONS: dict[str, str] = {
     "land": (
         "A card that occupies a land slot. Applies only when the type line includes Land, "
         "including modal double-faced cards with a land face; treat those land faces as lands "
-        "first and spells second."
+        "first and spells second. A land's non-mana abilities also earn the matching spell "
+        "roles alongside land: Bojuka Bog's graveyard exile is mass_disruption, a channel "
+        "removal mode is targeted_disruption, and a surveil or scry ability on a land is "
+        "card_selection for the deck that uses it (Undercity Sewers surveiling into a "
+        "graveyard plan)."
     ),
     "mana_ramp": (
-        "Repeatable acceleration ahead of the natural one-land-per-turn progression: mana "
-        "dorks, mana rocks, spells that put extra lands onto the battlefield, extra land "
-        "drops, and broad cost reduction. Lands themselves — including fetch lands — are "
-        "not ramp, tutors that find cards without producing mana are not ramp, and "
-        "one-shot burst mana such as Dark Ritual or Jeska's Will is not ramp; classify "
-        "burst mana as an enabler only when the plan is built around one big turn."
+        "Anything that gives you more available mana than the natural one-land-per-turn "
+        "progression, whether once or repeatedly. This plainly includes mana dorks and "
+        "rocks (Llanowar Elves, Arcane Signet), ramp spells that put a land onto the "
+        "battlefield (Rampant Growth, Cultivate, Farseek, Sakura-Tribe Elder are all "
+        "mana_ramp), reliable extra land drops, and broad cost reduction — mark mana_ramp "
+        "applicable for these without hesitation. A one-shot ramp spell still counts, "
+        "because the land or mana source it leaves is permanent. Count repeatable engines "
+        "cumulatively: a permanent whose trigger returns lands to the battlefield or "
+        "makes Treasures each turn is ramp over a game (Teval, the Balanced Scale "
+        "returning a land from the graveyard each combat). Exclusions: an extra land play "
+        "that only offsets a land you sacrifice each turn nets zero acceleration and is "
+        "not ramp (The Gitrog Monster — its value is the card draw); lands themselves, "
+        "including fetch lands; tutors that find cards without producing mana; and "
+        "one-shot burst mana (Dark Ritual), which is an enabler only when the plan is "
+        "built around one big turn."
     ),
     "card_advantage": (
         "An effect that nets more than one card of real access from the single card spent: "
         "multi-card draw, repeatable draw engines, impulse draw (exile and may play), "
-        "recurring land fetch like Land Tax, and self-mill only in decks that reliably play "
+        "recurring land fetch like Land Tax, a spell that mills or digs and still ends "
+        "with two or more cards in your hand (Rakshasa's Bargain, on top of its "
+        "selection), repeatably playing or copying real cards out of any graveyard — "
+        "yours or an opponent's, including exile-and-token abilities like The Scarab "
+        "God — and self-mill only in decks that reliably play "
         "cards from the graveyard. Count only what you hold at once: a permanent that "
         "draws or retrieves a card as it arrives nets a card — you keep both the body and "
         "the card (Elvish Visionary, Eternal Witness) — and is card advantage, while an "
@@ -59,10 +76,12 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "board wipe (Heroic Intervention, or Teferi's Protection used defensively) — is the "
         "enabler role, never disruption of any kind. Count repeatable disruption "
         "cumulatively, exactly like repeatable card advantage: a permanent whose trigger "
-        "repeatedly makes opponents sacrifice, discard, bounce, or lose resources (an "
-        "Archon of Cruelty attack trigger, a bounce-on-each-spell dragon) nets far better "
-        "than one-for-one over a game and is mass_disruption even though each trigger is "
-        "targeted and the value arrives across turns. Rule of thumb: after it resolves — "
+        "or activated ability repeatedly makes opponents sacrifice, discard, bounce, "
+        "lose resources, or lose graveyard cards (an Archon of Cruelty attack trigger, a "
+        "bounce-on-each-spell dragon, The Scarab God repeatably exiling creatures from "
+        "every opponent's graveyard) nets far "
+        "better than one-for-one over a game and is mass_disruption even though each "
+        "use is targeted and the value arrives across turns. Rule of thumb: after it resolves — "
         "or after a couple of triggers — your opponents are down more cards or turns than "
         "you spent; a one-for-one trade is targeted_disruption instead."
     ),
@@ -73,13 +92,16 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "pieces alive. Protection means shielding your own cards; removing or answering "
         "opponents' cards is disruption, never enabler work, even when doing so protects "
         "the plan indirectly — score that mode once, as disruption. Apply the staple test before marking this role: if the card would "
-        "contribute the same way in any deck of these colors — any land whose contribution "
-        "is producing or fixing mana (basics, fetches, duals), a generic mana rock like "
-        "Sol Ring, generic ramp spells and mana dorks, one-shot burst mana, generic "
-        "removal, or generic card draw and filtering — it is NOT an enabler here, even "
-        "when the plan uses lands, mana, or the graveyard. A synergy that every card of "
-        "its class provides equally (every land or ramp spell triggers landfall, every "
-        "draw spell fills the graveyard) does not make a staple an enabler."
+        "contribute the same way in any deck of these colors — any land whose only "
+        "contribution is producing or fixing mana (basics, fetches, duals), a generic "
+        "mana rock like Sol Ring, generic ramp spells and mana dorks, one-shot burst "
+        "mana, generic removal, or generic card draw and filtering — it is NOT an "
+        "enabler here, even when the plan uses lands, mana, or the graveyard. A land "
+        "whose non-mana ability does plan-specific work (a surveil land feeding a "
+        "graveyard plan) passes the staple test on that ability. A synergy that every "
+        "card of its class provides equally (every land or ramp spell triggers "
+        "landfall, every draw spell fills the graveyard) does not make a staple an "
+        "enabler."
     ),
     "payoff": (
         "A card that rewards the plan once it is happening, cashing the assembled plan in "
@@ -103,7 +125,11 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
             "How little tempo loss does it impose through entering tapped, sequencing "
             "constraints, activation costs, or conditional mana?"
         ),
-        "utility": "How valuable is its non-mana utility to this deck's plan or common game states?",
+        "utility": (
+            "How valuable is its non-mana utility to this deck's plan or common game "
+            "states? A land ability the plan actively uses (surveil into a graveyard "
+            "deck, recursion, protection) rates high or very_high."
+        ),
         "opportunity_cost": (
             "How reasonable is its slot cost compared with a basic land, stronger fixing land, "
             "or more broadly useful utility land?"
@@ -113,9 +139,12 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
     "mana_ramp": {
         "speed": "How early does it come down and start accelerating the deck's mana?",
         "permanence": (
-            "How repeatable and permanent is the acceleration across future turns, as opposed "
-            "to a one-shot burst? A permanent or land that produces mana every turn "
-            "indefinitely is very_high."
+            "How lasting is the acceleration it leaves behind? Judge the mana it leaves, "
+            "not whether the spell was cast once: a land put onto the battlefield or a "
+            "permanent mana source is high or very_high even when a one-shot spell created "
+            "it (Rampant Growth, Cultivate, and Sakura-Tribe Elder all leave a permanent "
+            "land, so they are high). Only genuinely one-shot mana that is gone the same "
+            "turn (a ritual) is low or very_low."
         ),
         "efficiency": (
             "How favorable is the mana, card, and tempo investment compared with the "
@@ -123,9 +152,10 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
         "fixing": (
             "How well does its mana output fit this deck's actual color requirements? "
-            "Perfect fixing for the deck's colors is very_high; colorless output is a real "
-            "drawback only in a color-hungry deck — in a deck with modest color needs "
-            "rate colorless acceleration neutral, never low or very_low."
+            "Judge color hunger from the commander's colored pips and the deck's colored "
+            "costs: colorless output that cannot help cast a heavily-pipped commander "
+            "rates low in that deck, while in a deck with modest color needs colorless "
+            "acceleration is neutral. Perfect fixing for the deck's colors is very_high."
         ),
         "curve_fit": (
             "How well does the acceleration line up with the commander's cost and the deck's "

@@ -30,13 +30,15 @@ export function percentText(rate: number): string {
 }
 
 const SNAKE_CASE_TOKEN = /\b[a-z]+(?:_[a-z]+)+\b/g;
+const QUOTED_TOKEN = /'([a-z]+(?:_[a-z]+)*)'/g;
 
-/** Backend failure strings mention snake_case role names; humanize them
-    and capitalize the sentence. */
+/** Backend failure strings mention snake_case role names plus quoted
+    criterion names and ratings ("'timing' answered 'very_high'");
+    humanize them and capitalize the sentence. */
 export function failureText(message: string): string {
-  const humanized = message.replace(SNAKE_CASE_TOKEN, (token) =>
-    titleize(token),
-  );
+  const humanized = message
+    .replace(QUOTED_TOKEN, (_match, token: string) => `'${titleize(token)}'`)
+    .replace(SNAKE_CASE_TOKEN, (token) => titleize(token));
   return humanized.charAt(0).toUpperCase() + humanized.slice(1);
 }
 

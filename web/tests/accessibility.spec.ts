@@ -202,9 +202,16 @@ const judgeReference = {
   total_cards: 32,
   deck_title: "Tatyova Lands Value",
   deck_goal: "Simic lands-matter value deck that ramps and draws.",
+  decks: [
+    {
+      title: "Tatyova Lands Value",
+      goal: "Simic lands-matter value deck that ramps and draws.",
+    },
+  ],
   cards: [
     {
       name: "Sol Ring",
+      deck_title: "Tatyova Lands Value",
       image_uri: null,
       mana_cost: "{1}",
       type_line: "Artifact",
@@ -212,6 +219,7 @@ const judgeReference = {
         must_roles: ["mana_ramp"],
         forbid_roles: ["enabler"],
         role_score_ranges: { mana_ramp: [80, 100] },
+        role_criteria: {},
         overall_range: [80, 100],
       },
       result: {
@@ -231,6 +239,7 @@ const judgeReference = {
     },
     {
       name: "Eternal Witness",
+      deck_title: "Tatyova Lands Value",
       image_uri: null,
       mana_cost: "{1}{G}{G}",
       type_line: "Creature — Human Shaman",
@@ -238,6 +247,7 @@ const judgeReference = {
         must_roles: ["card_advantage"],
         forbid_roles: ["card_selection"],
         role_score_ranges: {},
+        role_criteria: {},
         overall_range: [50, 85],
       },
       result: {

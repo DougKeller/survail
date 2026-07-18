@@ -34,7 +34,7 @@ from survail.modules.decks.evaluations.service.role_rubrics import (
 )
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v12"
+EVALUATOR_VERSION = "roles-v16"
 MAX_ATTEMPTS = 8
 MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
@@ -51,6 +51,18 @@ _RETRY_AFTER_MESSAGE = re.compile(
 )
 _CARD_MENTION = re.compile(r"\[\[([^\[\]]+)\]\]")
 ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+class ReferencedCardNotFoundError(ValueError):
+    """A [[card]] reference in the goal or a card note is not a known catalog card.
+
+    Referenced-card context is load-bearing for evaluation quality, so an
+    unresolvable reference is a hard failure rather than a silent omission.
+    """
+
+    def __init__(self, name: str) -> None:
+        super().__init__(f"Referenced card not found in the card database: {name}")
+        self.card_name = name
 
 
 class EvaluationProgress(BaseModel):
@@ -358,13 +370,14 @@ def _referenced_card_context(db: Session, deck: Deck, oracle_id: str) -> str:
             match.group(1).strip() for text in texts for match in _CARD_MENTION.finditer(text)
         )
     )
-    briefs = [
-        _snapshot_brief(snapshot)
-        if (snapshot := _snapshot_for_name(db, deck, name)) is not None
-        else f"Name: {name}\nOracle Text: (card not found)"
-        for name in names
-        if name
-    ]
+    briefs: list[str] = []
+    for name in names:
+        if not name:
+            continue
+        snapshot = _snapshot_for_name(db, name)
+        if snapshot is None:
+            raise ReferencedCardNotFoundError(name)
+        briefs.append(_snapshot_brief(snapshot))
     return "\n\n".join(briefs) if briefs else "None"
 
 
@@ -467,11 +480,9 @@ def _shape_band(share: float) -> str:
     return "few"
 
 
-def _snapshot_for_name(db: Session, deck: Deck, name: str) -> ScryfallCardSnapshot | None:
-    lowered = name.lower()
-    for cardset in deck.cardsets:
-        if cardset.card_name.lower() == lowered:
-            return snapshot_from_cardsets([cardset])
+def _snapshot_for_name(db: Session, name: str) -> ScryfallCardSnapshot | None:
+    # Resolve referenced cards from the full card catalog, not the deck list, so a
+    # [[reference]] is only accepted when the card is a known, available printing.
     return CatalogRepository(db).exact_name(name)
 
 

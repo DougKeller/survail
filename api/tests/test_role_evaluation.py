@@ -6,9 +6,18 @@ from typing import cast
 import httpx
 import pytest
 from openai import APIConnectionError, AsyncOpenAI, RateLimitError
+from sqlalchemy.sql.elements import ClauseElement
 from sqlalchemy.orm import Session
 
-from survail.core.models import CardFinish, CardRoleEvaluation, CardSet, CardZone, Deck, DeckFormat
+from survail.core.models import (
+    CardFinish,
+    CardRoleEvaluation,
+    CardSet,
+    CardZone,
+    CatalogCard,
+    Deck,
+    DeckFormat,
+)
 from survail.core.schemas import CardFace, ScryfallCardSnapshot
 from survail.modules.decks.evaluations.api.schemas import CardRoleScoreRead
 from survail.modules.decks.evaluations.service.evaluator import (
@@ -25,6 +34,7 @@ from survail.modules.decks.evaluations.service.evaluator import (
     _context_key,
     _deck_shape,
     _evaluation_input,
+    ReferencedCardNotFoundError,
     _referenced_card_context,
     _retry_delay,
     _role_score_from_llmaaj,
@@ -292,30 +302,88 @@ def test_evaluation_context_is_decklist_agnostic() -> None:
     assert f"Card under evaluation:\n{_brief('subject')}" in evaluation_input
 
 
-def test_referenced_card_context_expands_goal_mentions_from_deck() -> None:
+def _catalog_card(name: str, *, type_line: str = "Sorcery") -> CatalogCard:
+    snapshot = ScryfallCardSnapshot(
+        id=f"cat-{name}",
+        oracle_id=f"oracle-{name}",
+        name=name,
+        lang="en",
+        layout="normal",
+        cmc=2,
+        type_line=type_line,
+        oracle_text="Do a relevant thing.",
+        legalities={"commander": "legal"},
+        set="tst",
+        set_name="Test",
+        collector_number="1",
+        rarity="rare",
+        scryfall_uri="https://example.test/card",
+    )
+    return CatalogCard(snapshot=snapshot.model_dump(mode="json"))
+
+
+class CatalogFakeDb(FakeDb):
+    """Resolves referenced-card lookups from a catalog, like the real Session."""
+
+    def __init__(self, catalog: dict[str, CatalogCard]) -> None:
+        super().__init__()
+        self._catalog = {name.lower(): card for name, card in catalog.items()}
+
+    def scalar(self, statement: object) -> CatalogCard | None:
+        compiled = cast("ClauseElement", statement).compile()
+        for value in compiled.params.values():
+            card = self._catalog.get(str(value).lower())
+            if card is not None:
+                return card
+        return None
+
+
+def test_referenced_card_context_expands_goal_mentions_from_the_catalog() -> None:
     deck = Deck(
         id=uuid.uuid4(),
         owner_id=uuid.uuid4(),
         title="Deck",
         format=DeckFormat.COMMANDER,
         description="",
-        goal="Recur lands with [[commander]] and dig with [[Unknown Card]].",
+        goal="Recur lands with [[Ramunap Excavator]].",
         metadata_json={"kind": "commander", "commander_oracle_ids": []},
         revision=3,
     )
-    commander = _cardset("commander", type_line="Legendary Creature")
-    commander.zone = CardZone.COMMANDER
     subject = _cardset("subject")
-    subject.note = "Sacrifice fodder for [[payoff]]."
-    payoff = _cardset("payoff", type_line="Enchantment")
-    deck.cardsets = [commander, subject, payoff]
+    subject.note = "Sacrifice fodder for [[Victimize]]."
+    deck.cardsets = [subject]
+    db = CatalogFakeDb(
+        {
+            "Ramunap Excavator": _catalog_card(
+                "Ramunap Excavator", type_line="Creature — Cat"
+            ),
+            "Victimize": _catalog_card("Victimize"),
+        }
+    )
 
-    references = _referenced_card_context(cast("Session", FakeDb()), deck, subject.oracle_id)
+    references = _referenced_card_context(cast("Session", db), deck, subject.oracle_id)
 
-    assert "Name: commander" in references
-    assert "Type: Legendary Creature" in references
-    assert "Name: Unknown Card\nOracle Text: (card not found)" in references
-    assert "Name: payoff" in references
+    assert "Name: Ramunap Excavator" in references
+    assert "Type: Creature — Cat" in references
+    assert "Name: Victimize" in references
+
+
+def test_referenced_card_context_fails_on_an_unknown_reference() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Deck",
+        format=DeckFormat.COMMANDER,
+        description="",
+        goal="Dig with [[Definitely Not A Real Card]].",
+        metadata_json={"kind": "commander", "commander_oracle_ids": []},
+        revision=3,
+    )
+    subject = _cardset("subject")
+    deck.cardsets = [subject]
+
+    with pytest.raises(ReferencedCardNotFoundError, match="Definitely Not A Real Card"):
+        _referenced_card_context(cast("Session", CatalogFakeDb({})), deck, subject.oracle_id)
 
 
 def test_referenced_card_context_ignores_other_cards_notes() -> None:

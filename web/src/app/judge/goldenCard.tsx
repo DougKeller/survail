@@ -173,6 +173,7 @@ function CardIdentity({ card }: { card: JudgeReferenceCard }) {
         )}
       </Stack>
       <FlexSpacer />
+      <Tag tone="neutral">{card.deck_title}</Tag>
       <Tag tone={card.passed ? "accent2" : "accent"}>
         {card.passed ? "Passed" : "Failed"}
       </Tag>
@@ -234,6 +235,7 @@ export function GoldenCardView({ card }: { card: JudgeReferenceCard }) {
               Scored {card.result.overall_score}
             </Text>
           )}
+          <Tag tone="neutral">{card.deck_title}</Tag>
           <Tag tone="accent2">Passed</Tag>
         </Inline>
       }

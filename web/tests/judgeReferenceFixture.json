@@ -1,15 +1,26 @@
 {
-  "evaluator_version": "roles-v12",
+  "evaluator_version": "roles-v16",
   "model": "gpt-5.4-mini",
   "min_pass_rate": 0.9,
-  "pass_rate": 0.9375,
-  "passed_cards": 30,
-  "total_cards": 32,
+  "pass_rate": 0.9069767441860465,
+  "passed_cards": 39,
+  "total_cards": 43,
   "deck_title": "Tatyova Lands Value",
   "deck_goal": "Simic lands-matter value deck: ramp aggressively with permanent mana sources and extra land drops, convert landfall into card advantage, protect the engine, and close the game with a massive Craterhoof Behemoth or Avenger of Zendikar swing. Prefers instant-speed interaction that protects our own board and flexible answers to any permanent type.",
+  "decks": [
+    {
+      "title": "Tatyova Lands Value",
+      "goal": "Simic lands-matter value deck: ramp aggressively with permanent mana sources and extra land drops, convert landfall into card advantage, protect the engine, and close the game with a massive Craterhoof Behemoth or Avenger of Zendikar swing. Prefers instant-speed interaction that protects our own board and flexible answers to any permanent type."
+    },
+    {
+      "title": "Teval Graveyard Value",
+      "goal": "This deck aims to use self-mill and land recursion through its commander, [[Teval, the Balanced Scale]] to build a powerful value engine that ramps lands, reanimates creatures, and compounds graveyard-based synergies.\n\nEarly game is spent ramping with synergistic ramp spells such as [[Skull Prophet]] and [[Harrow]], ramping quickly into Teval. Once Teval is out, begin building the engine through leave-the-graveyard effects such as [[Teval's Judgment]] and [[Kheru Goldkeeper]], or establish more self-mill and leave-graveyard-enabling effects such as [[Ripples of Undeath]], [[Colossal Grave-Reaver]] and [[Overlord of the Balemurk]].\n\nZombie tokens can optionally be used for sac fodder for enabling more powerful effects such as [[Victimize]] or other effects requiring a creature sacrifice, or become mana dorks through cards like [[Insidious Roots]].\n\nSimple highly-synergistic clusters of cards such as [[Life from the Loam]] and cycling lands ([[Lonely Sandbar]] , [[Tranquil Thicket]] , and [[Barren Moor]]) provide cheap access to efficient draw engines.\n\nWin through going wide with zombies, tall with a big Teval or heavy beaters like [[Archon of Cruelty]], or through infinite combos such as [[Kheru Goldkeeper]] and [[Tortured Existence]] for infinite zombies through Teval, or through infinite recursion effects like [[Gravecrawler]], [[Warren Soultrader]], and [[Cauldron of Essence]] to whittle all opponents down at once.\n\nWhile the deck has a number of play patterns with various win conditions, it values interactive games where it can apply pressure to opponents through disruption and counterspell effects over outright winning through uninteractive solitaire."
+    }
+  ],
   "cards": [
     {
       "name": "Avenger of Zendikar",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/3/03dea775-bbb3-4e9c-8514-0605b5ad2e8b.jpg?1632467938",
       "mana_cost": "{5}{G}{G}",
       "type_line": "Creature — Elemental",
@@ -17,44 +28,33 @@
         "must_roles": ["payoff"],
         "forbid_roles": [],
         "role_score_ranges": { "payoff": [72, 100] },
+        "role_criteria": {},
         "overall_range": [72, 100]
       },
       "result": {
-        "overall_score": 91,
-        "overall_comment": "Avenger of Zendikar turns land drops into a rapidly growing board of Plants and can finish games quickly with a large landfall-fueled attack, though it needs setup and time to build counters.",
+        "overall_score": 77,
+        "overall_comment": "Avenger of Zendikar turns the deck’s land-heavy game plan into a huge board of Plants and rapidly growing pressure, with the main limitation that it wants additional land drops to fully convert that setup into a kill.",
         "roles": [
           {
             "role": "payoff",
-            "score": 90,
-            "description": "This is a major lands-matter finisher: it creates a large Plant army from the lands already controlled and keeps scaling the board with each later land drop, turning normal ramp into lethal pressure.",
+            "score": 75,
+            "description": "This is a major landfall payoff that transforms each land into board growth and makes the deck’s ramp and extra land drops directly threatening.",
             "answers": {
               "attainability": "high",
               "conversion": "high",
-              "decisiveness": "very_high",
-              "reward_size": "very_high"
+              "decisiveness": "high",
+              "reward_size": "high"
             }
           },
           {
             "role": "enhancer",
-            "score": 70,
-            "description": "This creature multiplies the value of every land drop by growing all Plants at once, but it needs an established board and lands already flowing to matter most.",
+            "score": 75,
+            "description": "It amplifies landfall lines by making every land drop grow a wide token board, but it is strongest when the engine is already producing extra lands.",
             "answers": {
               "amplification": "very_high",
               "breadth": "high",
               "necessity": "neutral",
-              "standalone_floor": "low"
-            }
-          },
-          {
-            "role": "enabler",
-            "score": 62,
-            "description": "This creature directly supports the lands-matter plan by translating lands already in play into a wide token board, giving the deck a major board-building payoff from the resources it is naturally assembling.",
-            "answers": {
-              "breadth": "high",
-              "directness": "high",
-              "reliability": "high",
-              "resilience": "low",
-              "timing": "neutral"
+              "standalone_floor": "neutral"
             }
           }
         ]
@@ -64,6 +64,7 @@
     },
     {
       "name": "Beast Within",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/0/0072db20-b134-47bd-9b5b-a19a131ee738.jpg?1696638297",
       "mana_cost": "{2}{G}",
       "type_line": "Instant",
@@ -71,16 +72,17 @@
         "must_roles": ["targeted_disruption"],
         "forbid_roles": ["enabler", "mass_disruption"],
         "role_score_ranges": { "targeted_disruption": [76, 100] },
+        "role_criteria": {},
         "overall_range": [76, 100]
       },
       "result": {
         "overall_score": 90,
-        "overall_comment": "Beast Within is flexible instant-speed removal that cleanly answers any problematic permanent while fitting the deck’s preference for holding up interaction, though the 3/3 token leaves a modest follow-up threat.",
+        "overall_comment": "Beast Within is a flexible instant-speed answer that cleanly trades for any permanent, with the 3/3 token creating a small board concession that this deck can usually outpace.",
         "roles": [
           {
             "role": "targeted_disruption",
             "score": 90,
-            "description": "Beast Within trades one card for any permanent at instant speed, giving this deck a broad catch-all answer to walkers, combo pieces, lands, or troublesome engines when holding up interaction.",
+            "description": "Beast Within efficiently answers any target permanent at instant speed, giving this deck broad, flexible interaction that cleanly handles problematic board pieces when held up on the opponent’s turn.",
             "answers": {
               "coverage": "very_high",
               "efficiency": "high",
@@ -96,40 +98,54 @@
     },
     {
       "name": "Boseiju, Who Endures",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/0/0055ea30-20fb-4324-a632-8fed87628f05.jpg?1647145068",
       "mana_cost": "",
       "type_line": "Legendary Land",
       "expectation": {
         "must_roles": ["land", "targeted_disruption"],
-        "forbid_roles": ["enabler"],
+        "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [74, 98]
       },
       "result": {
-        "overall_score": 77,
-        "overall_comment": "Boseiju, Who Endures gives the deck a land slot that stays online as green mana while doubling as instant-speed interaction for problem artifacts, enchantments, and nonbasic lands, with especially efficient activation when Tatyova is out.",
+        "overall_score": 87,
+        "overall_comment": "Boseiju, Who Endures is a resilient land slot that fixes green mana and gives the deck instant-speed, flexible removal for an opposing artifact, enchantment, or nonbasic land, with its channel cost becoming especially efficient alongside Tatyova as a legendary creature.",
         "roles": [
           {
             "role": "land",
-            "score": 75,
-            "description": "It is a legendary land that reliably supplies green mana and can be held for flexible interaction, fitting a land-heavy Simic engine with minimal sequencing strain.",
+            "score": 85,
+            "description": "It is a Legendary Land that enters as a durable green source while retaining useful channel utility from the land slot.",
             "answers": {
               "mana_reliability": "high",
               "opportunity_cost": "high",
-              "resilience": "high",
-              "tempo_efficiency": "high",
+              "resilience": "very_high",
+              "tempo_efficiency": "very_high",
               "utility": "high"
             }
           },
           {
             "role": "targeted_disruption",
-            "score": 75,
-            "description": "Channel cleanly answers a single artifact, enchantment, or nonbasic land at instant speed, and the effect is especially efficient with Tatyova present because the legend discount can reduce the activation cost.",
+            "score": 80,
+            "description": "Channel trades one card for a clean answer to a single artifact, enchantment, or nonbasic land at instant speed, which suits this deck's preference for flexible interaction.",
             "answers": {
               "coverage": "high",
               "efficiency": "high",
               "flexibility": "high",
               "permanence": "high",
+              "timing": "very_high"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 67,
+            "description": "Its land face and reduced channel cost help protect the deck's engine while keeping a land drop available, and the discount scales with Tatyova's legendary-creature status.",
+            "answers": {
+              "breadth": "low",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "high",
               "timing": "high"
             }
           }
@@ -140,26 +156,28 @@
     },
     {
       "name": "Brainstorm",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/3/0359f212-9564-41a9-870b-d2c57455a695.jpg?1628801650",
       "mana_cost": "{U}",
       "type_line": "Instant",
       "expectation": {
         "must_roles": ["card_selection"],
-        "forbid_roles": ["card_advantage"],
+        "forbid_roles": [],
         "role_score_ranges": { "card_selection": [58, 88] },
+        "role_criteria": {},
         "overall_range": [58, 88]
       },
       "result": {
-        "overall_score": 75,
-        "overall_comment": "Brainstorm gives Tatyova a cheap burst of selection that digs three deep and can reset unwanted cards back on top, with extra value when a landfall draw is available to improve the cards seen afterward.",
+        "overall_score": 71,
+        "overall_comment": "Brainstorm is efficient instant-speed selection that draws three and tucks two back, helping this deck dig for land engines, protection, or a finish while the top-of-library reset adds some timing and setup limits.",
         "roles": [
           {
             "role": "card_selection",
-            "score": 75,
-            "description": "Brainstorm is a premier one-mana filter spell here, letting the deck see three cards and place two back to smooth land-heavy draws and set up the next landfall draw.",
+            "score": 71,
+            "description": "Brainstorm digs three cards deep at instant speed and lets you place two back, giving this deck flexible filtering for land engines, protection, or a finisher when the top card quality matters.",
             "answers": {
               "access": "high",
-              "efficiency": "very_high",
+              "efficiency": "high",
               "range": "neutral",
               "setup_value": "high",
               "timing": "high"
@@ -172,6 +190,7 @@
     },
     {
       "name": "Command Tower",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/5/0548fb60-c843-4f8f-a029-6f10efc63a41.jpg?1780930249",
       "mana_cost": "",
       "type_line": "Land",
@@ -179,16 +198,17 @@
         "must_roles": ["land"],
         "forbid_roles": ["enabler"],
         "role_score_ranges": { "land": [60, 88] },
+        "role_criteria": {},
         "overall_range": [60, 88]
       },
       "result": {
         "overall_score": 75,
-        "overall_comment": "Command Tower fixes any color immediately at no tempo cost, making Tatyova’s early land-heavy curve smoother while remaining a clean, durable land slot with modest utility beyond mana.",
+        "overall_comment": "Command Tower supplies perfect fixing for Tatyova while staying untapped and dependable, with its main limitation being that it functions as a straightforward land slot and nothing beyond mana.",
         "roles": [
           {
             "role": "land",
             "score": 75,
-            "description": "This land produces exactly the colors Tatyova’s Simic shell needs with no activation cost or entering-tapped penalty, so it is among the most reliable and efficient fixers in the deck.",
+            "description": "It enters as an untapped source of any color in the commander’s color identity, which is exactly the fixing this Simic commander wants from a land slot.",
             "answers": {
               "mana_reliability": "very_high",
               "opportunity_cost": "high",
@@ -204,23 +224,25 @@
     },
     {
       "name": "Counterspell",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/2/02da8709-4228-4fed-9d2d-781e686661df.jpg?1675199223",
       "mana_cost": "{U}{U}",
       "type_line": "Instant",
       "expectation": {
         "must_roles": ["targeted_disruption"],
-        "forbid_roles": ["enabler"],
+        "forbid_roles": [],
         "role_score_ranges": { "targeted_disruption": [70, 95] },
+        "role_criteria": {},
         "overall_range": [70, 95]
       },
       "result": {
         "overall_score": 80,
-        "overall_comment": "Counterspell is a clean, instant-speed answer that trades efficiently for almost any spell and fits the deck’s preference for flexible protection, but it functions as generic interaction rather than engine-specific value.",
+        "overall_comment": "Counterspell gives the deck efficient instant-speed protection against any spell on the stack, cleanly trading up on key turns while requiring careful mana holding in a deck that prefers developing lands.",
         "roles": [
           {
             "role": "targeted_disruption",
             "score": 80,
-            "description": "Counterspell trades one card for one opposing spell at instant speed, giving this deck a flexible answer that can stop a key threat, combo piece, or sweeper when held up on curve.",
+            "description": "A clean one-for-one answer to any spell on the stack, Counterspell efficiently trades a single card for an opposing threat at instant speed and fits the deck’s preference for flexible interaction.",
             "answers": {
               "coverage": "high",
               "efficiency": "high",
@@ -236,6 +258,7 @@
     },
     {
       "name": "Craterhoof Behemoth",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/3/036f9ba6-6bd1-4be8-b584-f67308e8c60d.jpg?1690001278",
       "mana_cost": "{5}{G}{G}{G}",
       "type_line": "Creature — Beast",
@@ -243,18 +266,19 @@
         "must_roles": ["payoff"],
         "forbid_roles": [],
         "role_score_ranges": { "payoff": [82, 100] },
+        "role_criteria": {},
         "overall_range": [82, 100]
       },
       "result": {
-        "overall_score": 95,
-        "overall_comment": "Craterhoof Behemoth converts a wide creature board into immediate lethal pressure with haste and a team-wide trample-plus-pump swing, but it depends on already having a substantial board to matter.",
+        "overall_score": 90,
+        "overall_comment": "Craterhoof Behemoth serves as a top-end payoff that converts a wide creature board into immediate lethal pressure, with the main limitation that it depends on already developing enough creatures.",
         "roles": [
           {
             "role": "payoff",
-            "score": 95,
-            "description": "This is the deck’s classic finisher, turning a developed creature board into a sudden kill the turn it enters.",
+            "score": 90,
+            "description": "This is the deck's classic finisher: haste plus a massive team-wide power and trample boost turns a built-up battlefield into a sudden kill when the creature count is high.",
             "answers": {
-              "attainability": "high",
+              "attainability": "neutral",
               "conversion": "very_high",
               "decisiveness": "very_high",
               "reward_size": "very_high"
@@ -267,29 +291,31 @@
     },
     {
       "name": "Cultivate",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/7/075cac04-9397-4edb-b49a-485dd58dcae1.jpg?1675651349",
       "mana_cost": "{2}{G}",
       "type_line": "Sorcery",
       "expectation": {
         "must_roles": ["mana_ramp"],
         "forbid_roles": [],
-        "role_score_ranges": { "mana_ramp": [60, 82] },
-        "overall_range": [60, 86]
+        "role_score_ranges": { "mana_ramp": [50, 82] },
+        "role_criteria": {},
+        "overall_range": [50, 86]
       },
       "result": {
-        "overall_score": 71,
-        "overall_comment": "Cultivate accelerates Tatyova’s land-fueled game plan by moving an extra basic land onto the battlefield and another to hand, with solid color fixing and a smooth setup role for landfall turns.",
+        "overall_score": 67,
+        "overall_comment": "Cultivate accelerates Tatyova by turning a three-mana sorcery into one land on the battlefield and one in hand, with solid color fixing and a tapped-land tempo cost that keeps it efficient but not explosive.",
         "roles": [
           {
             "role": "mana_ramp",
-            "score": 71,
-            "description": "Cultivate is reliable three-mana land ramp that permanently advances mana by putting one basic onto the battlefield and another into hand, fitting the deck’s preference for steady acceleration toward Tatyova and its six-mana closers.",
+            "score": 67,
+            "description": "Cultivate is a reliable permanent-mana ramp spell here, because it puts one basic onto the battlefield and another into hand to keep land drops flowing for Tatyova and future turns.",
             "answers": {
               "curve_fit": "high",
               "efficiency": "high",
               "fixing": "high",
               "permanence": "high",
-              "speed": "neutral"
+              "speed": "low"
             }
           }
         ]
@@ -299,6 +325,7 @@
     },
     {
       "name": "Cyclonic Rift",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/f/1fadf1e3-4f4f-4f58-b8a9-11e14bb550f8.jpg?1561935676",
       "mana_cost": "{1}{U}",
       "type_line": "Instant",
@@ -306,19 +333,20 @@
         "must_roles": ["mass_disruption"],
         "forbid_roles": [],
         "role_score_ranges": { "mass_disruption": [74, 96] },
+        "role_criteria": {},
         "overall_range": [74, 96]
       },
       "result": {
-        "overall_score": 89,
-        "overall_comment": "Cyclonic Rift gives this deck a flexible instant-speed bounce answer early and a game-swinging overloaded reset later, with especially strong timing and broad table impact when the mana is available.",
+        "overall_score": 93,
+        "overall_comment": "Cyclonic Rift is a flexible instant-speed answer that cleanly bounces a problematic nonland permanent early, and its overload mode can reset opposing boards while leaving your land engine intact.",
         "roles": [
           {
             "role": "mass_disruption",
-            "score": 88,
-            "description": "Overload turns it into a one-sided board reset that bounces every nonland permanent opponents control, often clearing the way for a lethal landfall or creature swing.",
+            "score": 92,
+            "description": "Overloaded, it returns each nonland permanent you don't control, creating a broad asymmetrical reset that can clear the way for your landfall engine and a finishing swing.",
             "answers": {
               "asymmetry": "very_high",
-              "coverage": "high",
+              "coverage": "very_high",
               "impact": "very_high",
               "recoverability": "high",
               "timing": "high"
@@ -326,12 +354,12 @@
           },
           {
             "role": "targeted_disruption",
-            "score": 70,
-            "description": "At base, it cleanly answers one opposing nonland permanent at instant speed, fitting the deck’s preference for flexible interaction against problematic pieces.",
+            "score": 75,
+            "description": "At normal cost it trades for a single nonland permanent you do not control at instant speed, giving this deck efficient flexible interaction against a wide range of threats.",
             "answers": {
               "coverage": "high",
               "efficiency": "high",
-              "flexibility": "high",
+              "flexibility": "very_high",
               "permanence": "low",
               "timing": "very_high"
             }
@@ -343,6 +371,7 @@
     },
     {
       "name": "Elvish Visionary",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.jpg?1573513564",
       "mana_cost": "{1}{G}",
       "type_line": "Creature — Elf Shaman",
@@ -350,18 +379,19 @@
         "must_roles": [],
         "forbid_roles": ["card_selection"],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [0, 60]
       },
       "result": {
-        "overall_score": 46,
-        "overall_comment": "Elvish Visionary replaces itself immediately while adding a small body that can help apply pressure or chump block, but its contribution stays at simple cantrip value.",
+        "overall_score": 50,
+        "overall_comment": "Elvish Visionary is a small, efficient value creature that replaces itself on entry and helps keep landfall turns stocked, with little impact beyond that immediate card and body.",
         "roles": [
           {
             "role": "card_advantage",
-            "score": 46,
-            "description": "It enters and draws a card, so the deck keeps both the creature and the extra card access from a single cast, which is clean but limited to one immediate replacement.",
+            "score": 50,
+            "description": "It draws a card as it enters, so the deck keeps both a body and fresh access to another card without spending extra setup.",
             "answers": {
-              "floor": "neutral",
+              "floor": "high",
               "net_gain": "neutral",
               "quality": "low",
               "reliability": "very_high",
@@ -375,35 +405,37 @@
     },
     {
       "name": "Eternal Witness",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.jpg?1561965992",
       "mana_cost": "{1}{G}{G}",
       "type_line": "Creature — Human Shaman",
       "expectation": {
         "must_roles": ["card_advantage"],
-        "forbid_roles": ["card_selection"],
+        "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [50, 85]
       },
       "result": {
-        "overall_score": 76,
-        "overall_comment": "Eternal Witness returns any key card from the graveyard on entry, making it a flexible recursion piece that improves access to missing engines, interaction, or finishers while leaving a modest body behind.",
+        "overall_score": 73,
+        "overall_comment": "Eternal Witness returns any key card from the graveyard to hand on entry, giving this deck flexible recursion that rebuilds land engines, protection pieces, or finishers, with value that depends on having a worthwhile target.",
         "roles": [
           {
             "role": "card_selection",
-            "score": 75,
-            "description": "It lets you choose a specific card from your graveyard and put it back into hand, providing precise retrieval for whichever landfall piece, answer, or finisher you need most.",
+            "score": 71,
+            "description": "Its enters-the-battlefield return effect is clean chosen retrieval from the graveyard, making it a strong smoothing tool for recovering the exact piece this deck needs next.",
             "answers": {
               "access": "high",
               "efficiency": "high",
               "range": "high",
               "setup_value": "high",
-              "timing": "high"
+              "timing": "neutral"
             }
           },
           {
             "role": "card_advantage",
             "score": 62,
-            "description": "Entering the battlefield with a card from your graveyard gives you the Witness plus that card in hand, so it functions as immediate two-for-one value and can recur important pieces later in the game.",
+            "description": "Entering with a chosen card back in hand while leaving a body behind creates real card advantage, especially in a deck that can recur important lands, interaction, or finishers.",
             "answers": {
               "floor": "neutral",
               "net_gain": "high",
@@ -411,14 +443,27 @@
               "reliability": "high",
               "repeatability": "low"
             }
+          },
+          {
+            "role": "enabler",
+            "score": 58,
+            "description": "It helps rebuild the deck after trades by bringing back key engine pieces or interaction, supporting the land-value plan through recursion that many generic green creatures cannot provide.",
+            "answers": {
+              "breadth": "high",
+              "directness": "neutral",
+              "reliability": "high",
+              "resilience": "neutral",
+              "timing": "neutral"
+            }
           }
         ]
       },
-      "passed": false,
-      "failures": ["forbidden role 'card_selection' present (score 75)"]
+      "passed": true,
+      "failures": []
     },
     {
       "name": "Evolving Wilds",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/0/107cd283-de27-494f-90b8-0dec55745255.jpg?1562839813",
       "mana_cost": "",
       "type_line": "Land",
@@ -426,20 +471,21 @@
         "must_roles": ["land"],
         "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [36, 76]
       },
       "result": {
-        "overall_score": 62,
-        "overall_comment": "Evolving Wilds fixes either color and triggers Tatyova’s landfall for steady card flow, while its tapped land drop and sacrifice activation keep the mana development modest.",
+        "overall_score": 54,
+        "overall_comment": "Evolving Wilds provides a land slot that fixes colors and triggers Tatyova’s landfall draw, with modest tempo loss from entering tapped and sacrificing itself.",
         "roles": [
           {
             "role": "card_advantage",
-            "score": 62,
-            "description": "Each land drop becomes a Tatyova trigger through the searched basic, so this land can produce repeated extra cards over a game whenever it is drawn and used.",
+            "score": 54,
+            "description": "Each activation pairs a land drop with Tatyova’s landfall draw, so the card contributes repeated real card access over the game when land drops continue flowing.",
             "answers": {
-              "floor": "neutral",
+              "floor": "low",
               "net_gain": "neutral",
-              "quality": "high",
+              "quality": "neutral",
               "reliability": "high",
               "repeatability": "high"
             }
@@ -447,13 +493,13 @@
           {
             "role": "land",
             "score": 50,
-            "description": "It is a land slot that reliably finds either basic color for Simic, and the fetched land also feeds landfall for Tatyova and other land-matters cards.",
+            "description": "It is a basic-finding land that reliably helps cast Tatyova and other blue-green spells while still triggering landfall, but the tapped entry and activation cost slow development.",
             "answers": {
               "mana_reliability": "high",
               "opportunity_cost": "neutral",
-              "resilience": "low",
+              "resilience": "neutral",
               "tempo_efficiency": "low",
-              "utility": "high"
+              "utility": "neutral"
             }
           }
         ]
@@ -463,6 +509,7 @@
     },
     {
       "name": "Forest",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/0/0000419b-0bba-4488-8f7a-6194544ce91e.jpg?1721427487",
       "mana_cost": "",
       "type_line": "Basic Land — Forest",
@@ -470,22 +517,23 @@
         "must_roles": ["land"],
         "forbid_roles": ["enabler", "mana_ramp"],
         "role_score_ranges": { "land": [55, 85] },
+        "role_criteria": {},
         "overall_range": [55, 85]
       },
       "result": {
-        "overall_score": 75,
-        "overall_comment": "Forest is the cleanest mana source for this deck, supporting Tatyova’s landfall engine with untapped green mana and excellent resilience while carrying almost no extra utility beyond consistent colored production.",
+        "overall_score": 80,
+        "overall_comment": "Forest gives the deck a completely reliable untapped green source that supports early development and resists most interaction, while contributing no special utility beyond clean mana production.",
         "roles": [
           {
             "role": "land",
-            "score": 75,
-            "description": "Forest reliably supplies green mana for this Simic deck and enters untapped, making it the most tempo-efficient and resilient way to fuel early development and landfall turns.",
+            "score": 80,
+            "description": "As a basic untapped green source, Forest reliably casts green spells like Tatyova and early ramp while staying difficult to answer.",
             "answers": {
-              "mana_reliability": "high",
-              "opportunity_cost": "high",
+              "mana_reliability": "very_high",
+              "opportunity_cost": "very_high",
               "resilience": "very_high",
               "tempo_efficiency": "very_high",
-              "utility": "low"
+              "utility": "very_low"
             }
           }
         ]
@@ -495,6 +543,7 @@
     },
     {
       "name": "Harmonize",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/0/0015ef55-4b85-4147-9974-b3ff4a1487c3.jpg?1591320837",
       "mana_cost": "{2}{G}{G}",
       "type_line": "Sorcery",
@@ -502,22 +551,23 @@
         "must_roles": ["card_advantage"],
         "forbid_roles": ["card_selection"],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [48, 82]
       },
       "result": {
-        "overall_score": 62,
-        "overall_comment": "Harmonize refills this deck with three cards at sorcery speed, giving a solid midgame burst of raw access that is straightforward to cast in green-heavy mana but provides no special synergy beyond generic card draw.",
+        "overall_score": 67,
+        "overall_comment": "Harmonize is a clean four-mana burst of raw cards that refills the hand for a landfall engine, with its main limitation being that it only draws and does not shape draws or advance the board by itself.",
         "roles": [
           {
             "role": "card_advantage",
-            "score": 62,
-            "description": "Harmonize trades one card for three fresh cards, which is clean card advantage that helps Tatyova-style value turns keep flowing even when the land engine is not assembled.",
+            "score": 67,
+            "description": "Draw three cards at sorcery speed, giving this Tatyova deck a straightforward refill that supports keeping land drops and gas flowing.",
             "answers": {
               "floor": "high",
               "net_gain": "high",
               "quality": "high",
               "reliability": "high",
-              "repeatability": "very_low"
+              "repeatability": "low"
             }
           }
         ]
@@ -527,6 +577,7 @@
     },
     {
       "name": "Heroic Intervention",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/2/02f7ffb0-ad48-4f2c-af43-a86a9546a1b2.jpg?1729295822",
       "mana_cost": "{1}{G}",
       "type_line": "Instant",
@@ -534,74 +585,89 @@
         "must_roles": ["enabler"],
         "forbid_roles": ["mass_disruption", "targeted_disruption"],
         "role_score_ranges": { "enabler": [62, 90] },
+        "role_criteria": {},
         "overall_range": [62, 90]
       },
       "result": {
-        "overall_score": 79,
-        "overall_comment": "Heroic Intervention is a compact protection piece that can blank a sweeper or removal window for your board, preserving mana engines, landfall payoffs, and a poised finisher at instant speed.",
+        "overall_score": 84,
+        "overall_comment": "Heroic Intervention is a clean protection piece for this land-fueled engine, shielding the board from sweepers and spot removal while keeping a key turn sequence intact, though its value is concentrated in reactive windows.",
         "roles": [
           {
             "role": "enabler",
-            "score": 79,
-            "description": "This instant shields your permanents with hexproof and indestructible for a turn, keeping lands-matter engines, Tatyova, and board-based finishers alive through common removal or sweepers.",
+            "score": 83,
+            "description": "It directly protects your own permanents with hexproof and indestructible, which keeps the deck’s engine pieces and win condition online through the interaction this list expects to face.",
             "answers": {
               "breadth": "high",
-              "directness": "high",
+              "directness": "very_high",
               "reliability": "high",
               "resilience": "high",
-              "timing": "very_high"
-            }
-          }
-        ]
-      },
-      "passed": true,
-      "failures": []
-    },
-    {
-      "name": "Hullbreaker Horror",
-      "image_uri": "https://cards.scryfall.io/normal/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888",
-      "mana_cost": "{5}{U}{U}",
-      "type_line": "Creature — Kraken Horror",
-      "expectation": {
-        "must_roles": ["mass_disruption"],
-        "forbid_roles": ["targeted_disruption"],
-        "role_score_ranges": {},
-        "overall_range": [60, 95]
-      },
-      "result": {
-        "overall_score": 82,
-        "overall_comment": "Hullbreaker Horror gives this Tatyova deck a flash, uncounterable finisher that turns each spell into repeatable bounce for opposing spells and nonland permanents, while its seven-mana cost keeps it firmly in the late game.",
-        "roles": [
-          {
-            "role": "targeted_disruption",
-            "score": 80,
-            "description": "Flash and an uncounterable body let Hullbreaker Horror answer a single spell or permanent at instant speed, trading one card for one threat while leaving a large threat behind.",
-            "answers": {
-              "coverage": "high",
-              "efficiency": "high",
-              "flexibility": "high",
-              "permanence": "high",
-              "timing": "very_high"
-            }
-          },
-          {
-            "role": "mass_disruption",
-            "score": 75,
-            "description": "Once it sticks, every spell you cast can repeatedly bounce another spell or nonland permanent, letting this deck chain multiple tempo setbacks across a turn cycle and snowball board control.",
-            "answers": {
-              "asymmetry": "high",
-              "coverage": "high",
-              "impact": "high",
-              "recoverability": "high",
               "timing": "high"
             }
           },
           {
-            "role": "payoff",
-            "score": 75,
-            "description": "As a large evasive finisher, Hullbreaker Horror converts the deck's repeated spellcasting into control of the stack and board, then threatens to end the game through overwhelming pressure.",
+            "role": "mass_disruption",
+            "score": 71,
+            "description": "It blanks opposing sweepers and other board-wide removal against your permanents for a turn, preserving the battlefield you have built around Tatyova and your land engines.",
             "answers": {
-              "attainability": "high",
+              "asymmetry": "very_high",
+              "coverage": "high",
+              "impact": "neutral",
+              "recoverability": "high",
+              "timing": "high"
+            }
+          }
+        ]
+      },
+      "passed": false,
+      "failures": ["forbidden role 'mass_disruption' present (score 71)"]
+    },
+    {
+      "name": "Hullbreaker Horror",
+      "deck_title": "Tatyova Lands Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888",
+      "mana_cost": "{5}{U}{U}",
+      "type_line": "Creature — Kraken Horror",
+      "expectation": {
+        "must_roles": [],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [55, 95]
+      },
+      "result": {
+        "overall_score": 74,
+        "overall_comment": "Hullbreaker Horror is a flash, uncounterable threat that turns every spell into instant-speed bounce for opposing spells or nonland permanents, giving the deck a strong protective and tempo-oriented closer with limited standalone utility before you can keep casting spells.",
+        "roles": [
+          {
+            "role": "enabler",
+            "score": 71,
+            "description": "Flash and the ability to bounce a spell or nonland permanent on each spell cast help keep the deck's board and engine intact while advancing a protected game plan through open mana.",
+            "answers": {
+              "breadth": "neutral",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "targeted_disruption",
+            "score": 70,
+            "description": "Its spell-triggered bounce trades efficiently with individual spells or problematic permanents at instant speed, and flash plus uncounterable help it fit protection windows in a blue-green board-centric deck.",
+            "answers": {
+              "coverage": "high",
+              "efficiency": "high",
+              "flexibility": "high",
+              "permanence": "low",
+              "timing": "very_high"
+            }
+          },
+          {
+            "role": "payoff",
+            "score": 70,
+            "description": "As a large flash finisher, it rewards the deck for playing at instant speed by converting normal spellcasting into repeated tempo swings that can clear a path for a later attack.",
+            "answers": {
+              "attainability": "neutral",
               "conversion": "high",
               "decisiveness": "high",
               "reward_size": "high"
@@ -609,11 +675,12 @@
           }
         ]
       },
-      "passed": false,
-      "failures": ["forbidden role 'targeted_disruption' present (score 80)"]
+      "passed": true,
+      "failures": []
     },
     {
       "name": "Lotus Petal",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/3/133dac2f-ef50-460e-89c4-a23870faac06.jpg?1779414161",
       "mana_cost": "{0}",
       "type_line": "Artifact",
@@ -621,18 +688,33 @@
         "must_roles": [],
         "forbid_roles": ["mana_ramp"],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [0, 62]
       },
       "result": {
-        "overall_score": 0,
-        "overall_comment": "No material role identified.",
-        "roles": []
+        "overall_score": 54,
+        "overall_comment": "Lotus Petal gives the deck a very fast burst of any-color mana for explosive early development or a surprise protection turn, with a low floor because the mana is one-use only.",
+        "roles": [
+          {
+            "role": "enabler",
+            "score": 54,
+            "description": "Lotus Petal functions as a one-shot burst mana piece that can accelerate an important spell or leave mana open for a reactive turn, which matters in a deck that wants flexible instant-speed plays.",
+            "answers": {
+              "breadth": "low",
+              "directness": "high",
+              "reliability": "neutral",
+              "resilience": "very_low",
+              "timing": "very_high"
+            }
+          }
+        ]
       },
       "passed": true,
       "failures": []
     },
     {
       "name": "Midnight Tilling",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.jpg?1767732843",
       "mana_cost": "{1}{G}",
       "type_line": "Instant",
@@ -640,21 +722,34 @@
         "must_roles": ["card_selection"],
         "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [45, 75]
       },
       "result": {
         "overall_score": 67,
-        "overall_comment": "This instant mills four and often turns that dig into a permanent recouped to hand, giving Tatyova-style value while helping smooth draws and recover key pieces at moderate efficiency.",
+        "overall_comment": "Midnight Tilling is a low-cost selection spell that bins four cards and can rebuy a permanent, giving Tatyova-style value while helping find lands, engines, or a key permanent; its ceiling is modest without graveyard recursion or heavy permanent density.",
         "roles": [
           {
             "role": "card_selection",
             "score": 67,
-            "description": "Milking four cards and returning a permanent from among them trades the spell for chosen access to a needed permanent, which fits this deck’s value and recovery plan well. ",
+            "description": "This filters the top of the library by milling four and then lets you choose a permanent card to recover, which smooths draws and can dig toward lands, engines, or protection pieces.",
             "answers": {
               "access": "high",
               "efficiency": "neutral",
               "range": "high",
               "setup_value": "high",
+              "timing": "neutral"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 42,
+            "description": "It supports the deck's recursive, permanent-heavy value plan by stocking the graveyard and picking up a needed permanent, which helps rebuild after attrition without relying on a generic staple effect.",
+            "answers": {
+              "breadth": "low",
+              "directness": "neutral",
+              "reliability": "neutral",
+              "resilience": "low",
               "timing": "neutral"
             }
           }
@@ -665,6 +760,7 @@
     },
     {
       "name": "Oracle of Mul Daya",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/4/048fdbc1-4180-493c-8e99-5bee56647080.jpg?1681411377",
       "mana_cost": "{3}{G}",
       "type_line": "Creature — Elf Shaman",
@@ -672,16 +768,17 @@
         "must_roles": ["mana_ramp"],
         "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [60, 88]
       },
       "result": {
         "overall_score": 81,
-        "overall_comment": "Oracle of Mul Daya accelerates land drops and turns the top of the library into playable lands, letting Tatyova convert that extra land access into more cards while carrying some vulnerability as a creature engine piece.",
+        "overall_comment": "Oracle of Mul Daya accelerates the deck by adding land drops and turns the top of the library into playable lands, which keeps Tatyova-style landfall turns flowing while revealing future draws to help sequence them.",
         "roles": [
           {
             "role": "mana_ramp",
             "score": 79,
-            "description": "It is a permanent source of repeatable acceleration by granting an additional land play each turn, which fits a lands-heavy Simic plan and comes online early enough to matter for Tatyova turns.",
+            "description": "It permanently increases available mana by letting this deck make an additional land drop each turn, and the top-of-library land play often turns excess lands into real acceleration with good fit for a land-heavy plan.",
             "answers": {
               "curve_fit": "high",
               "efficiency": "high",
@@ -691,25 +788,13 @@
             }
           },
           {
-            "role": "card_advantage",
-            "score": 71,
-            "description": "It converts extra land drops and top-of-library land access into more Tatyova landfall draws over time, so a single card can keep producing additional real cards across several turns.",
-            "answers": {
-              "floor": "neutral",
-              "net_gain": "high",
-              "quality": "high",
-              "reliability": "high",
-              "repeatability": "high"
-            }
-          },
-          {
             "role": "card_selection",
-            "score": 67,
-            "description": "Playing lands from the top with the top card revealed gives steady library filtering and sequencing, letting the deck turn known land cards into smooth future draws and land drops.",
+            "score": 71,
+            "description": "Playing lands from the top of the library and keeping that top card revealed gives this deck real library control over upcoming land drops, smoothing land-dense turns and helping plan around known future draws.",
             "answers": {
               "access": "high",
               "efficiency": "high",
-              "range": "low",
+              "range": "neutral",
               "setup_value": "high",
               "timing": "high"
             }
@@ -717,7 +802,7 @@
           {
             "role": "enabler",
             "score": 67,
-            "description": "It directly fuels the deck's landfall engine by expanding land plays and uncovering the top card, helping assemble the mana-and-draw loop that Tatyova and other land synergies want.",
+            "description": "It directly fuels the deck's landfall engine by increasing land plays and turning the top card into a usable land, which strengthens the core loop that Tatyova and similar land-matter payoffs want to keep running.",
             "answers": {
               "breadth": "high",
               "directness": "high",
@@ -733,6 +818,7 @@
     },
     {
       "name": "Ponder",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/5/15813b4a-9eee-4724-97f3-c1b845cba330.jpg?1561756703",
       "mana_cost": "{U}",
       "type_line": "Sorcery",
@@ -740,19 +826,20 @@
         "must_roles": ["card_selection"],
         "forbid_roles": ["card_advantage"],
         "role_score_ranges": { "card_selection": [62, 88] },
+        "role_criteria": {},
         "overall_range": [62, 88]
       },
       "result": {
-        "overall_score": 79,
-        "overall_comment": "Ponder smooths draws by looking at the top three cards, reordering them, and replacing itself, helping Tatyova find land drops and action while staying a low-impact setup piece.",
+        "overall_score": 75,
+        "overall_comment": "Ponder is a cheap cantrip that smooths draws immediately and helps find lands, engines, or interaction early, with a modest floor because it only replaces itself.",
         "roles": [
           {
             "role": "card_selection",
-            "score": 79,
-            "description": "Ponder gives efficient early filtering by looking at the top three cards, optionally shuffling, and drawing a card, which helps dig toward lands, interaction, or payoff pieces without changing total cards.",
+            "score": 75,
+            "description": "Ponder gives immediate top-of-library selection and a self-replacing draw, which helps this deck smooth early land-heavy draws and find Tatyova-supporting pieces efficiently.",
             "answers": {
               "access": "high",
-              "efficiency": "very_high",
+              "efficiency": "high",
               "range": "neutral",
               "setup_value": "high",
               "timing": "very_high"
@@ -765,6 +852,7 @@
     },
     {
       "name": "Rampant Growth",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/1/01d56cde-e186-41e7-bcb2-80736a989678.jpg?1562895330",
       "mana_cost": "{1}{G}",
       "type_line": "Sorcery",
@@ -772,20 +860,21 @@
         "must_roles": ["mana_ramp"],
         "forbid_roles": [],
         "role_score_ranges": { "mana_ramp": [60, 88] },
+        "role_criteria": {},
         "overall_range": [60, 88]
       },
       "result": {
-        "overall_score": 71,
-        "overall_comment": "Rampant Growth accelerates Tatyova’s land-centric plan by putting a basic land onto the battlefield tapped, helping cast the commander and trigger landfall while staying a straightforward, modest early ramp piece.",
+        "overall_score": 75,
+        "overall_comment": "Rampant Growth is a clean early ramp spell for this land-focused Simic deck, fixing green and blue access by putting a basic land onto the battlefield tapped, with the main cost being a small tempo hit.",
         "roles": [
           {
             "role": "mana_ramp",
-            "score": 71,
-            "description": "It is a clean two-mana ramp spell that converts one card into an extra land on the battlefield, advancing the deck’s mana development and landfall count for later turns.",
+            "score": 75,
+            "description": "It accelerates the deck on turn two by turning one card into a permanent land on the battlefield, helping Tatyova and other landfall turns arrive sooner.",
             "answers": {
               "curve_fit": "high",
               "efficiency": "high",
-              "fixing": "neutral",
+              "fixing": "high",
               "permanence": "high",
               "speed": "high"
             }
@@ -797,6 +886,7 @@
     },
     {
       "name": "Ramunap Excavator",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/3/f/3f8a0a0e-81f7-40a2-b393-bdc1423549f6.jpg?1712354606",
       "mana_cost": "{2}{G}",
       "type_line": "Creature — Snake Cleric",
@@ -804,34 +894,47 @@
         "must_roles": ["enabler"],
         "forbid_roles": [],
         "role_score_ranges": { "enabler": [58, 86] },
+        "role_criteria": {},
         "overall_range": [56, 86]
       },
       "result": {
-        "overall_score": 73,
-        "overall_comment": "Ramunap Excavator repeatedly recasts lands from the graveyard to keep land drops flowing for Tatyova landfall, giving the deck strong resilience and steady engine continuity, though it still needs lands already in the graveyard to matter.",
+        "overall_score": 85,
+        "overall_comment": "Ramunap Excavator is a resilient lands-recursion enabler that lets this deck keep making land drops from the graveyard, which sustains Tatyova-style landfall value and rebuilds after attrition, though it still needs lands already in the graveyard.",
         "roles": [
           {
-            "role": "card_advantage",
-            "score": 71,
-            "description": "By letting lands be played again from the graveyard, it turns each spent or milled land into another future draw trigger with Tatyova, creating sustained resource flow over a long game.",
+            "role": "enabler",
+            "score": 83,
+            "description": "This directly supports the deck’s lands-matter engine by rebuilding land-drop access from the graveyard, which keeps landfall lines functioning after removal or discard and gives extra value to every land already used.",
             "answers": {
-              "floor": "neutral",
-              "net_gain": "high",
-              "quality": "high",
+              "breadth": "high",
+              "directness": "very_high",
               "reliability": "high",
-              "repeatability": "high"
+              "resilience": "high",
+              "timing": "high"
             }
           },
           {
-            "role": "enabler",
-            "score": 71,
-            "description": "This directly fuels the deck’s landfall engine by recycling lands for more future land plays, making it a plan-specific recursion piece that generic Simic staples do not replicate.",
+            "role": "mana_ramp",
+            "score": 79,
+            "description": "Playing lands from the graveyard turns spent lands into future land drops, extending the deck’s mana development across multiple turns and helping keep landfall and ramp lines flowing.",
             "answers": {
-              "breadth": "high",
-              "directness": "high",
+              "curve_fit": "high",
+              "efficiency": "high",
+              "fixing": "neutral",
+              "permanence": "very_high",
+              "speed": "high"
+            }
+          },
+          {
+            "role": "card_advantage",
+            "score": 71,
+            "description": "By turning graveyard lands into additional land plays, it can repeatedly generate extra Tatyova landfall draws over a game, creating real card access without spending extra cards.",
+            "answers": {
+              "floor": "high",
+              "net_gain": "high",
+              "quality": "neutral",
               "reliability": "high",
-              "resilience": "high",
-              "timing": "neutral"
+              "repeatability": "high"
             }
           }
         ]
@@ -841,6 +944,7 @@
     },
     {
       "name": "Regrowth",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.jpg?1559592786",
       "mana_cost": "{1}{G}",
       "type_line": "Sorcery",
@@ -848,21 +952,34 @@
         "must_roles": ["card_selection"],
         "forbid_roles": ["card_advantage"],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [70, 95]
       },
       "result": {
-        "overall_score": 92,
-        "overall_comment": "Regrowth cleanly turns any graveyard card into the best next resource for this deck, with solid flexibility and timing, though it spends a full card and mana for a single chosen return.",
+        "overall_score": 81,
+        "overall_comment": "Regrowth is efficient recursion that rebuy key lands-matter pieces, interaction, or finishers from the graveyard, but its value is single-card selection with no ongoing advantage on its own.",
         "roles": [
           {
             "role": "card_selection",
-            "score": 92,
-            "description": "Regrowth trades itself for the exact card you want from the graveyard, giving this deck precise access to a land, engine piece, answer, or finisher at a very efficient rate.",
+            "score": 79,
+            "description": "Regrowth trades itself for the best card in your graveyard, letting Tatyova builds reclaim a missing engine piece, answer, or finisher exactly when needed.",
             "answers": {
-              "access": "very_high",
+              "access": "high",
               "efficiency": "high",
-              "range": "very_high",
+              "range": "high",
               "setup_value": "very_high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 75,
+            "description": "Regrowth directly rebuilds this deck after key landfall, protection, or payoff pieces are removed by returning the exact card you need to keep the game plan moving.",
+            "answers": {
+              "breadth": "high",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "high",
               "timing": "high"
             }
           }
@@ -873,6 +990,7 @@
     },
     {
       "name": "Reliquary Tower",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/6/064e88cb-b9ae-4b70-a788-7a0c2e215f1c.jpg?1780589355",
       "mana_cost": "",
       "type_line": "Land",
@@ -880,22 +998,23 @@
         "must_roles": ["land"],
         "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [42, 75]
       },
       "result": {
-        "overall_score": 65,
-        "overall_comment": "Reliquary Tower is a resilient utility land that smoothly fixes colorless mana and preserves large hand sizes from Tatyova-triggered draw turns, with its main value coming from hand-size retention and modest land slot pressure.",
+        "overall_score": 55,
+        "overall_comment": "Reliquary Tower is a clean land slot that keeps Tatyova-fueled draw turns comfortable by preserving a large hand while still adding colorless mana, with its main limitation being that the mana it produces is off-color for the deck.",
         "roles": [
           {
             "role": "land",
-            "score": 65,
-            "description": "As a land, it reliably enters untapped and produces colorless mana while granting no maximum hand size, which suits long Tatyova draw turns and keeps extra cards available.",
+            "score": 55,
+            "description": "This land enters untapped, taps for colorless mana, and removes the maximum hand size limit, so it is a durable utility slot with modest mana help and real hand-size relief in long draw-heavy games.",
             "answers": {
-              "mana_reliability": "neutral",
+              "mana_reliability": "low",
               "opportunity_cost": "neutral",
               "resilience": "high",
               "tempo_efficiency": "high",
-              "utility": "high"
+              "utility": "neutral"
             }
           }
         ]
@@ -905,23 +1024,25 @@
     },
     {
       "name": "Rhystic Study",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/3/03ac9b21-8c79-49ec-a0df-0fd22e4a0ed7.jpg?1592487897",
       "mana_cost": "{2}{U}",
       "type_line": "Enchantment",
       "expectation": {
         "must_roles": ["card_advantage"],
         "forbid_roles": [],
-        "role_score_ranges": { "card_advantage": [72, 95] },
-        "overall_range": [72, 96]
+        "role_score_ranges": { "card_advantage": [68, 95] },
+        "role_criteria": {},
+        "overall_range": [68, 96]
       },
       "result": {
         "overall_score": 88,
-        "overall_comment": "Rhystic Study steadily turns opponents’ spellcasting into extra cards, giving this deck a resilient draw engine that keeps landfall and interaction flowing, though its output depends on opponents choosing whether to pay the tax.",
+        "overall_comment": "Rhystic Study steadily turns opponents’ spellcasting into extra cards for Tatyova’s lands-matter engine, with excellent repeatability and a modest drawback in that it depends on opponents choosing whether to pay.",
         "roles": [
           {
             "role": "card_advantage",
             "score": 88,
-            "description": "This enchantment repeatedly draws extra cards whenever opponents cast spells, so a single card spent can generate a long stream of real card access over the course of the game.",
+            "description": "It repeatedly draws extra cards whenever opponents cast spells, giving the deck a persistent stream of fresh resources while staying relevant in almost any board state.",
             "answers": {
               "floor": "high",
               "net_gain": "very_high",
@@ -937,6 +1058,7 @@
     },
     {
       "name": "Sakura-Tribe Elder",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/6/0632d42e-ee81-4ceb-82af-c5cbf32e3d1a.jpg?1562700817",
       "mana_cost": "{1}{G}",
       "type_line": "Creature — Snake Shaman",
@@ -944,34 +1066,23 @@
         "must_roles": ["mana_ramp"],
         "forbid_roles": [],
         "role_score_ranges": { "mana_ramp": [60, 84] },
+        "role_criteria": {},
         "overall_range": [60, 88]
       },
       "result": {
         "overall_score": 71,
-        "overall_comment": "Sakura-Tribe Elder provides a cheap sacrifice ramp body that fixes early mana and fuels landfall while keeping a modest floor when the board is light, but its acceleration is one-shot and the tapped land keeps it from being a premium tempo play.",
+        "overall_comment": "Sakura-Tribe Elder is efficient early ramp for this Tatyova deck, putting a basic land onto the battlefield tapped to advance mana and landfall while providing a modest body that can be cashed in at instant speed.",
         "roles": [
           {
             "role": "mana_ramp",
             "score": 71,
-            "description": "It trades itself for a basic land onto the battlefield tapped, giving the deck a permanent extra mana source early and helping Tatyova turns, though the tapped land and sacrifice cost slow the tempo.",
+            "description": "It accelerates mana immediately for a two-mana play by sacrificing itself to fetch a basic land onto the battlefield tapped, helping this deck reach Tatyova and larger land-based turns ahead of curve.",
             "answers": {
               "curve_fit": "high",
               "efficiency": "high",
               "fixing": "neutral",
               "permanence": "high",
               "speed": "high"
-            }
-          },
-          {
-            "role": "enabler",
-            "score": 54,
-            "description": "As a sacrifice ramp creature, it specifically advances the deck's landfall engine and land-count development while remaining useful as a small blocker or sacrifice body when needed.",
-            "answers": {
-              "breadth": "neutral",
-              "directness": "neutral",
-              "reliability": "high",
-              "resilience": "low",
-              "timing": "high"
             }
           }
         ]
@@ -981,6 +1092,7 @@
     },
     {
       "name": "Simic Signet",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/1/11488771-3d02-476e-bf6d-ad40ec691fd5.jpg?1593814960",
       "mana_cost": "{2}",
       "type_line": "Artifact",
@@ -988,16 +1100,17 @@
         "must_roles": ["mana_ramp"],
         "forbid_roles": ["enabler"],
         "role_score_ranges": { "mana_ramp": [68, 88] },
+        "role_criteria": {},
         "overall_range": [68, 90]
       },
       "result": {
         "overall_score": 79,
-        "overall_comment": "Simic Signet is efficient permanent ramp for this deck, smoothing colors and accelerating Tatyova into landfall turns a little earlier, with modest turn-two speed and no special synergy beyond being a durable mana rock.",
+        "overall_comment": "Simic Signet is an efficient early mana rock that fixes both colors for Tatyova’s curve and helps cast the commander a turn earlier, with no meaningful plan-specific upside beyond reliable acceleration.",
         "roles": [
           {
             "role": "mana_ramp",
             "score": 79,
-            "description": "This cheap mana rock starts accelerating on the turn after it resolves and fixes into both Simic colors, making it a clean permanent source of extra mana for the deck’s landfall-heavy game plan.",
+            "description": "This is a cheap permanent mana source that immediately accelerates the deck and fixes both green and blue, making it a clean way to reach Tatyova and other midgame plays faster.",
             "answers": {
               "curve_fit": "high",
               "efficiency": "high",
@@ -1013,27 +1126,29 @@
     },
     {
       "name": "Sol Ring",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/4/04002706-2236-4b79-bdea-4f263e43cb9c.jpg?1767730264",
       "mana_cost": "{1}",
       "type_line": "Artifact",
       "expectation": {
         "must_roles": ["mana_ramp"],
         "forbid_roles": ["enabler"],
-        "role_score_ranges": { "mana_ramp": [80, 100] },
-        "overall_range": [80, 100]
+        "role_score_ranges": { "mana_ramp": [72, 100] },
+        "role_criteria": {},
+        "overall_range": [72, 100]
       },
       "result": {
-        "overall_score": 92,
-        "overall_comment": "Sol Ring accelerates Tatyova by powering out its engine and top-end plays early, with its main limitation being colorless output that does not help cast the deck’s blue-green spells directly.",
+        "overall_score": 83,
+        "overall_comment": "Sol Ring accelerates Tatyova’s game plan extremely early with efficient colorless mana, but its contribution stays generic and does not specifically advance the land-engine package.",
         "roles": [
           {
             "role": "mana_ramp",
-            "score": 92,
-            "description": "A premier two-mana rock, Sol Ring starts accelerating immediately and keeps generating mana every turn, making it one of the best ways to jump from early development into Tatyova and other high-impact plays.",
+            "score": 83,
+            "description": "Sol Ring is a premier turn-one accelerator that leaves a permanent mana source behind, helping this deck deploy Tatyova and its land engines ahead of curve.",
             "answers": {
-              "curve_fit": "very_high",
+              "curve_fit": "high",
               "efficiency": "very_high",
-              "fixing": "neutral",
+              "fixing": "low",
               "permanence": "very_high",
               "speed": "very_high"
             }
@@ -1045,6 +1160,7 @@
     },
     {
       "name": "Solemn Simulacrum",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.jpg?1562133717",
       "mana_cost": "{4}",
       "type_line": "Artifact Creature — Golem",
@@ -1052,20 +1168,21 @@
         "must_roles": ["mana_ramp"],
         "forbid_roles": ["card_advantage", "card_selection"],
         "role_score_ranges": {},
-        "overall_range": [45, 75]
+        "role_criteria": {},
+        "overall_range": [40, 78]
       },
       "result": {
-        "overall_score": 50,
-        "overall_comment": "Solemn Simulacrum ramps the deck with a basic land onto the battlefield and later replaces itself on death, giving Tatyova a sturdy body that advances land drops while smoothing resource flow; its value is steady but tied to board and death timing.",
+        "overall_score": 58,
+        "overall_comment": "Solemn Simulacrum ramps into a tapped basic land on entry and later replaces itself when it dies, making it a solid value bridge for Tatyova’s land-focused game plan with modest speed and selection impact.",
         "roles": [
           {
             "role": "mana_ramp",
-            "score": 50,
-            "description": "It enters and puts a basic land onto the battlefield tapped, giving a permanent mana source that helps this Simic lands deck keep developing toward Tatyova and its large top-end.",
+            "score": 58,
+            "description": "It accelerates by putting a basic land onto the battlefield tapped on entry, giving this deck a permanent mana source that supports Tatyova and later bigger landfall turns.",
             "answers": {
-              "curve_fit": "neutral",
+              "curve_fit": "high",
               "efficiency": "neutral",
-              "fixing": "low",
+              "fixing": "neutral",
               "permanence": "high",
               "speed": "low"
             }
@@ -1077,6 +1194,7 @@
     },
     {
       "name": "Sylvan Library",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/7/17788434-47c5-4290-8555-adc8171d55cd.jpg?1675202144",
       "mana_cost": "{1}{G}",
       "type_line": "Enchantment",
@@ -1084,16 +1202,17 @@
         "must_roles": ["card_selection"],
         "forbid_roles": [],
         "role_score_ranges": { "card_selection": [68, 92] },
+        "role_criteria": {},
         "overall_range": [68, 94]
       },
       "result": {
-        "overall_score": 84,
-        "overall_comment": "Sylvan Library is a strong draw-selection engine here that smooths land-heavy draws and, with Tatyova-style card flow, helps keep the hand stocked while its life payment can pressure its own staying power.",
+        "overall_score": 85,
+        "overall_comment": "Sylvan Library gives this deck repeated top-of-library filtering with a strong draw burst that helps find land drops, ramp pieces, and interaction, though the extra cards come with a meaningful life-payment choice each turn.",
         "roles": [
           {
             "role": "card_selection",
             "score": 83,
-            "description": "It gives precise top-of-library filtering by letting you choose whether to keep the extra cards or place them back, which is excellent for finding lands, protection, or payoff pieces in a lands engine.",
+            "description": "Its draw-step choice lets you see deeper, keep the best cards, and put unwanted draws back on top, making it a steady filter for land drops, ramp, and answers in a deck that wants to stay fluid.",
             "answers": {
               "access": "very_high",
               "efficiency": "high",
@@ -1105,13 +1224,25 @@
           {
             "role": "card_advantage",
             "score": 71,
-            "description": "It repeatedly draws extra cards each upkeep step when you choose to keep them, letting this deck see more land drops, interaction, and engine pieces over a game.",
+            "description": "At the beginning of each draw step, Sylvan Library can draw extra cards repeatedly, so it keeps generating real card access over multiple turns while the life-payment decision limits how freely the engine can be pushed.",
             "answers": {
               "floor": "neutral",
               "net_gain": "high",
               "quality": "high",
               "reliability": "high",
               "repeatability": "high"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 62,
+            "description": "It helps assemble Tatyova’s land engine and the deck’s next few turns by smoothing draws every turn cycle, with especially good value in a list that wants to keep hitting land drops and action.",
+            "answers": {
+              "breadth": "high",
+              "directness": "neutral",
+              "reliability": "high",
+              "resilience": "neutral",
+              "timing": "high"
             }
           }
         ]
@@ -1121,6 +1252,7 @@
     },
     {
       "name": "Tatyova, Benthic Druid",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/1/3/13a902f7-2711-4769-9866-762195c3d0fb.jpg?1726285261",
       "mana_cost": "{3}{G}{U}",
       "type_line": "Legendary Creature — Merfolk Druid",
@@ -1128,18 +1260,19 @@
         "must_roles": ["card_advantage"],
         "forbid_roles": [],
         "role_score_ranges": { "card_advantage": [68, 92] },
+        "role_criteria": {},
         "overall_range": [70, 94]
       },
       "result": {
-        "overall_score": 76,
-        "overall_comment": "Tatyova turns every land drop into steady life gain and card advantage, making the deck’s land-heavy engine far more consistent, with her five-mana body asking for a turn of setup before the value starts flowing.",
+        "overall_score": 81,
+        "overall_comment": "Tatyova turns every land entering the battlefield into a steady card flow and life buffer, making the deck’s land-heavy engine much smoother while asking for lands to keep coming.",
         "roles": [
           {
             "role": "card_advantage",
-            "score": 75,
-            "description": "Landfall on every land entering under your control draws a card and gains life, so Tatyova keeps converting the deck’s many land drops into a steady stream of extra access once she sticks.",
+            "score": 79,
+            "description": "Each land drop replaces itself with a draw and adds life, so this land-heavy deck turns normal development into ongoing extra access over the course of a game.",
             "answers": {
-              "floor": "neutral",
+              "floor": "high",
               "net_gain": "high",
               "quality": "high",
               "reliability": "high",
@@ -1147,15 +1280,26 @@
             }
           },
           {
+            "role": "payoff",
+            "score": 70,
+            "description": "Once the deck is making repeated land drops, Tatyova converts that activity into extra cards and life, rewarding the engine without needing additional pieces beyond lands entering.",
+            "answers": {
+              "attainability": "high",
+              "conversion": "high",
+              "decisiveness": "neutral",
+              "reward_size": "high"
+            }
+          },
+          {
             "role": "enabler",
-            "score": 62,
-            "description": "Tatyova directly fuels the lands-matter engine by turning routine land drops into card flow, helping the deck keep lands, interaction, and finishers moving through long games.",
+            "score": 67,
+            "description": "Tatyova directly supports the deck’s landfall engine by turning the large land count and extra land drops into sustained resources that keep the plan moving.",
             "answers": {
               "breadth": "high",
               "directness": "high",
               "reliability": "high",
               "resilience": "low",
-              "timing": "neutral"
+              "timing": "high"
             }
           }
         ]
@@ -1165,6 +1309,7 @@
     },
     {
       "name": "Zendikar Resurgent",
+      "deck_title": "Tatyova Lands Value",
       "image_uri": "https://cards.scryfall.io/normal/front/3/2/32ea1726-34c5-4f75-828c-1c67e8cd4789.jpg?1599766172",
       "mana_cost": "{5}{G}{G}",
       "type_line": "Enchantment",
@@ -1172,28 +1317,17 @@
         "must_roles": ["mana_ramp"],
         "forbid_roles": [],
         "role_score_ranges": {},
+        "role_criteria": {},
         "overall_range": [60, 88]
       },
       "result": {
-        "overall_score": 77,
-        "overall_comment": "Zendikar Resurgent sharply accelerates the deck’s mana while turning each creature spell into a draw, but its seven-mana cost makes it a later engine piece that wants established board and land development.",
+        "overall_score": 72,
+        "overall_comment": "Zendikar Resurgent accelerates this lands-matter deck by doubling land mana and turns creature casts into steady card flow, with the main limitation that its impact begins after a seven-mana setup.",
         "roles": [
-          {
-            "role": "mana_ramp",
-            "score": 75,
-            "description": "This is a strong permanent accelerator that starts paying off immediately once resolved by doubling colored mana from lands and fitting the deck’s green-heavy ramp plan well.",
-            "answers": {
-              "curve_fit": "high",
-              "efficiency": "high",
-              "fixing": "high",
-              "permanence": "very_high",
-              "speed": "low"
-            }
-          },
           {
             "role": "payoff",
             "score": 70,
-            "description": "It rewards the deck for already advancing its mana and creature development by converting those actions into much larger mana turns and extra cards.",
+            "description": "It rewards the deck for doing what it already wants to do by converting land-heavy turns and creature deployment into a much larger mana and card advantage swing.",
             "answers": {
               "attainability": "neutral",
               "conversion": "high",
@@ -1202,9 +1336,21 @@
             }
           },
           {
+            "role": "mana_ramp",
+            "score": 62,
+            "description": "It doubles mana from lands already in play, which sharply accelerates a deck built around permanent mana sources and big follow-up turns once it resolves.",
+            "answers": {
+              "curve_fit": "high",
+              "efficiency": "high",
+              "fixing": "neutral",
+              "permanence": "high",
+              "speed": "low"
+            }
+          },
+          {
             "role": "card_advantage",
             "score": 62,
-            "description": "Each creature spell replaces itself, so in a creature-forward game it steadily converts development into extra cards while keeping the enchantment in play.",
+            "description": "Its creature-cast trigger keeps the hand stocked in a deck with a meaningful creature suite, especially when those spells are part of the plan to convert mana into board presence.",
             "answers": {
               "floor": "low",
               "net_gain": "high",
@@ -1216,7 +1362,7 @@
           {
             "role": "enabler",
             "score": 54,
-            "description": "This directly fuels the deck’s mana engine in a way that compounds land development and keeps the explosive landfall plan rolling once established.",
+            "description": "It directly supports the deck's core game plan by turning every land tap into extra mana, which helps cast large threats and chain into more plays after setup.",
             "answers": {
               "breadth": "high",
               "directness": "high",
@@ -1229,6 +1375,622 @@
       },
       "passed": true,
       "failures": []
+    },
+    {
+      "name": "Bojuka Bog",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/0/1/01769b12-4841-4a1a-a089-e061442203ed.jpg?1591321823",
+      "mana_cost": "",
+      "type_line": "Land",
+      "expectation": {
+        "must_roles": ["land", "mass_disruption"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 64,
+        "overall_comment": "Bojuka Bog gives the deck a tapped black source with a one-shot graveyard exile effect that helps break opposing recursion and clear the way for Teval's graveyard engine, with modest tempo cost.",
+        "roles": [
+          {
+            "role": "mass_disruption",
+            "score": 62,
+            "description": "Exiling one player's graveyard on entry can blunt a recursion-heavy start and remove several cards' worth of future value at once, while the land still remains as mana.",
+            "answers": {
+              "asymmetry": "high",
+              "coverage": "high",
+              "impact": "neutral",
+              "recoverability": "high",
+              "timing": "neutral"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 62,
+            "description": "The graveyard exile mode directly supports the deck's recursion plan by clearing opposing graveyards before Teval and its support pieces start generating value.",
+            "answers": {
+              "breadth": "low",
+              "directness": "high",
+              "reliability": "neutral",
+              "resilience": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "land",
+            "score": 60,
+            "description": "This tapped black land fits the mana base while its enters-the-battlefield exile cleanly answers a graveyard and supports the deck's own graveyard-focused game plan.",
+            "answers": {
+              "mana_reliability": "high",
+              "opportunity_cost": "neutral",
+              "resilience": "high",
+              "tempo_efficiency": "low",
+              "utility": "high"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Death Begets Life",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/0/8/08cb3168-6872-43b6-9980-35ddc20cf192.jpg?1744103026",
+      "mana_cost": "{5}{B}{G}{U}",
+      "type_line": "Sorcery",
+      "expectation": {
+        "must_roles": ["mass_disruption"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {
+          "mass_disruption": { "timing": ["very_low", "low", "neutral"] }
+        },
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 71,
+        "overall_comment": "Death Begets Life clears away creatures and enchantments while refilling the hand with a large burst of cards, and it becomes strongest when the deck can convert the cleared board into a renewed graveyard-based engine.",
+        "roles": [
+          {
+            "role": "mass_disruption",
+            "score": 71,
+            "description": "This sorcery wipes creatures and enchantments from the table at once, resetting opposing boards while leaving this graveyard-focused deck well positioned to rebuild.",
+            "answers": {
+              "asymmetry": "high",
+              "coverage": "high",
+              "impact": "high",
+              "recoverability": "high",
+              "timing": "neutral"
+            }
+          },
+          {
+            "role": "card_advantage",
+            "score": 50,
+            "description": "Destroying the whole creature and enchantment board can turn this into a major refill, especially in games where opponents have built up multiple permanents.",
+            "answers": {
+              "floor": "low",
+              "net_gain": "high",
+              "quality": "high",
+              "reliability": "neutral",
+              "repeatability": "very_low"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Kheru Goldkeeper",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/8/d/8d11183a-57f5-4ddb-8a6e-15fff704b114.jpg?1743204780",
+      "mana_cost": "{1}{B}{G}{U}",
+      "type_line": "Creature — Dragon",
+      "expectation": {
+        "must_roles": ["mana_ramp"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 73,
+        "overall_comment": "Kheru Goldkeeper turns graveyard exile into steady Treasure production during your turn and later recycles itself into a flying, countered threat that can support a creature line through Renew, with the mana engine depending on cards leaving the graveyard.",
+        "roles": [
+          {
+            "role": "mana_ramp",
+            "score": 71,
+            "description": "Each turn it converts cards leaving your graveyard into Treasures, giving this graveyard-heavy deck a recurring burst of mana that scales with Teval, Life from the Loam, and other leave-graveyard triggers.",
+            "answers": {
+              "curve_fit": "high",
+              "efficiency": "high",
+              "fixing": "high",
+              "permanence": "high",
+              "speed": "neutral"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 71,
+            "description": "It directly supports the deck's graveyard-recursion engine by rewarding leave-graveyard events and later reuses itself from the graveyard to add pressure on a key creature.",
+            "answers": {
+              "breadth": "neutral",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "payoff",
+            "score": 50,
+            "description": "When the graveyard engine is running, it cashes those triggers into Treasure and can turn itself into a sizeable flying upgrade for a creature through Renew.",
+            "answers": {
+              "attainability": "high",
+              "conversion": "neutral",
+              "decisiveness": "low",
+              "reward_size": "neutral"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Naga Fleshcrafter",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/5/d/5df17423-9fdd-4432-8660-1d267c685595.jpg?1743204171",
+      "mana_cost": "{3}{U}",
+      "type_line": "Creature — Snake Shapeshifter",
+      "expectation": {
+        "must_roles": ["payoff"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 65,
+        "overall_comment": "Naga Fleshcrafter is a graveyard renewal piece that turns excess mana into a teamwide copy burst, letting Teval or another key nonlegendary creature anchor a sudden board-wide swing, with the line being sorcery-speed and reliant on a suitable target.",
+        "roles": [
+          {
+            "role": "payoff",
+            "score": 65,
+            "description": "Renew converts a developed board into a sharp combat payoff by copying a pumped nonlegendary creature across the team for a turn, which can make Teval or another threat much more threatening.",
+            "answers": {
+              "attainability": "low",
+              "conversion": "high",
+              "decisiveness": "high",
+              "reward_size": "high"
+            }
+          },
+          {
+            "role": "enhancer",
+            "score": 50,
+            "description": "The renew mode amplifies a creature-centric board by spreading one good body’s stats and text across the team for a turn, though it needs an established board and a legal target to matter.",
+            "answers": {
+              "amplification": "high",
+              "breadth": "high",
+              "necessity": "low",
+              "standalone_floor": "very_low"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 46,
+            "description": "Its renew ability supports the deck’s recursion and token engine by reusing the graveyard to turn one creature into a temporary teamwide copy effect, which can turn a stable board into a stronger Teval-fueled attack step.",
+            "answers": {
+              "breadth": "neutral",
+              "directness": "high",
+              "reliability": "low",
+              "resilience": "low",
+              "timing": "low"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Overlord of the Balemurk",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/4/9/49993a18-f733-4d1f-b629-12fc45cbb327.jpg?1726287349",
+      "mana_cost": "{3}{B}{B}",
+      "type_line": "Enchantment Creature — Avatar Horror",
+      "expectation": {
+        "must_roles": [],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {
+          "payoff": {
+            "reward_size": ["low", "neutral"],
+            "decisiveness": ["very_low", "low", "neutral"]
+          }
+        },
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 73,
+        "overall_comment": "Overlord of the Balemurk mills four on entry or attack and turns that self-mill into hand recursion, giving this deck a steady graveyard-fueled value engine with strong cast flexibility and a slower setup cost.",
+        "roles": [
+          {
+            "role": "card_advantage",
+            "score": 71,
+            "description": "It trades one card for a body plus recurring access to a card from the graveyard on entry or attack, which fits this deck’s self-mill and land-recursion engine well.",
+            "answers": {
+              "floor": "neutral",
+              "net_gain": "high",
+              "quality": "high",
+              "reliability": "high",
+              "repeatability": "high"
+            }
+          },
+          {
+            "role": "card_selection",
+            "score": 67,
+            "description": "It mills four and then lets you choose a non-Avatar creature or planeswalker card from your graveyard to hand, giving focused graveyard selection for the deck’s recursion lines.",
+            "answers": {
+              "access": "high",
+              "efficiency": "high",
+              "range": "neutral",
+              "setup_value": "high",
+              "timing": "neutral"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 67,
+            "description": "It directly fuels the graveyard by milling on entry or attack and rebuilds the hand with creature or planeswalker recursion, supporting the deck’s core leave-the-graveyard loops.",
+            "answers": {
+              "breadth": "high",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "neutral",
+              "timing": "neutral"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Rakshasa's Bargain",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/5/c/5c409f4f-3b2c-4c33-b850-55b2a46f51ca.jpg?1743204844",
+      "mana_cost": "{2/B}{2/G}{2/U}",
+      "type_line": "Instant",
+      "expectation": {
+        "must_roles": ["card_advantage"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 77,
+        "overall_comment": "Rakshasa's Bargain digs four cards deep to stock the graveyard while putting two chosen cards into hand, giving this deck efficient selection and graveyard setup with solid timing and broad access.",
+        "roles": [
+          {
+            "role": "card_selection",
+            "score": 75,
+            "description": "It looks four cards deep and turns the best two into hand while the others go to the graveyard, which fits the deck's graveyard-centric setup and land recursion plan well.",
+            "answers": {
+              "access": "high",
+              "efficiency": "high",
+              "range": "high",
+              "setup_value": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 67,
+            "description": "By stocking the graveyard and finding two needed pieces at once, it helps assemble recursive land and creature lines that Teval and the deck's graveyard engines rely on.",
+            "answers": {
+              "breadth": "high",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "low",
+              "timing": "high"
+            }
+          }
+        ]
+      },
+      "passed": false,
+      "failures": ["expected role 'card_advantage' missing"]
+    },
+    {
+      "name": "Sol Ring",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/0/4/04002706-2236-4b79-bdea-4f263e43cb9c.jpg?1767730264",
+      "mana_cost": "{1}",
+      "type_line": "Artifact",
+      "expectation": {
+        "must_roles": ["mana_ramp"],
+        "forbid_roles": ["enabler"],
+        "role_score_ranges": {},
+        "role_criteria": { "mana_ramp": { "fixing": ["very_low", "low"] } },
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 79,
+        "overall_comment": "Sol Ring accelerates Teval’s deployment with efficient colorless burst mana, but its colorless output and generic floor keep it in the role of a straightforward accelerator here.",
+        "roles": [
+          {
+            "role": "mana_ramp",
+            "score": 79,
+            "description": "Sol Ring is a premier early accelerator that comes down immediately and turns one mana into two colorless, helping this three-color deck reach Teval and its graveyard engine quickly.",
+            "answers": {
+              "curve_fit": "high",
+              "efficiency": "very_high",
+              "fixing": "very_low",
+              "permanence": "very_high",
+              "speed": "very_high"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Teval, the Balanced Scale",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/b/5/b5d1955a-9ff0-4f8b-9af8-341371957299.jpg?1745970978",
+      "mana_cost": "{1}{B}{G}{U}",
+      "type_line": "Legendary Creature — Spirit Dragon",
+      "expectation": {
+        "must_roles": ["mana_ramp"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 89,
+        "overall_comment": "Teval is a core engine piece that mills to stock the graveyard, recurs lands for steady acceleration, and turns cards leaving the graveyard into a steady Zombie stream that feeds the deck’s recursive lines, with the land return tied to combat.",
+        "roles": [
+          {
+            "role": "enabler",
+            "score": 88,
+            "description": "Teval directly fuels the deck’s graveyard engine by stocking cards, returning lands, and making Zombies whenever cards leave the graveyard, which supports recursion and sacrifice-oriented lines.",
+            "answers": {
+              "breadth": "very_high",
+              "directness": "very_high",
+              "reliability": "high",
+              "resilience": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "payoff",
+            "score": 70,
+            "description": "Teval converts graveyard movement into a growing board of Zombie Druids, giving the deck a repeatable reward that scales as its recursion and self-mill keep working.",
+            "answers": {
+              "attainability": "high",
+              "conversion": "high",
+              "decisiveness": "neutral",
+              "reward_size": "high"
+            }
+          },
+          {
+            "role": "mana_ramp",
+            "score": 67,
+            "description": "Teval steadily accelerates mana by returning a land from the graveyard to the battlefield tapped every time it attacks, which suits a graveyard-land shell that can keep lands flowing.",
+            "answers": {
+              "curve_fit": "high",
+              "efficiency": "high",
+              "fixing": "high",
+              "permanence": "high",
+              "speed": "low"
+            }
+          },
+          {
+            "role": "card_selection",
+            "score": 58,
+            "description": "Teval’s attack trigger mills three and then lets you choose a land card from the graveyard to return, which filters toward a needed land while stocking the graveyard for recursive lines.",
+            "answers": {
+              "access": "neutral",
+              "efficiency": "high",
+              "range": "low",
+              "setup_value": "high",
+              "timing": "high"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "The Gitrog Monster",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/4/0/40489e28-878d-44a2-847f-07beef1aa0f8.jpg?1752944964",
+      "mana_cost": "{3}{B}{G}",
+      "type_line": "Legendary Creature — Frog Horror",
+      "expectation": {
+        "must_roles": [],
+        "forbid_roles": ["mana_ramp"],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 77,
+        "overall_comment": "The Gitrog Monster turns every land that reaches the graveyard into extra cards while its additional land play supports the deck’s land-recursion engine, though its upkeep sacrifice asks for a steady land flow to stay on board.",
+        "roles": [
+          {
+            "role": "card_advantage",
+            "score": 75,
+            "description": "Every land card that hits the graveyard becomes a draw, so the commander’s self-mill and land-rebuy lines can turn into a sustained stream of extra cards over a game.",
+            "answers": {
+              "floor": "neutral",
+              "net_gain": "high",
+              "quality": "high",
+              "reliability": "high",
+              "repeatability": "very_high"
+            }
+          },
+          {
+            "role": "enabler",
+            "score": 71,
+            "description": "It directly fuels the deck’s graveyard-and-land engine by rewarding self-mill and land recursion, while the extra land play helps assemble Teval turns and keep the resource loop moving.",
+            "answers": {
+              "breadth": "high",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "neutral",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "mana_ramp",
+            "score": 67,
+            "description": "Its extra land play increases mana development over the game and pairs well with the deck’s land recursion plan, giving a steady acceleration source once the engine is online.",
+            "answers": {
+              "curve_fit": "high",
+              "efficiency": "high",
+              "fixing": "neutral",
+              "permanence": "high",
+              "speed": "neutral"
+            }
+          }
+        ]
+      },
+      "passed": false,
+      "failures": ["forbidden role 'mana_ramp' present (score 67)"]
+    },
+    {
+      "name": "The Scarab God",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/0/1/01ff8244-ec3b-41bd-a007-bbd403a96e96.jpg?1690001628",
+      "mana_cost": "{3}{U}{B}",
+      "type_line": "Legendary Creature — God",
+      "expectation": {
+        "must_roles": ["mass_disruption", "card_advantage"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": {},
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 78,
+        "overall_comment": "The Scarab God turns the deck’s Zombie production into steady upkeep pressure, repeated scrying, and graveyard-to-board conversion, while its activated ability steadily converts opposing graveyard creatures into copied threats.",
+        "roles": [
+          {
+            "role": "enabler",
+            "score": 75,
+            "description": "It directly rewards the Zombie production this commander already creates by turning those bodies into upkeep drain and scry, and it keeps returning to hand after dying.",
+            "answers": {
+              "breadth": "high",
+              "directness": "high",
+              "reliability": "high",
+              "resilience": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "payoff",
+            "score": 75,
+            "description": "It converts the deck’s Zombie count and graveyard access into life loss, scrying, and board presence, giving the engine a clear endgame sink.",
+            "answers": {
+              "attainability": "high",
+              "conversion": "high",
+              "decisiveness": "high",
+              "reward_size": "high"
+            }
+          },
+          {
+            "role": "card_advantage",
+            "score": 71,
+            "description": "Its activated ability repeatedly turns graveyard creatures into 4/4 Zombie copies, giving this deck a durable stream of extra bodies and virtual material over long games.",
+            "answers": {
+              "floor": "neutral",
+              "net_gain": "high",
+              "quality": "high",
+              "reliability": "high",
+              "repeatability": "high"
+            }
+          },
+          {
+            "role": "mass_disruption",
+            "score": 71,
+            "description": "Its activated ability repeatedly exiles creatures from graveyards and replaces them with smaller Zombie copies, steadily weakening opponents’ graveyard resources while advancing your board.",
+            "answers": {
+              "asymmetry": "high",
+              "coverage": "neutral",
+              "impact": "high",
+              "recoverability": "high",
+              "timing": "high"
+            }
+          },
+          {
+            "role": "card_selection",
+            "score": 62,
+            "description": "The upkeep trigger scrys based on Zombie count, giving this graveyard-and-token deck recurring top-of-library smoothing that scales as the board develops.",
+            "answers": {
+              "access": "high",
+              "efficiency": "high",
+              "range": "very_low",
+              "setup_value": "high",
+              "timing": "high"
+            }
+          }
+        ]
+      },
+      "passed": true,
+      "failures": []
+    },
+    {
+      "name": "Undercity Sewers",
+      "deck_title": "Teval Graveyard Value",
+      "image_uri": "https://cards.scryfall.io/normal/front/1/9/19545db3-8be5-41e5-8d13-dec4f96fe624.jpg?1771346946",
+      "mana_cost": "",
+      "type_line": "Land — Island Swamp",
+      "expectation": {
+        "must_roles": ["land", "card_selection"],
+        "forbid_roles": [],
+        "role_score_ranges": {},
+        "role_criteria": { "land": { "utility": ["high", "very_high"] } },
+        "overall_range": [40, 100]
+      },
+      "result": {
+        "overall_score": 68,
+        "overall_comment": "Undercity Sewers is a tapped fixing land that steadily feeds the graveyard with surveil 1, smoothing draws and setting up Teval, Life from the Loam, and leave-the-graveyard triggers.",
+        "roles": [
+          {
+            "role": "enabler",
+            "score": 67,
+            "description": "The surveil 1 directly supports the deck's self-mill and graveyard recursion engine by stocking cards for Teval, Life from the Loam, and other leave-graveyard payoffs.",
+            "answers": {
+              "breadth": "high",
+              "directness": "high",
+              "reliability": "neutral",
+              "resilience": "high",
+              "timing": "neutral"
+            }
+          },
+          {
+            "role": "land",
+            "score": 60,
+            "description": "This land fixes the deck's blue and black mana while the enter-the-battlefield surveil 1 actively feeds a graveyard-centered plan and smooths early draws.",
+            "answers": {
+              "mana_reliability": "high",
+              "opportunity_cost": "neutral",
+              "resilience": "high",
+              "tempo_efficiency": "low",
+              "utility": "high"
+            }
+          }
+        ]
+      },
+      "passed": false,
+      "failures": ["expected role 'card_selection' missing"]
     }
   ]
 }
