@@ -2,6 +2,7 @@
 // SCREENSHOT_LABEL=<label> to write labeled PNGs to test-results/ui-screenshots.
 import { test } from "@playwright/test";
 
+import judgeReferenceFixture from "./judgeReferenceFixture.json" with { type: "json" };
 import { mockRichApi } from "./richDeckMock";
 
 const OUT_DIR = process.env["SCREENSHOT_DIR"] ?? "test-results/ui-screenshots";
@@ -34,6 +35,40 @@ test("editor text view screenshot", async ({ page }) => {
   await page.screenshot({ path: `${OUT_DIR}/${LABEL}-editor-text.png` });
   await page.screenshot({
     path: `${OUT_DIR}/${LABEL}-editor-text-full.png`,
+    fullPage: true,
+  });
+});
+
+test("design library screenshot", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto("/design");
+  await page.getByRole("heading", { name: "Design library" }).waitFor();
+  await page.waitForTimeout(750);
+  await page.screenshot({ path: `${OUT_DIR}/${LABEL}-design.png` });
+  await page.screenshot({
+    path: `${OUT_DIR}/${LABEL}-design-full.png`,
+    fullPage: true,
+  });
+});
+
+test("judge golden screenshot", async ({ page }) => {
+  const artifacts = judgeReferenceFixture as Record<string, unknown>;
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.route(
+    "http://localhost:8000/evaluations/judge-reference",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(artifacts),
+      });
+    },
+  );
+  await page.goto("/judge");
+  await page.getByText("target", { exact: false }).first().waitFor();
+  await page.waitForTimeout(750);
+  await page.screenshot({ path: `${OUT_DIR}/${LABEL}-judge.png` });
+  await page.screenshot({
+    path: `${OUT_DIR}/${LABEL}-judge-full.png`,
     fullPage: true,
   });
 });

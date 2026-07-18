@@ -4,12 +4,20 @@ import "./imageTile.css";
 
 interface ImageTileProps {
   children?: ReactNode;
+  /** Fixed small-width variant for a thumbnail beside text content. */
+  thumbnail?: boolean;
 }
 
 /** Card-art tile: positions corner badges and the hover action cluster
     over the artwork (stacks/grid deck views). */
-export function ImageTile({ children }: ImageTileProps): ReactNode {
-  return <div className="ds-image-tile">{children}</div>;
+export function ImageTile({
+  children,
+  thumbnail = false,
+}: ImageTileProps): ReactNode {
+  const className = thumbnail
+    ? "ds-image-tile ds-image-tile-thumbnail"
+    : "ds-image-tile";
+  return <div className={className}>{children}</div>;
 }
 
 interface ImageTileActionsProps {

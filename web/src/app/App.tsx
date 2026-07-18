@@ -46,6 +46,14 @@ const LibraryScreen = lazy(async () => {
   const module = await import("./screens/LibraryScreen");
   return { default: module.LibraryScreen };
 });
+const DesignLibraryScreen = lazy(async () => {
+  const module = await import("./screens/DesignLibraryScreen");
+  return { default: module.DesignLibraryScreen };
+});
+const JudgeGoldenScreen = lazy(async () => {
+  const module = await import("./screens/JudgeGoldenScreen");
+  return { default: module.JudgeGoldenScreen };
+});
 
 const PRICE_PROVIDER_OPTIONS = [
   { label: "TCGPlayer · USD", value: "tcgplayer" },
@@ -90,8 +98,12 @@ function AppChrome({
   }
 
   const onImport = location.pathname === "/import";
+  const onDesign = location.pathname === "/design";
+  const onJudge = location.pathname === "/judge";
   const onDecks =
     !onImport &&
+    !onDesign &&
+    !onJudge &&
     (location.pathname === "/" || location.pathname.startsWith("/decks"));
 
   return (
@@ -105,6 +117,12 @@ function AppChrome({
         </NavLink>
         <NavLink current={onImport} href="/import" onClick={goTo("/import")}>
           Import
+        </NavLink>
+        <NavLink current={onDesign} href="/design" onClick={goTo("/design")}>
+          Design
+        </NavLink>
+        <NavLink current={onJudge} href="/judge" onClick={goTo("/judge")}>
+          Judge
         </NavLink>
         <FlexSpacer />
         <Select
@@ -125,6 +143,8 @@ function AppChrome({
           <Route path="*" element={<LibraryScreen mode="decks" />} />
           <Route path="/decks" element={<LibraryScreen mode="decks" />} />
           <Route path="/import" element={<LibraryScreen mode="import" />} />
+          <Route path="/design" element={<DesignLibraryScreen />} />
+          <Route path="/judge" element={<JudgeGoldenScreen />} />
           <Route path="/decks/:id" element={<EditorScreen />} />
         </Routes>
       </Suspense>

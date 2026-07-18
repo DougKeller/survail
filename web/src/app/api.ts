@@ -28,7 +28,9 @@ import {
   evaluateCard,
   evaluateCards,
   evaluateCurrentDeck,
+  judgeReference,
   streamCurrentDeckEvaluation,
+  submitEvaluationFeedback,
 } from "../modules/decks/evaluations/api/client";
 import { decideGuidanceProposal } from "../modules/decks/guidance/api/client";
 import {
@@ -60,7 +62,9 @@ export const api = {
   cachedDeckEvaluation,
   evaluateCard,
   evaluateCurrentDeck,
+  judgeReference,
   streamCurrentDeckEvaluation,
+  submitEvaluationFeedback,
   evaluateCards,
   decideGuidanceProposal,
   generateDescription,

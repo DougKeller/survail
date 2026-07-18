@@ -1,0 +1,25 @@
+/* Allowed-range meter: neutral track, sage allowed band, score marker.
+   The marker turns terracotta on the fail tone. */
+
+.ds-range-band {
+  display: block;
+  height: 12px;
+  max-width: var(--size-range-band);
+  width: 100%;
+}
+
+.ds-range-band-track {
+  fill: var(--color-neutral-300);
+}
+
+.ds-range-band-allowed {
+  fill: var(--color-accent-2-400);
+}
+
+.ds-range-band-marker {
+  fill: var(--color-accent-2-800);
+}
+
+.ds-range-band-fail .ds-range-band-marker {
+  fill: var(--color-accent-600);
+}

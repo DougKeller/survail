@@ -193,6 +193,71 @@ function cloneDeckState<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+const judgeReference = {
+  evaluator_version: "roles-v12",
+  model: "gpt-5.4-mini",
+  min_pass_rate: 0.9,
+  pass_rate: 0.94,
+  passed_cards: 30,
+  total_cards: 32,
+  deck_title: "Tatyova Lands Value",
+  deck_goal: "Simic lands-matter value deck that ramps and draws.",
+  cards: [
+    {
+      name: "Sol Ring",
+      image_uri: null,
+      mana_cost: "{1}",
+      type_line: "Artifact",
+      expectation: {
+        must_roles: ["mana_ramp"],
+        forbid_roles: ["enabler"],
+        role_score_ranges: { mana_ramp: [80, 100] },
+        overall_range: [80, 100],
+      },
+      result: {
+        overall_score: 92,
+        overall_comment: "Premier acceleration for this deck.",
+        roles: [
+          {
+            role: "mana_ramp",
+            score: 92,
+            description: "Turn-one acceleration that compounds all game.",
+            answers: { speed: "very_high", permanence: "very_high" },
+          },
+        ],
+      },
+      passed: true,
+      failures: [],
+    },
+    {
+      name: "Eternal Witness",
+      image_uri: null,
+      mana_cost: "{1}{G}{G}",
+      type_line: "Creature — Human Shaman",
+      expectation: {
+        must_roles: ["card_advantage"],
+        forbid_roles: ["card_selection"],
+        role_score_ranges: {},
+        overall_range: [50, 85],
+      },
+      result: {
+        overall_score: 76,
+        overall_comment: "Recovers a key card while adding a body.",
+        roles: [
+          {
+            role: "card_selection",
+            score: 75,
+            description: "Retrieves the best card from the graveyard.",
+            answers: { access: "high" },
+          },
+        ],
+      },
+      passed: false,
+      failures: ["forbidden role 'card_selection' present (score 75)"],
+    },
+  ],
+};
+
 async function mockApi(page: Page): Promise<void> {
   let currentDeck: Deck = cloneDeckState(deck);
 
@@ -214,6 +279,8 @@ async function mockApi(page: Page): Promise<void> {
         username: "local-developer",
         display_name: "Local Developer",
       });
+    } else if (url.pathname === "/evaluations/judge-reference") {
+      await fulfillJson(route, judgeReference);
     } else if (url.pathname === "/decks") {
       await fulfillJson(route, [deck]);
     } else if (url.pathname === "/decks/deck-1") {
@@ -1921,4 +1988,47 @@ test.describe("visual regression", () => {
       animations: "disabled",
     });
   });
+});
+
+test("design library showcases the system without accessibility violations", async ({
+  page,
+}) => {
+  await page.goto("/design");
+  await expect(
+    page.getByRole("heading", { name: "Design library" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tokens" })).toBeVisible();
+
+  const results = await new AxeBuilder({ page }).analyze();
+
+  expect(results.violations).toEqual([]);
+});
+
+test("judge golden dataset reads human-friendly with pass state surfaced", async ({
+  page,
+}) => {
+  await page.goto("/judge");
+  await expect(
+    page.getByRole("heading", { name: "Tatyova Lands Value" }),
+  ).toBeVisible();
+  await expect(page.getByText("30 / 32 cards · 94%")).toBeVisible();
+  await expect(page.getByText("target 90%")).toBeVisible();
+
+  const failingCard = page
+    .locator(".ds-card")
+    .filter({ hasText: "Eternal Witness" });
+  await expect(failingCard).toBeVisible();
+  await expect(failingCard.getByText("Failed")).toBeVisible();
+  await expect(
+    failingCard.getByText(/forbidden role 'Card Selection' present/i),
+  ).toBeVisible();
+
+  const body = await page.locator("body").innerText();
+  expect(body).not.toContain("mana_ramp");
+  expect(body).not.toContain("card_selection");
+  expect(body).not.toContain("very_high");
+
+  const results = await new AxeBuilder({ page }).analyze();
+
+  expect(results.violations).toEqual([]);
 });

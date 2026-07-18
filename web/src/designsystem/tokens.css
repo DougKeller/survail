@@ -119,6 +119,7 @@
   --size-tile-min: 220px;
   --size-curve: 64px;
   --size-timeline-dot: 30px;
+  --size-range-band: 320px;
 
   /* Modal scrim behind .ds-dialog, ink-tinted to match the shadow ramp. */
   --color-scrim: color-mix(in srgb, #2e2b25 44%, transparent);

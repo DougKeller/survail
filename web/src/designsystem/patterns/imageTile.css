@@ -9,6 +9,17 @@
   transform: translateY(-5px);
 }
 
+/* Thumbnail variant — fixed small width beside text, no hover lift. */
+
+.ds-image-tile-thumbnail {
+  flex: none;
+  width: var(--size-image-tile-sm);
+}
+
+.ds-image-tile-thumbnail:hover {
+  transform: none;
+}
+
 .ds-image-tile img {
   aspect-ratio: 488 / 680;
   border-radius: var(--radius-sm);

@@ -1,6 +1,11 @@
 import { ApiError, request, stream } from "../../../../core/http/client";
 
-import type { CardEvaluationProgress, CardRoleEvaluation } from "../contracts";
+import type {
+  CardEvaluationProgress,
+  CardRoleEvaluation,
+  EvaluationFeedbackRequest,
+  JudgeReference,
+} from "../contracts";
 
 type EvaluationStreamEvent =
   | { type: "progress"; payload: CardEvaluationProgress }
@@ -99,4 +104,18 @@ export function evaluateCard(
       body: "{}",
     },
   );
+}
+
+export function judgeReference(): Promise<JudgeReference> {
+  return request<JudgeReference>("/evaluations/judge-reference");
+}
+
+export function submitEvaluationFeedback(
+  deckId: string,
+  feedback: EvaluationFeedbackRequest,
+): Promise<{ id: string }> {
+  return request<{ id: string }>(`/decks/${deckId}/card-evaluations/feedback`, {
+    method: "POST",
+    body: JSON.stringify(feedback),
+  });
 }

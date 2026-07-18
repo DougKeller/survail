@@ -25,3 +25,49 @@ export interface CardEvaluationProgress {
   average_seconds_per_card: number | null;
   eta_seconds: number | null;
 }
+
+export interface JudgeGoldenExpectation {
+  must_roles: string[];
+  forbid_roles: string[];
+  role_score_ranges: Record<string, number[]>;
+  overall_range: number[];
+}
+
+export interface JudgeReferenceCard {
+  name: string;
+  image_uri: string | null;
+  mana_cost: string | null;
+  type_line: string | null;
+  expectation: JudgeGoldenExpectation;
+  result: {
+    overall_score: number;
+    overall_comment: string;
+    roles: CardRoleScore[];
+  } | null;
+  passed: boolean;
+  failures: string[];
+}
+
+export interface JudgeReference {
+  evaluator_version: string;
+  model: string;
+  min_pass_rate: number;
+  pass_rate: number;
+  passed_cards: number;
+  total_cards: number;
+  deck_title: string;
+  deck_goal: string;
+  cards: JudgeReferenceCard[];
+}
+
+type EvaluationFeedbackVerdict = "up" | "down";
+
+export interface EvaluationFeedbackRequest {
+  oracle_id: string;
+  scope: string;
+  verdict: EvaluationFeedbackVerdict;
+  reason: string;
+  expected_added_roles: string[];
+  expected_removed_roles: string[];
+  expected_criteria: Record<string, QualitativeRating>;
+}

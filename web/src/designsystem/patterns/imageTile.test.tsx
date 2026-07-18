@@ -40,6 +40,26 @@ describe("ImageTile", () => {
     }).parentElement;
     expect(actions?.classList.contains("ds-image-tile-actions")).toBe(true);
   });
+
+  it("applies the fixed-width thumbnail variant on demand", () => {
+    const { container } = render(
+      <ImageTile thumbnail>
+        <img alt="Lightning Bolt" src="art.jpg" />
+      </ImageTile>,
+    );
+    const tile = container.querySelector(".ds-image-tile");
+    expect(tile?.classList.contains("ds-image-tile-thumbnail")).toBe(true);
+  });
+
+  it("omits the thumbnail variant by default", () => {
+    const { container } = render(
+      <ImageTile>
+        <img alt="Lightning Bolt" src="art.jpg" />
+      </ImageTile>,
+    );
+    const tile = container.querySelector(".ds-image-tile");
+    expect(tile?.classList.contains("ds-image-tile-thumbnail")).toBe(false);
+  });
 });
 
 describe("GroupTile", () => {

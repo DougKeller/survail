@@ -3,8 +3,14 @@
   gap: var(--space-3);
 }
 
-.ds-timeline-item-dimmed {
+/* Dimmed history entries fade the decorative rail only; body ink steps to
+   the muted mix so the text keeps a >=4.5:1 WCAG AA ratio on the surface. */
+.ds-timeline-item-dimmed .ds-timeline-item-rail {
   opacity: 0.55;
+}
+
+.ds-timeline-item-dimmed .ds-timeline-item-body {
+  color: var(--color-text-muted);
 }
 
 .ds-timeline-item-rail {

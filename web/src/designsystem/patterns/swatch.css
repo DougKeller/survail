@@ -1,0 +1,204 @@
+/* Token swatches for the design-library page: a labeled color chip per
+   --color-* token and a labeled bar per --space-* step. Each modifier class
+   maps one token name onto the chip so app code never touches raw values. */
+
+.ds-swatch {
+  align-items: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ds-swatch-chip {
+  block-size: var(--space-8);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-sm);
+  display: block;
+  inline-size: calc(var(--space-8) * 2);
+}
+
+.ds-swatch-name {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+/* Base surface + brand tokens. */
+
+.ds-swatch-bg {
+  background-color: var(--color-bg);
+}
+
+.ds-swatch-surface {
+  background-color: var(--color-surface);
+}
+
+.ds-swatch-text {
+  background-color: var(--color-text);
+}
+
+.ds-swatch-accent {
+  background-color: var(--color-accent);
+}
+
+.ds-swatch-accent-2 {
+  background-color: var(--color-accent-2);
+}
+
+.ds-swatch-divider {
+  background-color: var(--color-divider);
+}
+
+/* Terracotta accent ramp. */
+
+.ds-swatch-accent-100 {
+  background-color: var(--color-accent-100);
+}
+
+.ds-swatch-accent-200 {
+  background-color: var(--color-accent-200);
+}
+
+.ds-swatch-accent-300 {
+  background-color: var(--color-accent-300);
+}
+
+.ds-swatch-accent-400 {
+  background-color: var(--color-accent-400);
+}
+
+.ds-swatch-accent-500 {
+  background-color: var(--color-accent-500);
+}
+
+.ds-swatch-accent-600 {
+  background-color: var(--color-accent-600);
+}
+
+.ds-swatch-accent-700 {
+  background-color: var(--color-accent-700);
+}
+
+.ds-swatch-accent-800 {
+  background-color: var(--color-accent-800);
+}
+
+.ds-swatch-accent-900 {
+  background-color: var(--color-accent-900);
+}
+
+/* Sage accent-2 ramp. */
+
+.ds-swatch-accent-2-100 {
+  background-color: var(--color-accent-2-100);
+}
+
+.ds-swatch-accent-2-200 {
+  background-color: var(--color-accent-2-200);
+}
+
+.ds-swatch-accent-2-300 {
+  background-color: var(--color-accent-2-300);
+}
+
+.ds-swatch-accent-2-400 {
+  background-color: var(--color-accent-2-400);
+}
+
+.ds-swatch-accent-2-500 {
+  background-color: var(--color-accent-2-500);
+}
+
+.ds-swatch-accent-2-600 {
+  background-color: var(--color-accent-2-600);
+}
+
+.ds-swatch-accent-2-700 {
+  background-color: var(--color-accent-2-700);
+}
+
+.ds-swatch-accent-2-800 {
+  background-color: var(--color-accent-2-800);
+}
+
+.ds-swatch-accent-2-900 {
+  background-color: var(--color-accent-2-900);
+}
+
+/* Neutral ramp. */
+
+.ds-swatch-neutral-100 {
+  background-color: var(--color-neutral-100);
+}
+
+.ds-swatch-neutral-200 {
+  background-color: var(--color-neutral-200);
+}
+
+.ds-swatch-neutral-300 {
+  background-color: var(--color-neutral-300);
+}
+
+.ds-swatch-neutral-400 {
+  background-color: var(--color-neutral-400);
+}
+
+.ds-swatch-neutral-500 {
+  background-color: var(--color-neutral-500);
+}
+
+.ds-swatch-neutral-600 {
+  background-color: var(--color-neutral-600);
+}
+
+.ds-swatch-neutral-700 {
+  background-color: var(--color-neutral-700);
+}
+
+.ds-swatch-neutral-800 {
+  background-color: var(--color-neutral-800);
+}
+
+.ds-swatch-neutral-900 {
+  background-color: var(--color-neutral-900);
+}
+
+/* Spacing bars. */
+
+.ds-swatch-space {
+  align-items: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ds-swatch-space-bar {
+  background-color: var(--color-accent);
+  block-size: var(--space-2);
+  border-radius: var(--radius-full);
+  display: block;
+}
+
+.ds-swatch-space-1 {
+  inline-size: var(--space-1);
+}
+
+.ds-swatch-space-2 {
+  inline-size: var(--space-2);
+}
+
+.ds-swatch-space-3 {
+  inline-size: var(--space-3);
+}
+
+.ds-swatch-space-4 {
+  inline-size: var(--space-4);
+}
+
+.ds-swatch-space-6 {
+  inline-size: var(--space-6);
+}
+
+.ds-swatch-space-8 {
+  inline-size: var(--space-8);
+}

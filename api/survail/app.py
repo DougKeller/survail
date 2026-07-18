@@ -11,6 +11,9 @@ from survail.modules.agent.api.router import router as agent_router
 from survail.modules.auth.api.router import router as auth_router
 from survail.modules.cards.api.router import router as cards_router
 from survail.modules.decks.api.router import router as decks_router
+from survail.modules.decks.evaluations.api.judge_reference_router import (
+    router as judge_reference_router,
+)
 from survail.modules.decks.evaluations.api.router import router as evaluations_router
 from survail.modules.decks.guidance.api.router import router as guidance_router
 from survail.modules.decks.operations.api.router import router as operations_router
@@ -36,6 +39,7 @@ app.include_router(imports_router)
 app.include_router(agent_router)
 app.include_router(guidance_router)
 app.include_router(evaluations_router)
+app.include_router(judge_reference_router)
 
 
 @app.exception_handler(ScryfallError)
