@@ -42,12 +42,14 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "not card selection."
     ),
     "targeted_disruption": (
-        "Spending one card to answer one of an opponent's cards or plays: spot removal, "
-        "counterspells, bounce, taps and freezes, targeted graveyard exile, or single-land "
-        "disruption. An effect that can answer many cards at once — a scalable or global "
-        "sweep — is mass_disruption, not targeted_disruption, even when it is sometimes "
-        "aimed at a single threat. Protecting your own cards is not disruption; that "
-        "belongs to the enabler role."
+        "Spending one card for a one-for-one trade against an opponent's card or play: "
+        "spot removal, counterspells, bounce, taps and freezes, targeted graveyard exile, "
+        "or single-land disruption. An effect that nets better than one-for-one — a "
+        "scalable or global sweep, a multi-part strip (sacrifice plus discard), or a "
+        "repeatable trigger that disrupts again every turn or attack at no further card "
+        "cost — is mass_disruption, not targeted_disruption, even when each piece aims at "
+        "a single threat. Protecting your own cards is not disruption; that belongs to "
+        "the enabler role."
     ),
     "mass_disruption": (
         "One card that sets back many opponent cards or whole turns at once: board wipes, "
@@ -55,9 +57,14 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "attack taxes, stax or silence pieces, and full-turn lockouts that stop opponents "
         "from acting. An effect that only shields your own permanents or plan — even from a "
         "board wipe (Heroic Intervention, or Teferi's Protection used defensively) — is the "
-        "enabler role, never disruption of any kind. Rule of thumb: after it resolves your "
-        "opponents have lost cards or turns; a one-for-one trade is targeted_disruption "
-        "instead."
+        "enabler role, never disruption of any kind. Count repeatable disruption "
+        "cumulatively, exactly like repeatable card advantage: a permanent whose trigger "
+        "repeatedly makes opponents sacrifice, discard, bounce, or lose resources (an "
+        "Archon of Cruelty attack trigger, a bounce-on-each-spell dragon) nets far better "
+        "than one-for-one over a game and is mass_disruption even though each trigger is "
+        "targeted and the value arrives across turns. Rule of thumb: after it resolves — "
+        "or after a couple of triggers — your opponents are down more cards or turns than "
+        "you spent; a one-for-one trade is targeted_disruption instead."
     ),
     "enabler": (
         "A card that does plan-specific work the deck's core plan cannot function without: "

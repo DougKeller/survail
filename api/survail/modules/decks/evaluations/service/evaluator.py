@@ -34,7 +34,7 @@ from survail.modules.decks.evaluations.service.role_rubrics import (
 )
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v11"
+EVALUATOR_VERSION = "roles-v12"
 MAX_ATTEMPTS = 8
 MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"

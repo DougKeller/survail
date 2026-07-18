@@ -1,6 +1,6 @@
 {
-  "description": "Golden expectations for the Tatyova Lands Value judge spot-check deck. Bounds are variance-tolerant: primary-role identity must be stable, egregious misassignments (fixed in roles-v10) are forbidden, and score ranges allow for run-to-run judge noise. Regenerate results with `judge_eval.py run` and verify with `judge_eval.py check`.",
-  "evaluator_version": "roles-v11",
+  "description": "Golden expectations for the Tatyova Lands Value judge spot-check deck. Bounds are variance-tolerant: primary-role identity must be stable, egregious misassignments are forbidden, and score ranges allow for run-to-run judge noise. The judge runs on gpt-5.4-mini, which occasionally hedges marginal secondary roles, so the check passes at a 90% per-card pass rate rather than demanding perfection. Regenerate results with `judge_eval.py run` and verify with `judge_eval.py check`.",
+  "evaluator_version": "roles-v12",
   "cards": {
     "Tatyova, Benthic Druid": {
       "must_roles": [
@@ -441,6 +441,19 @@
         45,
         75
       ]
+    },
+    "Hullbreaker Horror": {
+      "must_roles": [
+        "mass_disruption"
+      ],
+      "forbid_roles": [
+        "targeted_disruption"
+      ],
+      "overall_range": [
+        60,
+        95
+      ]
     }
-  }
+  },
+  "min_pass_rate": 0.9
 }

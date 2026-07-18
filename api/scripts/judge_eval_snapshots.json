@@ -1096,6 +1096,82 @@
     "type_line": "Instant",
     "universes_beyond": true
   },
+  "Hullbreaker Horror": {
+    "border_color": "borderless",
+    "card_faces": [],
+    "cmc": 7.0,
+    "collector_number": "2321",
+    "color_identity": [
+      "U"
+    ],
+    "colors": [
+      "U"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "id": "08fd6904-c497-40de-b3cf-a427e5bed264",
+    "image_uris": {
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888",
+      "large": "https://cards.scryfall.io/large/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888",
+      "normal": "https://cards.scryfall.io/normal/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888",
+      "png": "https://cards.scryfall.io/png/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.png?1759234888",
+      "small": "https://cards.scryfall.io/small/front/0/8/08fd6904-c497-40de-b3cf-a427e5bed264.jpg?1759234888"
+    },
+    "keywords": [
+      "Flash"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "legalities": {
+      "alchemy": "not_legal",
+      "brawl": "legal",
+      "commander": "legal",
+      "duel": "legal",
+      "future": "not_legal",
+      "gladiator": "legal",
+      "historic": "legal",
+      "legacy": "legal",
+      "modern": "legal",
+      "oathbreaker": "legal",
+      "oldschool": "not_legal",
+      "pauper": "not_legal",
+      "paupercommander": "not_legal",
+      "penny": "not_legal",
+      "pioneer": "legal",
+      "predh": "not_legal",
+      "premodern": "not_legal",
+      "standard": "not_legal",
+      "standardbrawl": "not_legal",
+      "timeless": "legal",
+      "tlr": "not_legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{5}{U}{U}",
+    "name": "Hullbreaker Horror",
+    "oracle_id": "d4a84e78-d9b9-4c67-8a4b-4329e65f0f15",
+    "oracle_text": "Flash\nThis spell can't be countered.\nWhenever you cast a spell, choose up to one \u2014\n\u2022 Return target spell you don't control to its owner's hand.\n\u2022 Return target nonland permanent to its owner's hand.",
+    "power": "7",
+    "prices": {
+      "eur": null,
+      "eur_foil": null,
+      "tix": null,
+      "usd": "21.71",
+      "usd_etched": null,
+      "usd_foil": null
+    },
+    "rarity": "rare",
+    "released_at": "2025-10-13",
+    "scryfall_uri": "https://scryfall.com/card/sld/2321/hullbreaker-horror?utm_source=api",
+    "set": "sld",
+    "set_name": "Secret Lair Drop",
+    "toughness": "8",
+    "type_line": "Creature \u2014 Kraken Horror",
+    "universes_beyond": true
+  },
   "Island": {
     "border_color": "black",
     "card_faces": [],

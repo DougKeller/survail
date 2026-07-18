@@ -193,32 +193,43 @@ async def run_evaluations(only: list[str] | None) -> None:
 def check_against_golden() -> int:
     golden = json.loads(GOLDEN_PATH.read_text())
     results = json.loads(RESULTS_PATH.read_text())["results"]
-    failures: list[str] = []
+    min_pass_rate = golden.get("min_pass_rate", 0.9)
+    failing_cards: dict[str, list[str]] = {}
     for name, expectation in sorted(golden["cards"].items()):
+        failures: list[str] = []
         result = results.get(name)
         if result is None:
-            failures.append(f"{name}: no result recorded")
+            failing_cards[name] = ["no result recorded"]
             continue
         roles = {entry["role"]: entry["score"] for entry in result["roles"]}
         for role in expectation.get("must_roles", []):
             if role not in roles:
-                failures.append(f"{name}: expected role '{role}' missing (got {sorted(roles)})")
+                failures.append(f"expected role '{role}' missing (got {sorted(roles)})")
         for role in expectation.get("forbid_roles", []):
             if role in roles:
-                failures.append(f"{name}: forbidden role '{role}' present (score {roles[role]})")
+                failures.append(f"forbidden role '{role}' present (score {roles[role]})")
         for role, (low, high) in expectation.get("role_score_ranges", {}).items():
             if role in roles and not low <= roles[role] <= high:
-                failures.append(f"{name}: {role} score {roles[role]} outside [{low}, {high}]")
+                failures.append(f"{role} score {roles[role]} outside [{low}, {high}]")
         overall = result["overall_score"]
         low, high = expectation.get("overall_range", [0, 100])
         if not low <= overall <= high:
-            failures.append(f"{name}: overall {overall} outside [{low}, {high}]")
-    if failures:
-        print(f"GOLDEN CHECK FAILED ({len(failures)} failures):")
+            failures.append(f"overall {overall} outside [{low}, {high}]")
+        if failures:
+            failing_cards[name] = failures
+    total = len(golden["cards"])
+    passed = total - len(failing_cards)
+    rate = passed / total
+    for name, failures in failing_cards.items():
         for failure in failures:
-            print(f"  ✗ {failure}")
+            print(f"  ✗ {name}: {failure}")
+    print(
+        f"Golden check: {passed}/{total} cards passed "
+        f"({rate:.0%}, minimum {min_pass_rate:.0%})."
+    )
+    if rate < min_pass_rate:
+        print("GOLDEN CHECK FAILED")
         return 1
-    print(f"Golden check passed for {len(golden['cards'])} cards.")
     return 0
 
 

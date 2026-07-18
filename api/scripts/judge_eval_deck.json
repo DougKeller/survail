@@ -33,6 +33,7 @@
     { "name": "Regrowth", "quantity": 1 },
     { "name": "Solemn Simulacrum", "quantity": 1 },
     { "name": "Midnight Tilling", "quantity": 1 },
+    { "name": "Hullbreaker Horror", "quantity": 1 },
     { "name": "Forest", "quantity": 15 },
     { "name": "Island", "quantity": 10 }
   ],
@@ -67,6 +68,7 @@
     "Regrowth",
     "Solemn Simulacrum",
     "Midnight Tilling",
+    "Hullbreaker Horror",
     "Forest"
   ]
 }
