@@ -16,19 +16,30 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "An effect that nets more than one card of real access from the single card spent: "
         "multi-card draw, repeatable draw engines, impulse draw (exile and may play), "
         "recurring land fetch like Land Tax, and self-mill only in decks that reliably play "
-        "cards from the graveyard. Count repeatable effects cumulatively: a card that draws "
-        "or returns a card on each of several triggers or turns (Life from the Loam, "
-        "landfall draw) nets cards over a game and qualifies. A single effect that merely "
-        "replaces itself (cantrips, Mind Stone) or one-shot one-for-one recursion (Regrowth, "
-        "Eternal Witness) is card_selection, not card advantage; loot effects that leave you "
-        "net down are not card advantage; creating tokens or board material is not card "
-        "advantage; conditional draw doublers are enhancers, not card advantage."
+        "cards from the graveyard. Count only what you hold at once: a permanent that "
+        "draws or retrieves a card as it arrives nets a card — you keep both the body and "
+        "the card (Elvish Visionary, Eternal Witness) — and is card advantage, while an "
+        "effect that only replaces its own card later, when it dies or is cashed in "
+        "(dies-draw creatures, Mind Stone), nets nothing at any moment and earns no draw "
+        "role at all; count that replacement toward the floor or resilience of the card's "
+        "real roles instead. Count repeatable effects cumulatively: a card that draws or "
+        "returns a card on each of several triggers or turns (Life from the Loam, landfall "
+        "draw) nets cards over a game and qualifies. Reanimation and one-shot chosen "
+        "retrieval that trade the whole spell for a single card or creature (Regrowth, "
+        "Persist) never give you both at once and are card_selection, not card advantage; "
+        "cantrips that replace themselves are card_selection; loot effects that leave you "
+        "net down are not card advantage; creating tokens or board material is never card "
+        "advantage — tokens are not cards; conditional draw doublers are enhancers, not "
+        "card advantage."
     ),
     "card_selection": (
         "Filtering, smoothing, or tutoring that improves card quality without netting extra "
         "cards: scry, surveil, cantrips, top-of-library manipulation, tutors that trade one "
-        "card for a specific card, and one-for-one recursion that retrieves a chosen card. "
-        "Ordinary fetch lands and mana fixing are not card selection."
+        "card for a specific card, and one-shot chosen retrieval or reanimation that trades "
+        "the spell for a chosen card in any zone (Regrowth, Persist, mill-then-return-one "
+        "effects). A permanent that retrieves a card as it arrives keeps both body and card "
+        "and belongs to card_advantage instead. Ordinary fetch lands and mana fixing are "
+        "not card selection."
     ),
     "targeted_disruption": (
         "Spending one card to answer one of an opponent's cards or plays: spot removal, "
@@ -117,7 +128,9 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
     "card_advantage": {
         "net_gain": (
             "How many extra cards of real access does it net beyond the one card spent to "
-            "cast it?"
+            "cast it? Count everything you hold at once: a permanent that draws or "
+            "retrieves a card as it arrives nets that card, because you keep both the "
+            "body and the card."
         ),
         "repeatability": "How often does it keep producing extra cards across a typical game?",
         "reliability": (
@@ -193,7 +206,9 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
             "deck of these colors: basic and fetch lands, generic mana rocks, ramp spells, "
             "mana dorks, burst mana, generic removal or countermagic, generic card draw or "
             "filtering. A synergy that every card of its class provides equally (every "
-            "land or ramp spell triggers landfall) does not count as plan-specific work."
+            "land or ramp spell triggers landfall) does not count as plan-specific work, "
+            "and a goal that asks for interaction or protection does not make generic "
+            "interaction plan-specific."
         ),
         "reliability": "How consistently can this deck deploy it and have it matter?",
         "resilience": (

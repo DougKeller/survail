@@ -28,6 +28,11 @@
     { "name": "Reliquary Tower", "quantity": 1 },
     { "name": "Evolving Wilds", "quantity": 1 },
     { "name": "Boseiju, Who Endures", "quantity": 1 },
+    { "name": "Elvish Visionary", "quantity": 1 },
+    { "name": "Eternal Witness", "quantity": 1 },
+    { "name": "Regrowth", "quantity": 1 },
+    { "name": "Solemn Simulacrum", "quantity": 1 },
+    { "name": "Midnight Tilling", "quantity": 1 },
     { "name": "Forest", "quantity": 15 },
     { "name": "Island", "quantity": 10 }
   ],
@@ -57,6 +62,11 @@
     "Reliquary Tower",
     "Evolving Wilds",
     "Boseiju, Who Endures",
+    "Elvish Visionary",
+    "Eternal Witness",
+    "Regrowth",
+    "Solemn Simulacrum",
+    "Midnight Tilling",
     "Forest"
   ]
 }

@@ -13,6 +13,7 @@ from survail.core.schemas import CardFace, ScryfallCardSnapshot
 from survail.modules.decks.evaluations.api.schemas import CardRoleScoreRead
 from survail.modules.decks.evaluations.service.evaluator import (
     MAX_CONCURRENT_EVALUATIONS,
+    EVALUATOR_VERSION,
     OVERALL_SCORE_WEIGHTING_EXPONENT,
     OpenAIRoleEvaluator,
     QualitativeRating,
@@ -169,7 +170,7 @@ def test_role_evaluations_derive_numeric_scores_and_cache_by_context() -> None:
         deck_id=deck.id,
         deck_revision=3,
         context_key=_context_key(deck, "0", _brief("0"), "None"),
-        evaluator_version="roles-v10",
+        evaluator_version=EVALUATOR_VERSION,
         oracle_id="0",
         overall_comment="Cached comment.",
         roles=[

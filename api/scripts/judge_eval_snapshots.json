@@ -661,6 +661,153 @@
     "type_line": "Instant",
     "universes_beyond": false
   },
+  "Elvish Visionary": {
+    "border_color": "black",
+    "card_faces": [],
+    "cmc": 2.0,
+    "collector_number": "BBD-196",
+    "color_identity": [
+      "G"
+    ],
+    "colors": [
+      "G"
+    ],
+    "finishes": [
+      "nonfoil"
+    ],
+    "frame": "2015",
+    "id": "186212d3-4b41-42a2-b2ee-81e035e22408",
+    "image_uris": {
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.jpg?1573513564",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.jpg?1573513564",
+      "large": "https://cards.scryfall.io/large/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.jpg?1573513564",
+      "normal": "https://cards.scryfall.io/normal/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.jpg?1573513564",
+      "png": "https://cards.scryfall.io/png/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.png?1573513564",
+      "small": "https://cards.scryfall.io/small/front/1/8/186212d3-4b41-42a2-b2ee-81e035e22408.jpg?1573513564"
+    },
+    "keywords": [],
+    "lang": "en",
+    "layout": "normal",
+    "legalities": {
+      "alchemy": "not_legal",
+      "brawl": "legal",
+      "commander": "legal",
+      "duel": "legal",
+      "future": "not_legal",
+      "gladiator": "legal",
+      "historic": "legal",
+      "legacy": "legal",
+      "modern": "legal",
+      "oathbreaker": "legal",
+      "oldschool": "not_legal",
+      "pauper": "legal",
+      "paupercommander": "legal",
+      "penny": "legal",
+      "pioneer": "legal",
+      "predh": "legal",
+      "premodern": "not_legal",
+      "standard": "not_legal",
+      "standardbrawl": "not_legal",
+      "timeless": "legal",
+      "tlr": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{1}{G}",
+    "name": "Elvish Visionary",
+    "oracle_id": "c6a3a882-a127-4590-93d7-679ef4313efe",
+    "oracle_text": "When this creature enters, draw a card.",
+    "power": "1",
+    "prices": {
+      "eur": "0.12",
+      "eur_foil": null,
+      "tix": null,
+      "usd": "0.29",
+      "usd_etched": null,
+      "usd_foil": null
+    },
+    "rarity": "common",
+    "released_at": "2019-11-07",
+    "scryfall_uri": "https://scryfall.com/card/plst/BBD-196/elvish-visionary?utm_source=api",
+    "set": "plst",
+    "set_name": "The List",
+    "toughness": "1",
+    "type_line": "Creature \u2014 Elf Shaman",
+    "universes_beyond": false
+  },
+  "Eternal Witness": {
+    "border_color": "black",
+    "card_faces": [],
+    "cmc": 3.0,
+    "collector_number": "144",
+    "color_identity": [
+      "G"
+    ],
+    "colors": [
+      "G"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2003",
+    "id": "02902fcc-eefc-4e81-aafd-59fa203a71d7",
+    "image_uris": {
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.jpg?1561965992",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.jpg?1561965992",
+      "large": "https://cards.scryfall.io/large/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.jpg?1561965992",
+      "normal": "https://cards.scryfall.io/normal/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.jpg?1561965992",
+      "png": "https://cards.scryfall.io/png/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.png?1561965992",
+      "small": "https://cards.scryfall.io/small/front/0/2/02902fcc-eefc-4e81-aafd-59fa203a71d7.jpg?1561965992"
+    },
+    "keywords": [],
+    "lang": "en",
+    "layout": "normal",
+    "legalities": {
+      "alchemy": "not_legal",
+      "brawl": "legal",
+      "commander": "legal",
+      "duel": "legal",
+      "future": "not_legal",
+      "gladiator": "legal",
+      "historic": "legal",
+      "legacy": "legal",
+      "modern": "legal",
+      "oathbreaker": "legal",
+      "oldschool": "not_legal",
+      "pauper": "not_legal",
+      "paupercommander": "not_legal",
+      "penny": "not_legal",
+      "pioneer": "not_legal",
+      "predh": "legal",
+      "premodern": "not_legal",
+      "standard": "not_legal",
+      "standardbrawl": "not_legal",
+      "timeless": "legal",
+      "tlr": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{1}{G}{G}",
+    "name": "Eternal Witness",
+    "oracle_id": "30b24e8e-3b0e-4d8e-90f3-f66eb7c1858c",
+    "oracle_text": "When this creature enters, you may return target card from your graveyard to your hand.",
+    "power": "2",
+    "prices": {
+      "eur": "0.94",
+      "eur_foil": "3.92",
+      "tix": "0.03",
+      "usd": "2.65",
+      "usd_etched": null,
+      "usd_foil": "10.24"
+    },
+    "rarity": "uncommon",
+    "released_at": "2013-06-07",
+    "scryfall_uri": "https://scryfall.com/card/mma/144/eternal-witness?utm_source=api",
+    "set": "mma",
+    "set_name": "Modern Masters",
+    "toughness": "1",
+    "type_line": "Creature \u2014 Human Shaman",
+    "universes_beyond": false
+  },
   "Evolving Wilds": {
     "border_color": "black",
     "card_faces": [],
@@ -1090,6 +1237,82 @@
     "type_line": "Artifact",
     "universes_beyond": true
   },
+  "Midnight Tilling": {
+    "border_color": "black",
+    "card_faces": [],
+    "cmc": 2.0,
+    "collector_number": "182",
+    "color_identity": [
+      "G"
+    ],
+    "colors": [
+      "G"
+    ],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2015",
+    "id": "c5112bbf-752c-41e7-9c61-4c81e6a77463",
+    "image_uris": {
+      "art_crop": "https://cards.scryfall.io/art_crop/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.jpg?1767732843",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.jpg?1767732843",
+      "large": "https://cards.scryfall.io/large/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.jpg?1767732843",
+      "normal": "https://cards.scryfall.io/normal/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.jpg?1767732843",
+      "png": "https://cards.scryfall.io/png/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.png?1767732843",
+      "small": "https://cards.scryfall.io/small/front/c/5/c5112bbf-752c-41e7-9c61-4c81e6a77463.jpg?1767732843"
+    },
+    "keywords": [
+      "Mill"
+    ],
+    "lang": "en",
+    "layout": "normal",
+    "legalities": {
+      "alchemy": "legal",
+      "brawl": "legal",
+      "commander": "legal",
+      "duel": "legal",
+      "future": "legal",
+      "gladiator": "legal",
+      "historic": "legal",
+      "legacy": "legal",
+      "modern": "legal",
+      "oathbreaker": "legal",
+      "oldschool": "not_legal",
+      "pauper": "legal",
+      "paupercommander": "legal",
+      "penny": "not_legal",
+      "pioneer": "legal",
+      "predh": "not_legal",
+      "premodern": "not_legal",
+      "standard": "legal",
+      "standardbrawl": "legal",
+      "timeless": "legal",
+      "tlr": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{1}{G}",
+    "name": "Midnight Tilling",
+    "oracle_id": "79bc2c6d-b03d-4ceb-b468-293378ec73ae",
+    "oracle_text": "Mill four cards, then you may return a permanent card from among them to your hand. (To mill four cards, put the top four cards of your library into your graveyard.)",
+    "power": null,
+    "prices": {
+      "eur": "0.13",
+      "eur_foil": "0.22",
+      "tix": "0.03",
+      "usd": "0.23",
+      "usd_etched": null,
+      "usd_foil": "0.24"
+    },
+    "rarity": "common",
+    "released_at": "2026-01-23",
+    "scryfall_uri": "https://scryfall.com/card/ecl/182/midnight-tilling?utm_source=api",
+    "set": "ecl",
+    "set_name": "Lorwyn Eclipsed",
+    "toughness": null,
+    "type_line": "Instant",
+    "universes_beyond": false
+  },
   "Oracle of Mul Daya": {
     "border_color": "black",
     "card_faces": [],
@@ -1380,6 +1603,79 @@
     "set_name": "Outlaws of Thunder Junction Commander",
     "toughness": "3",
     "type_line": "Creature \u2014 Snake Cleric",
+    "universes_beyond": false
+  },
+  "Regrowth": {
+    "border_color": "white",
+    "card_faces": [],
+    "cmc": 2.0,
+    "collector_number": "214",
+    "color_identity": [
+      "G"
+    ],
+    "colors": [
+      "G"
+    ],
+    "finishes": [
+      "nonfoil"
+    ],
+    "frame": "1993",
+    "id": "09b792b3-ed87-4360-a392-506e5f8140a1",
+    "image_uris": {
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.jpg?1559592786",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.jpg?1559592786",
+      "large": "https://cards.scryfall.io/large/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.jpg?1559592786",
+      "normal": "https://cards.scryfall.io/normal/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.jpg?1559592786",
+      "png": "https://cards.scryfall.io/png/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.png?1559592786",
+      "small": "https://cards.scryfall.io/small/front/0/9/09b792b3-ed87-4360-a392-506e5f8140a1.jpg?1559592786"
+    },
+    "keywords": [],
+    "lang": "en",
+    "layout": "normal",
+    "legalities": {
+      "alchemy": "not_legal",
+      "brawl": "legal",
+      "commander": "legal",
+      "duel": "legal",
+      "future": "not_legal",
+      "gladiator": "legal",
+      "historic": "legal",
+      "legacy": "legal",
+      "modern": "legal",
+      "oathbreaker": "legal",
+      "oldschool": "restricted",
+      "pauper": "not_legal",
+      "paupercommander": "not_legal",
+      "penny": "legal",
+      "pioneer": "not_legal",
+      "predh": "legal",
+      "premodern": "not_legal",
+      "standard": "not_legal",
+      "standardbrawl": "not_legal",
+      "timeless": "legal",
+      "tlr": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{1}{G}",
+    "name": "Regrowth",
+    "oracle_id": "e6e4a8bd-5c40-4654-8de1-0da9afed90fd",
+    "oracle_text": "Return target card from your graveyard to your hand.",
+    "power": null,
+    "prices": {
+      "eur": null,
+      "eur_foil": null,
+      "tix": null,
+      "usd": null,
+      "usd_etched": null,
+      "usd_foil": null
+    },
+    "rarity": "uncommon",
+    "released_at": "1994-06-21",
+    "scryfall_uri": "https://scryfall.com/card/sum/214/regrowth?utm_source=api",
+    "set": "sum",
+    "set_name": "Summer Magic / Edgar",
+    "toughness": null,
+    "type_line": "Sorcery",
     "universes_beyond": false
   },
   "Reliquary Tower": {
@@ -1737,6 +2033,76 @@
     "set_name": "Lorwyn Eclipsed Commander",
     "toughness": null,
     "type_line": "Artifact",
+    "universes_beyond": false
+  },
+  "Solemn Simulacrum": {
+    "border_color": "black",
+    "card_faces": [],
+    "cmc": 4.0,
+    "collector_number": "245",
+    "color_identity": [],
+    "colors": [],
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "frame": "2003",
+    "id": "00f9955f-a522-47bf-b064-92dd21a76b18",
+    "image_uris": {
+      "art_crop": "https://cards.scryfall.io/art_crop/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.jpg?1562133717",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.jpg?1562133717",
+      "large": "https://cards.scryfall.io/large/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.jpg?1562133717",
+      "normal": "https://cards.scryfall.io/normal/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.jpg?1562133717",
+      "png": "https://cards.scryfall.io/png/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.png?1562133717",
+      "small": "https://cards.scryfall.io/small/front/0/0/00f9955f-a522-47bf-b064-92dd21a76b18.jpg?1562133717"
+    },
+    "keywords": [],
+    "lang": "en",
+    "layout": "normal",
+    "legalities": {
+      "alchemy": "legal",
+      "brawl": "legal",
+      "commander": "legal",
+      "duel": "legal",
+      "future": "legal",
+      "gladiator": "legal",
+      "historic": "legal",
+      "legacy": "legal",
+      "modern": "legal",
+      "oathbreaker": "legal",
+      "oldschool": "not_legal",
+      "pauper": "not_legal",
+      "paupercommander": "not_legal",
+      "penny": "legal",
+      "pioneer": "legal",
+      "predh": "legal",
+      "premodern": "not_legal",
+      "standard": "legal",
+      "standardbrawl": "legal",
+      "timeless": "legal",
+      "tlr": "not_legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{4}",
+    "name": "Solemn Simulacrum",
+    "oracle_id": "00c0543c-2a1f-4425-8283-4062d74a1637",
+    "oracle_text": "When this creature enters, you may search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.\nWhen this creature dies, you may draw a card.",
+    "power": "2",
+    "prices": {
+      "eur": "0.73",
+      "eur_foil": "9.00",
+      "tix": "0.02",
+      "usd": "1.48",
+      "usd_etched": null,
+      "usd_foil": "24.47"
+    },
+    "rarity": "rare",
+    "released_at": "2003-10-02",
+    "scryfall_uri": "https://scryfall.com/card/mrd/245/solemn-simulacrum?utm_source=api",
+    "set": "mrd",
+    "set_name": "Mirrodin",
+    "toughness": "2",
+    "type_line": "Artifact Creature \u2014 Golem",
     "universes_beyond": false
   },
   "Sylvan Library": {

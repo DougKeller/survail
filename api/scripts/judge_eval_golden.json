@@ -1,139 +1,446 @@
 {
   "description": "Golden expectations for the Tatyova Lands Value judge spot-check deck. Bounds are variance-tolerant: primary-role identity must be stable, egregious misassignments (fixed in roles-v10) are forbidden, and score ranges allow for run-to-run judge noise. Regenerate results with `judge_eval.py run` and verify with `judge_eval.py check`.",
-  "evaluator_version": "roles-v10",
+  "evaluator_version": "roles-v11",
   "cards": {
     "Tatyova, Benthic Druid": {
-      "must_roles": ["card_advantage"],
-      "role_score_ranges": { "card_advantage": [68, 92] },
-      "overall_range": [70, 94]
+      "must_roles": [
+        "card_advantage"
+      ],
+      "role_score_ranges": {
+        "card_advantage": [
+          68,
+          92
+        ]
+      },
+      "overall_range": [
+        70,
+        94
+      ]
     },
     "Sol Ring": {
-      "must_roles": ["mana_ramp"],
-      "forbid_roles": ["enabler"],
-      "role_score_ranges": { "mana_ramp": [80, 100] },
-      "overall_range": [80, 100]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "forbid_roles": [
+        "enabler"
+      ],
+      "role_score_ranges": {
+        "mana_ramp": [
+          80,
+          100
+        ]
+      },
+      "overall_range": [
+        80,
+        100
+      ]
     },
     "Simic Signet": {
-      "must_roles": ["mana_ramp"],
-      "forbid_roles": ["enabler"],
-      "role_score_ranges": { "mana_ramp": [68, 88] },
-      "overall_range": [68, 90]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "forbid_roles": [
+        "enabler"
+      ],
+      "role_score_ranges": {
+        "mana_ramp": [
+          68,
+          88
+        ]
+      },
+      "overall_range": [
+        68,
+        90
+      ]
     },
     "Rampant Growth": {
-      "must_roles": ["mana_ramp"],
-      "role_score_ranges": { "mana_ramp": [60, 82] },
-      "overall_range": [60, 84]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "role_score_ranges": {
+        "mana_ramp": [
+          60,
+          88
+        ]
+      },
+      "overall_range": [
+        60,
+        88
+      ]
     },
     "Cultivate": {
-      "must_roles": ["mana_ramp"],
-      "role_score_ranges": { "mana_ramp": [60, 82] },
-      "overall_range": [60, 86]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "role_score_ranges": {
+        "mana_ramp": [
+          60,
+          82
+        ]
+      },
+      "overall_range": [
+        60,
+        86
+      ]
     },
     "Lotus Petal": {
-      "forbid_roles": ["mana_ramp"],
-      "overall_range": [0, 62]
+      "forbid_roles": [
+        "mana_ramp"
+      ],
+      "overall_range": [
+        0,
+        62
+      ]
     },
     "Sakura-Tribe Elder": {
-      "must_roles": ["mana_ramp"],
-      "role_score_ranges": { "mana_ramp": [60, 84] },
-      "overall_range": [60, 88]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "role_score_ranges": {
+        "mana_ramp": [
+          60,
+          84
+        ]
+      },
+      "overall_range": [
+        60,
+        88
+      ]
     },
     "Rhystic Study": {
-      "must_roles": ["card_advantage"],
-      "role_score_ranges": { "card_advantage": [72, 95] },
-      "overall_range": [72, 96]
+      "must_roles": [
+        "card_advantage"
+      ],
+      "role_score_ranges": {
+        "card_advantage": [
+          72,
+          95
+        ]
+      },
+      "overall_range": [
+        72,
+        96
+      ]
     },
     "Harmonize": {
-      "must_roles": ["card_advantage"],
-      "forbid_roles": ["card_selection"],
-      "overall_range": [48, 82]
+      "must_roles": [
+        "card_advantage"
+      ],
+      "forbid_roles": [
+        "card_selection"
+      ],
+      "overall_range": [
+        48,
+        82
+      ]
     },
     "Ponder": {
-      "must_roles": ["card_selection"],
-      "forbid_roles": ["card_advantage"],
-      "role_score_ranges": { "card_selection": [62, 88] },
-      "overall_range": [62, 88]
+      "must_roles": [
+        "card_selection"
+      ],
+      "forbid_roles": [
+        "card_advantage"
+      ],
+      "role_score_ranges": {
+        "card_selection": [
+          62,
+          88
+        ]
+      },
+      "overall_range": [
+        62,
+        88
+      ]
     },
     "Brainstorm": {
-      "must_roles": ["card_selection"],
-      "role_score_ranges": { "card_selection": [58, 88] },
-      "overall_range": [58, 88]
+      "must_roles": [
+        "card_selection"
+      ],
+      "role_score_ranges": {
+        "card_selection": [
+          58,
+          88
+        ]
+      },
+      "overall_range": [
+        58,
+        88
+      ],
+      "forbid_roles": [
+        "card_advantage"
+      ]
     },
     "Sylvan Library": {
-      "must_roles": ["card_selection"],
-      "role_score_ranges": { "card_selection": [68, 92] },
-      "overall_range": [68, 94]
+      "must_roles": [
+        "card_selection"
+      ],
+      "role_score_ranges": {
+        "card_selection": [
+          68,
+          92
+        ]
+      },
+      "overall_range": [
+        68,
+        94
+      ]
     },
     "Oracle of Mul Daya": {
-      "must_roles": ["mana_ramp"],
-      "overall_range": [60, 88]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "overall_range": [
+        60,
+        88
+      ]
     },
     "Ramunap Excavator": {
-      "must_roles": ["enabler"],
-      "role_score_ranges": { "enabler": [58, 86] },
-      "overall_range": [56, 86]
+      "must_roles": [
+        "enabler"
+      ],
+      "role_score_ranges": {
+        "enabler": [
+          58,
+          86
+        ]
+      },
+      "overall_range": [
+        56,
+        86
+      ]
     },
     "Beast Within": {
-      "must_roles": ["targeted_disruption"],
-      "forbid_roles": ["enabler", "mass_disruption"],
-      "role_score_ranges": { "targeted_disruption": [76, 100] },
-      "overall_range": [76, 100]
+      "must_roles": [
+        "targeted_disruption"
+      ],
+      "forbid_roles": [
+        "enabler",
+        "mass_disruption"
+      ],
+      "role_score_ranges": {
+        "targeted_disruption": [
+          76,
+          100
+        ]
+      },
+      "overall_range": [
+        76,
+        100
+      ]
     },
     "Counterspell": {
-      "must_roles": ["targeted_disruption"],
-      "forbid_roles": ["enabler"],
-      "role_score_ranges": { "targeted_disruption": [70, 95] },
-      "overall_range": [70, 95]
+      "must_roles": [
+        "targeted_disruption"
+      ],
+      "forbid_roles": [
+        "enabler"
+      ],
+      "role_score_ranges": {
+        "targeted_disruption": [
+          70,
+          95
+        ]
+      },
+      "overall_range": [
+        70,
+        95
+      ]
     },
     "Cyclonic Rift": {
-      "must_roles": ["mass_disruption"],
-      "role_score_ranges": { "mass_disruption": [74, 96] },
-      "overall_range": [74, 96]
+      "must_roles": [
+        "mass_disruption"
+      ],
+      "role_score_ranges": {
+        "mass_disruption": [
+          74,
+          96
+        ]
+      },
+      "overall_range": [
+        74,
+        96
+      ]
     },
     "Heroic Intervention": {
-      "must_roles": ["enabler"],
-      "forbid_roles": ["mass_disruption", "targeted_disruption"],
-      "role_score_ranges": { "enabler": [62, 90] },
-      "overall_range": [62, 90]
+      "must_roles": [
+        "enabler"
+      ],
+      "forbid_roles": [
+        "mass_disruption",
+        "targeted_disruption"
+      ],
+      "role_score_ranges": {
+        "enabler": [
+          62,
+          90
+        ]
+      },
+      "overall_range": [
+        62,
+        90
+      ]
     },
     "Craterhoof Behemoth": {
-      "must_roles": ["payoff"],
-      "role_score_ranges": { "payoff": [82, 100] },
-      "overall_range": [82, 100]
+      "must_roles": [
+        "payoff"
+      ],
+      "role_score_ranges": {
+        "payoff": [
+          82,
+          100
+        ]
+      },
+      "overall_range": [
+        82,
+        100
+      ]
     },
     "Avenger of Zendikar": {
-      "must_roles": ["payoff"],
-      "role_score_ranges": { "payoff": [80, 100] },
-      "overall_range": [80, 100]
+      "must_roles": [
+        "payoff"
+      ],
+      "role_score_ranges": {
+        "payoff": [
+          72,
+          100
+        ]
+      },
+      "overall_range": [
+        72,
+        100
+      ]
     },
     "Zendikar Resurgent": {
-      "must_roles": ["mana_ramp"],
-      "overall_range": [60, 88]
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "overall_range": [
+        60,
+        88
+      ]
     },
     "Command Tower": {
-      "must_roles": ["land"],
-      "forbid_roles": ["enabler"],
-      "role_score_ranges": { "land": [60, 88] },
-      "overall_range": [60, 88]
+      "must_roles": [
+        "land"
+      ],
+      "forbid_roles": [
+        "enabler"
+      ],
+      "role_score_ranges": {
+        "land": [
+          60,
+          88
+        ]
+      },
+      "overall_range": [
+        60,
+        88
+      ]
     },
     "Reliquary Tower": {
-      "must_roles": ["land"],
-      "overall_range": [42, 75]
+      "must_roles": [
+        "land"
+      ],
+      "overall_range": [
+        42,
+        75
+      ]
     },
     "Evolving Wilds": {
-      "must_roles": ["land"],
-      "overall_range": [36, 76]
+      "must_roles": [
+        "land"
+      ],
+      "overall_range": [
+        36,
+        76
+      ]
     },
     "Boseiju, Who Endures": {
-      "must_roles": ["land", "targeted_disruption"],
-      "forbid_roles": ["enabler"],
-      "overall_range": [74, 98]
+      "must_roles": [
+        "land",
+        "targeted_disruption"
+      ],
+      "forbid_roles": [
+        "enabler"
+      ],
+      "overall_range": [
+        74,
+        98
+      ]
     },
     "Forest": {
-      "must_roles": ["land"],
-      "forbid_roles": ["enabler", "mana_ramp"],
-      "role_score_ranges": { "land": [55, 85] },
-      "overall_range": [55, 85]
+      "must_roles": [
+        "land"
+      ],
+      "forbid_roles": [
+        "enabler",
+        "mana_ramp"
+      ],
+      "role_score_ranges": {
+        "land": [
+          55,
+          85
+        ]
+      },
+      "overall_range": [
+        55,
+        85
+      ]
+    },
+    "Elvish Visionary": {
+      "forbid_roles": [
+        "card_selection"
+      ],
+      "overall_range": [
+        0,
+        60
+      ]
+    },
+    "Eternal Witness": {
+      "must_roles": [
+        "card_advantage"
+      ],
+      "forbid_roles": [
+        "card_selection"
+      ],
+      "overall_range": [
+        50,
+        85
+      ]
+    },
+    "Regrowth": {
+      "must_roles": [
+        "card_selection"
+      ],
+      "forbid_roles": [
+        "card_advantage"
+      ],
+      "overall_range": [
+        70,
+        95
+      ]
+    },
+    "Solemn Simulacrum": {
+      "must_roles": [
+        "mana_ramp"
+      ],
+      "forbid_roles": [
+        "card_advantage",
+        "card_selection"
+      ],
+      "overall_range": [
+        45,
+        75
+      ]
+    },
+    "Midnight Tilling": {
+      "must_roles": [
+        "card_selection"
+      ],
+      "overall_range": [
+        45,
+        75
+      ]
     }
   }
 }

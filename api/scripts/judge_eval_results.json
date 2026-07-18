@@ -1,25 +1,25 @@
 {
-  "model": "gpt-5.4-mini",
+  "model": "gpt-5.4",
   "results": {
     "Avenger of Zendikar": {
       "cached": false,
       "card_name": "Avenger of Zendikar",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "4ba5b3f6-503b-43e6-b66e-4f8c55cffed7",
-      "overall_comment": "Avenger of Zendikar is a premier landfall payoff here, turning a developed mana base into a wide board immediately and then converting every extra land drop into rapidly growing lethal pressure.",
-      "overall_score": 95,
+      "overall_comment": "Avenger of Zendikar is a major lands payoff here, turning the deck\u2019s heavy land count and continued land drops into a wide board that can quickly become a game-ending attack, though it asks for substantial mana and follow-up lands to reach full pressure.",
+      "overall_score": 90,
       "roles": [
         {
           "answers": {
             "attainability": "high",
             "conversion": "very_high",
-            "decisiveness": "very_high",
+            "decisiveness": "high",
             "reward_size": "very_high"
           },
-          "description": "It cashes in the deck\u2019s land-heavy engine by creating a large token board on entry and turning each subsequent land drop into a bigger battlefield presence that can end games.",
+          "description": "Avenger of Zendikar converts this deck\u2019s land-heavy board and ongoing landfall into a large token army that scales with future land drops and supports the deck\u2019s Craterhoof-style finishing plan.",
           "role": "payoff",
-          "score": 95
+          "score": 90
         }
       ]
     },
@@ -27,22 +27,22 @@
       "cached": false,
       "card_name": "Beast Within",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "7735eeba-693b-47e2-bd51-414379cf1016",
-      "overall_comment": "Beast Within is a flexible instant-speed answer that cleanly answers any permanent type for this deck, and the incidental 3/3 token is manageable in a strategy built to press ahead with land-fueled board development.",
-      "overall_score": 90,
+      "overall_comment": "Beast Within gives this deck highly flexible instant-speed spot removal for any problematic permanent, with strong timing and broad coverage tempered by leaving behind a 3/3 body.",
+      "overall_score": 85,
       "roles": [
         {
           "answers": {
             "coverage": "very_high",
-            "efficiency": "high",
+            "efficiency": "neutral",
             "flexibility": "very_high",
             "permanence": "high",
             "timing": "very_high"
           },
-          "description": "Beast Within is efficient instant-speed spot removal that can answer any single permanent, giving this deck a clean catch-all for problematic threats at a modest mana cost.",
+          "description": "Beast Within is broad instant-speed removal that cleanly answers any permanent type this deck may face, though the replacement 3/3 token softens the trade compared with cleaner one-for-one answers.",
           "role": "targeted_disruption",
-          "score": 90
+          "score": 85
         }
       ]
     },
@@ -50,9 +50,9 @@
       "cached": false,
       "card_name": "Boseiju, Who Endures",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "bf1341dd-41a3-49f6-87ec-63170dde4324",
-      "overall_comment": "Boseiju, Who Endures is a land slot that reliably fixes green mana while doubling as instant-speed, low-opportunity-cost interaction for problematic artifacts, enchantments, and nonbasic lands, with the channel mode softened by the opponent\u2019s basic-land search.",
+      "overall_comment": "Boseiju, Who Endures is a highly efficient untapped green land for this deck that also doubles as flexible instant-speed removal for key noncreature permanents and opposing utility lands, with its answer limited to artifacts, enchantments, and nonbasic lands.",
       "overall_score": 82,
       "roles": [
         {
@@ -63,7 +63,7 @@
             "tempo_efficiency": "very_high",
             "utility": "high"
           },
-          "description": "It is a legendary land that enters untapped and taps for green, giving the deck stable mana while still remaining available as a flexible answer when held in hand.",
+          "description": "An untapped green source is excellent for this green-heavy deck, and its built-in channel mode gives a land slot meaningful interaction against problematic artifacts, enchantments, and nonbasic lands at low deck-building cost.",
           "role": "land",
           "score": 80
         },
@@ -75,7 +75,7 @@
             "permanence": "high",
             "timing": "very_high"
           },
-          "description": "Channel answers one opposing artifact, enchantment, or nonbasic land at instant speed, trading efficiently into a wide range of key permanents with clean destruction and useful timing.",
+          "description": "Its channel ability provides instant-speed one-for-one removal from a land slot with broad coverage against key noncreature permanents, though the replacement land for the opponent softens the exchange.",
           "role": "targeted_disruption",
           "score": 80
         }
@@ -85,22 +85,22 @@
       "cached": false,
       "card_name": "Brainstorm",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "36cd2364-d113-47d1-b2c4-b088d9eb88dd",
-      "overall_comment": "Brainstorm is a cheap instant-speed selection tool that deepens the deck\u2019s draw quality and helps hide unneeded cards on top of the library, which is especially useful when Tatyova and landfall draws are already keeping cards flowing.",
-      "overall_score": 75,
+      "overall_comment": "Brainstorm gives this deck cheap instant-speed card smoothing that can line up lands, interaction, or payoffs efficiently, though its impact stays modest when repeated top-deck clearing is limited.",
+      "overall_score": 71,
       "roles": [
         {
           "answers": {
             "access": "high",
-            "efficiency": "very_high",
+            "efficiency": "high",
             "range": "neutral",
-            "setup_value": "high",
-            "timing": "high"
+            "setup_value": "neutral",
+            "timing": "very_high"
           },
-          "description": "Brainstorm cheaply sees three cards and lets you reorder two back on top, smoothing draws and setting up later landfall draws from Tatyova without changing your card count.",
+          "description": "Brainstorm is a very efficient instant-speed filter that sees three cards and lets this deck reorder two back, helping sculpt draws for lands, ramp, protection, or finishers with strong timing but modest long-game setup depth.",
           "role": "card_selection",
-          "score": 75
+          "score": 71
         }
       ]
     },
@@ -108,22 +108,22 @@
       "cached": false,
       "card_name": "Command Tower",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "0895c9b7-ae7d-4bb3-af17-3b75deb50a25",
-      "overall_comment": "Command Tower gives this lands-heavy Simic deck perfect early fixing with no tempo cost, helping cast Tatyova and the deck\u2019s green-blue spells smoothly while remaining a resilient land slot.",
-      "overall_score": 75,
+      "overall_comment": "Command Tower is a premier untapped fixer for this two-color Tatyova deck, supporting early green ramp and later blue-green sequencing with excellent consistency, though its contribution stays focused on mana production.",
+      "overall_score": 70,
       "roles": [
         {
           "answers": {
             "mana_reliability": "very_high",
             "opportunity_cost": "high",
-            "resilience": "high",
+            "resilience": "neutral",
             "tempo_efficiency": "very_high",
             "utility": "low"
           },
-          "description": "It is an untapped land that always fixes into either commander color, making early Simic development and color consistency very smooth.",
+          "description": "Command Tower fills a land slot with near-perfect untapped color fixing for this two-color deck, making early green development and later blue requirements easy while contributing little beyond mana.",
           "role": "land",
-          "score": 75
+          "score": 70
         }
       ]
     },
@@ -131,10 +131,10 @@
       "cached": false,
       "card_name": "Counterspell",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "cc187110-1148-4090-bbb8-e205694a39f5",
-      "overall_comment": "Counterspell is a cheap, instant-speed answer that cleanly protects the game state against a key spell for very little mana, making it a flexible interaction piece with excellent timing in this Simic landfall deck.",
-      "overall_score": 80,
+      "overall_comment": "Counterspell gives this deck efficient instant-speed stack interaction that can stop nearly any opposing spell at a key moment, with the main limitation of requiring steady blue mana to hold up.",
+      "overall_score": 75,
       "roles": [
         {
           "answers": {
@@ -142,11 +142,11 @@
             "efficiency": "high",
             "flexibility": "high",
             "permanence": "high",
-            "timing": "very_high"
+            "timing": "high"
           },
-          "description": "Counterspell trades one card for one spell efficiently at instant speed, giving the deck a clean catch-all answer to problematic plays while it keeps mana open for its own engine.",
+          "description": "Counterspell is a highly efficient instant-speed one-for-one that cleanly answers almost any spell before it resolves, with broad coverage and strong flexibility tempered by its double-blue holding pattern.",
           "role": "targeted_disruption",
-          "score": 80
+          "score": 75
         }
       ]
     },
@@ -154,21 +154,21 @@
       "cached": false,
       "card_name": "Craterhoof Behemoth",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "8c52bd39-0586-48ca-b263-17210cf9feb6",
-      "overall_comment": "Craterhoof Behemoth is a top-end payoff that turns a developed board into an immediate lethal attack, with haste making the conversion clean but its impact depending on already having enough creatures in play.",
-      "overall_score": 90,
+      "overall_comment": "Craterhoof Behemoth is a premier finisher here, converting the deck's developed creature board into an immediate trample alpha strike, though its impact depends on already having enough bodies in play.",
+      "overall_score": 95,
       "roles": [
         {
           "answers": {
-            "attainability": "neutral",
+            "attainability": "high",
             "conversion": "very_high",
             "decisiveness": "very_high",
             "reward_size": "very_high"
           },
-          "description": "This is a classic finisher for a go-wide battlefield, converting a crowded creature board into a huge trampling alpha strike that can end the game on the spot.",
+          "description": "Craterhoof Behemoth is an elite closer for this deck, turning a wide board from cards like Avenger of Zendikar into a hasty trample swing that often ends the game immediately once enough creatures are assembled.",
           "role": "payoff",
-          "score": 90
+          "score": 95
         }
       ]
     },
@@ -176,10 +176,10 @@
       "cached": false,
       "card_name": "Cultivate",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "8b755881-a72d-4e21-a369-d2924eb4585a",
-      "overall_comment": "Cultivate is a reliable early ramp spell here, fixing Simic mana while advancing lands into play and hand to help trigger Tatyova and set up later landfall turns.",
-      "overall_score": 73,
+      "overall_comment": "Cultivate is a solid permanent-mana ramp spell here, advancing toward Tatyova and later land-heavy turns with stable color fixing, though the tapped battlefield land makes its acceleration pace fairly typical.",
+      "overall_score": 71,
       "roles": [
         {
           "answers": {
@@ -189,33 +189,9 @@
             "permanence": "high",
             "speed": "neutral"
           },
-          "description": "Cultivate permanently advances your mana by putting one basic onto the battlefield tapped and another into hand, making it a steady setup piece for Tatyova\u2019s land-heavy game plan.",
+          "description": "Cultivate provides durable acceleration by putting a basic onto the battlefield and another into hand, helping this deck hit Tatyova and keep making land drops, with typical speed and a tapped-land tempo cost.",
           "role": "mana_ramp",
           "score": 71
-        },
-        {
-          "answers": {
-            "access": "high",
-            "efficiency": "high",
-            "range": "low",
-            "setup_value": "high",
-            "timing": "high"
-          },
-          "description": "Cultivate selectively finds up to two basic lands, letting the deck choose the colors and sequencing it needs while also smoothing future draws through the land in hand.",
-          "role": "card_selection",
-          "score": 67
-        },
-        {
-          "answers": {
-            "floor": "high",
-            "net_gain": "neutral",
-            "quality": "high",
-            "reliability": "high",
-            "repeatability": "neutral"
-          },
-          "description": "It effectively turns one card into two lands of access by replacing itself with a land in hand and another on the battlefield, which helps keep land drops flowing over the game.",
-          "role": "card_advantage",
-          "score": 62
         }
       ]
     },
@@ -223,34 +199,67 @@
       "cached": false,
       "card_name": "Cyclonic Rift",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "d75b9c82-1b49-4c3e-a1b5-aeef57d6644b",
-      "overall_comment": "Cyclonic Rift is a versatile instant-speed answer that cleanly handles a key nonland permanent early and can later reset opposing boards, giving this deck a strong defensive catch-up tool with a weak base mode for its mana cost.",
-      "overall_score": 89,
+      "overall_comment": "Cyclonic Rift serves this deck as highly flexible instant-speed interaction early and a powerful one-sided reset late, though its answer is temporary and its overloaded mode comes online at a premium cost.",
+      "overall_score": 85,
       "roles": [
         {
           "answers": {
-            "asymmetry": "high",
-            "coverage": "very_high",
+            "asymmetry": "very_high",
+            "coverage": "high",
             "impact": "very_high",
             "recoverability": "high",
-            "timing": "high"
+            "timing": "neutral"
           },
-          "description": "With overload, it can bounce every nonland permanent an opponent controls, sharply setting back entire boards while this deck can often rebuild quickly from lands and permanents.",
+          "description": "Overloaded, Cyclonic Rift can reset all opposing nonland permanents while leaving this lands-heavy board intact, creating a strongly asymmetric swing that this deck can exploit to push ahead or set up a finishing attack.",
           "role": "mass_disruption",
-          "score": 88
+          "score": 83
         },
         {
           "answers": {
             "coverage": "high",
             "efficiency": "high",
-            "flexibility": "high",
+            "flexibility": "very_high",
             "permanence": "low",
             "timing": "very_high"
           },
-          "description": "At base, it efficiently bounces a single troublesome nonland permanent at instant speed, making it a flexible answer to commanders, engines, or blockers in blue-green control turns.",
+          "description": "At two mana, Cyclonic Rift cleanly answers almost any opposing nonland permanent at instant speed, with excellent flexibility for protecting tempo even though the answer sends threats back to hand.",
           "role": "targeted_disruption",
-          "score": 70
+          "score": 75
+        }
+      ]
+    },
+    "Elvish Visionary": {
+      "cached": false,
+      "card_name": "Elvish Visionary",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "c6a3a882-a127-4590-93d7-679ef4313efe",
+      "overall_comment": "No material role identified.",
+      "overall_score": 0,
+      "roles": []
+    },
+    "Eternal Witness": {
+      "cached": false,
+      "card_name": "Eternal Witness",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "30b24e8e-3b0e-4d8e-90f3-f66eb7c1858c",
+      "overall_comment": "Eternal Witness supplies solid card advantage by returning the best card in your graveyard while leaving behind a body, with its ceiling tied to having a worthwhile graveyard target and enough mana to recast it.",
+      "overall_score": 58,
+      "roles": [
+        {
+          "answers": {
+            "floor": "high",
+            "net_gain": "neutral",
+            "quality": "very_high",
+            "reliability": "high",
+            "repeatability": "very_low"
+          },
+          "description": "Eternal Witness nets a card on entry by returning any card from your graveyard to hand while keeping a creature on board, giving this deck dependable access to its best spent ramp, interaction, or payoff pieces.",
+          "role": "card_advantage",
+          "score": 58
         }
       ]
     },
@@ -258,9 +267,9 @@
       "cached": false,
       "card_name": "Evolving Wilds",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "a75445d3-1303-4bb5-89ad-26ea93fecd48",
-      "overall_comment": "Evolving Wilds provides a land slot that fixes colors by finding a basic tapped while also feeding Tatyova\u2019s landfall draw plan and land-drop based value engine.",
+      "overall_comment": "Evolving Wilds fills a land slot with decent color access and meaningful utility for this Tatyova deck by converting into a basic land and generating an extra land-entry sequence over time, though the tapped sequencing and self-sacrifice slow its tempo.",
       "overall_score": 50,
       "roles": [
         {
@@ -271,32 +280,8 @@
             "tempo_efficiency": "low",
             "utility": "high"
           },
-          "description": "This land is reliable fixing for Simic mana and adds landfall value by putting a basic onto the battlefield, though the tapped entry and sacrifice cost make it a modest tempo hit.",
+          "description": "Evolving Wilds fixes either deck color and has useful utility in a lands-matter shell through its self-sacrifice into a basic, though entering as a land that must be cashed in for tapped mana makes it slower than stronger fixing lands.",
           "role": "land",
-          "score": 50
-        },
-        {
-          "answers": {
-            "floor": "low",
-            "net_gain": "neutral",
-            "quality": "high",
-            "reliability": "high",
-            "repeatability": "low"
-          },
-          "description": "By turning one land card into an extra landfall trigger that draws off Tatyova, it can generate real card advantage over the game when the commander is active.",
-          "role": "card_advantage",
-          "score": 50
-        },
-        {
-          "answers": {
-            "breadth": "low",
-            "directness": "neutral",
-            "reliability": "high",
-            "resilience": "low",
-            "timing": "high"
-          },
-          "description": "It directly enables the deck\u2019s lands-matter engine by guaranteeing a land drop and a Tatyova trigger, smoothing early development and helping key landfall turns.",
-          "role": "enabler",
           "score": 50
         }
       ]
@@ -305,20 +290,20 @@
       "cached": false,
       "card_name": "Forest",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
-      "overall_comment": "Forest provides the deck with clean, untapped green mana for early development and stable color access, with its main constraint being that it contributes only the basic land role.",
+      "overall_comment": "Forest is a highly efficient, resilient green source that supports this deck\u2019s land-heavy development and Tatyova mana needs, with little utility beyond dependable untapped mana.",
       "overall_score": 70,
       "roles": [
         {
           "answers": {
-            "mana_reliability": "very_high",
+            "mana_reliability": "high",
             "opportunity_cost": "high",
-            "resilience": "high",
+            "resilience": "very_high",
             "tempo_efficiency": "very_high",
             "utility": "very_low"
           },
-          "description": "Forest is a perfectly reliable untapped green source that supports early land drops and keeps the deck on curve for green-heavy plays.",
+          "description": "Forest is an untapped, highly resilient green source that fits this green-heavy Tatyova deck smoothly, with excellent baseline slot efficiency and only minimal utility beyond producing mana.",
           "role": "land",
           "score": 70
         }
@@ -328,10 +313,10 @@
       "cached": false,
       "card_name": "Harmonize",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "7eff84f1-f772-497a-b350-bbc93d0230f7",
-      "overall_comment": "Harmonize is a straightforward four-mana burst of raw card flow that refills this deck after deploying lands and interaction, with the main limitation being its sorcery-speed, one-shot nature.",
-      "overall_score": 71,
+      "overall_comment": "Harmonize gives this lands deck a dependable midgame refill of three real cards, with strong floor and card quality but no continuing engine beyond the one shot.",
+      "overall_score": 67,
       "roles": [
         {
           "answers": {
@@ -339,11 +324,11 @@
             "net_gain": "high",
             "quality": "high",
             "reliability": "very_high",
-            "repeatability": "low"
+            "repeatability": "very_low"
           },
-          "description": "Drawing three cards from one spell gives a solid one-card-for-three refresh that helps this deck keep hitting land drops and find engines or finishers.",
+          "description": "Harmonize is a clean one-shot refill that turns one card into three fresh cards, giving this deck reliable midgame fuel with strong floor, though it produces its value only once at sorcery speed.",
           "role": "card_advantage",
-          "score": 71
+          "score": 67
         }
       ]
     },
@@ -351,22 +336,22 @@
       "cached": false,
       "card_name": "Heroic Intervention",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "24882fa2-3fe9-4c1b-aa3d-0e6488b9db27",
-      "overall_comment": "Heroic Intervention is a compact protection piece that preserves this deck\u2019s lands, creatures, and engines through sweepers or targeted removal, letting Tatyova and the board keep converting land drops into value.",
-      "overall_score": 75,
+      "overall_comment": "Heroic Intervention protects this deck\u2019s landfall engines, mana base, and token finishers at instant speed, with excellent timing and broad shielding that depends on already having key permanents in play.",
+      "overall_score": 83,
       "roles": [
         {
           "answers": {
             "breadth": "high",
             "directness": "high",
             "reliability": "high",
-            "resilience": "high",
-            "timing": "high"
+            "resilience": "very_high",
+            "timing": "very_high"
           },
-          "description": "It directly protects the deck\u2019s key permanents with hexproof and indestructible at instant speed, keeping landfall engines and board presence alive through removal or a sweeper window.",
+          "description": "Heroic Intervention is a strong protection piece for this deck\u2019s permanent-heavy engine, covering Tatyova, extra lands, and wide payoff boards at instant speed, though it matters most once you have established permanents worth saving.",
           "role": "enabler",
-          "score": 75
+          "score": 83
         }
       ]
     },
@@ -374,334 +359,55 @@
       "cached": false,
       "card_name": "Lotus Petal",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "32e5339e-9e4f-46f8-b305-f9d6d3ba8bb5",
       "overall_comment": "No material role identified.",
       "overall_score": 0,
       "roles": []
     },
-    "Oracle of Mul Daya": {
+    "Midnight Tilling": {
       "cached": false,
-      "card_name": "Oracle of Mul Daya",
+      "card_name": "Midnight Tilling",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "6c5b02eb-7829-436a-8555-fea200e4b67f",
-      "overall_comment": "Oracle of Mul Daya accelerates the deck with a steady extra land drop and turns the top of the library into playable lands, which pairs naturally with Tatyova to keep the engine flowing while smoothing land-heavy draws.",
-      "overall_score": 73,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "79bc2c6d-b03d-4ceb-b468-293378ec73ae",
+      "overall_comment": "Midnight Tilling serves this deck as cheap instant-speed card selection that digs four cards deep and can recover a milled permanent, with its value capped by finding only one card and only from among those four.",
+      "overall_score": 62,
       "roles": [
-        {
-          "answers": {
-            "breadth": "high",
-            "directness": "high",
-            "reliability": "high",
-            "resilience": "neutral",
-            "timing": "high"
-          },
-          "description": "It directly supports the deck\u2019s landfall engine by creating more land plays and letting future land cards be used off the top, which helps the Tatyova plan stay fueled through normal draw sequences.",
-          "role": "enabler",
-          "score": 71
-        },
-        {
-          "answers": {
-            "curve_fit": "high",
-            "efficiency": "high",
-            "fixing": "neutral",
-            "permanence": "high",
-            "speed": "neutral"
-          },
-          "description": "Its extra land drop repeatedly advances mana development from turn four onward, and playing lands from the top can effectively turn future draws into additional development when lands are revealed.",
-          "role": "mana_ramp",
-          "score": 67
-        },
         {
           "answers": {
             "access": "neutral",
             "efficiency": "high",
-            "range": "low",
-            "setup_value": "high",
-            "timing": "high"
-          },
-          "description": "Playing with the top card revealed and being able to play lands from the top gives controlled access to land draws and reduces the risk of dead land on top in a deck that wants to keep making land drops.",
-          "role": "card_selection",
-          "score": 58
-        }
-      ]
-    },
-    "Ponder": {
-      "cached": false,
-      "card_name": "Ponder",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "02090581-61aa-4348-ad57-451be8ee91c2",
-      "overall_comment": "Ponder is a cheap selection spell that smooths early draws by looking three deep and replacing itself, helping this deck dig toward lands, ramp, or interaction at key moments.",
-      "overall_score": 75,
-      "roles": [
-        {
-          "answers": {
-            "access": "high",
-            "efficiency": "very_high",
             "range": "neutral",
             "setup_value": "high",
             "timing": "high"
           },
-          "description": "Ponder is efficient top-of-library selection that looks three cards deep, can shuffle away a bad top, and replaces itself to smooth early land, ramp, or interaction draws.",
+          "description": "At instant speed it digs four cards deep and can convert the best permanent among them into hand, giving this lands-heavy deck flexible access to lands or key engine pieces for only two mana.",
           "role": "card_selection",
-          "score": 75
+          "score": 62
         }
       ]
     },
-    "Rampant Growth": {
+    "Oracle of Mul Daya": {
       "cached": false,
-      "card_name": "Rampant Growth",
+      "card_name": "Oracle of Mul Daya",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "8539f295-5d58-4436-a73a-b9277c4c7795",
-      "overall_comment": "Rampant Growth is a clean early ramp spell here, fixing mana by finding a basic land and accelerating Tatyova\u2019s land-based engine while smoothing the curve into the commander and other value turns.",
-      "overall_score": 71,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "6c5b02eb-7829-436a-8555-fea200e4b67f",
+      "overall_comment": "Oracle of Mul Daya is a strong lands engine piece here, accelerating mana through extra land drops while turning the top of the library into steady land access; its main limitation is that the acceleration depends on having lands available and keeping a fragile four-mana creature in play.",
+      "overall_score": 69,
       "roles": [
-        {
-          "answers": {
-            "curve_fit": "high",
-            "efficiency": "high",
-            "fixing": "neutral",
-            "permanence": "high",
-            "speed": "high"
-          },
-          "description": "It puts a basic land onto the battlefield tapped for a permanent mana increase, giving this land-matters deck a reliable early jump in development.",
-          "role": "mana_ramp",
-          "score": 71
-        }
-      ]
-    },
-    "Ramunap Excavator": {
-      "cached": false,
-      "card_name": "Ramunap Excavator",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "4f819ba4-52ef-4fdd-8e4c-5ae3b2f44db5",
-      "overall_comment": "Ramunap Excavator turns the deck\u2019s extra land drops and fetch-style land use into steady graveyard-backed land drops, making Tatyova-style landfall turns more consistent while staying useful as a recursive land engine piece even after disruption.",
-      "overall_score": 68,
-      "roles": [
-        {
-          "answers": {
-            "breadth": "neutral",
-            "directness": "high",
-            "reliability": "high",
-            "resilience": "high",
-            "timing": "neutral"
-          },
-          "description": "It directly supports the deck\u2019s lands-from-graveyard line by rebuilding land drops after removal or sacrifice and keeping the land engine operating through attrition.",
-          "role": "enabler",
-          "score": 67
-        },
         {
           "answers": {
             "curve_fit": "high",
             "efficiency": "neutral",
-            "fixing": "neutral",
-            "permanence": "high",
-            "speed": "low"
-          },
-          "description": "It gives repeatable access to lands from the graveyard, letting the deck keep making land drops for mana development beyond the normal pace.",
-          "role": "mana_ramp",
-          "score": 58
-        },
-        {
-          "answers": {
-            "floor": "low",
-            "net_gain": "high",
-            "quality": "neutral",
-            "reliability": "neutral",
-            "repeatability": "high"
-          },
-          "description": "By replaying lands from the graveyard, it can convert each land recovered into additional Tatyova landfall draws over time, creating real card access when the graveyard is stocked.",
-          "role": "card_advantage",
-          "score": 58
-        }
-      ]
-    },
-    "Reliquary Tower": {
-      "cached": false,
-      "card_name": "Reliquary Tower",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "c23e5b80-08d2-4e24-9908-fe2aa4f30f6f",
-      "overall_comment": "Reliquary Tower is a low-cost utility land that keeps Tatyova-driven card flow from forcing discard, while still giving the deck a normal colorless land drop.",
-      "overall_score": 60,
-      "roles": [
-        {
-          "answers": {
-            "mana_reliability": "very_low",
-            "opportunity_cost": "neutral",
-            "resilience": "high",
-            "tempo_efficiency": "very_high",
-            "utility": "high"
-          },
-          "description": "This land is a solid utility slot because it always enters untapped and can preserve large landfall-fueled hands, though it only makes colorless mana and does not fix Simic colors.",
-          "role": "land",
-          "score": 60
-        }
-      ]
-    },
-    "Rhystic Study": {
-      "cached": false,
-      "card_name": "Rhystic Study",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "53236dd7-845a-444c-96d5-f41ed7325d8f",
-      "overall_comment": "Rhystic Study is a premier recurring card-advantage engine here, turning the deck\u2019s normal land-ramp and interaction-heavy game into a steady stream of extra cards while staying useful even when the board is under pressure.",
-      "overall_score": 83,
-      "roles": [
-        {
-          "answers": {
-            "floor": "neutral",
-            "net_gain": "very_high",
-            "quality": "high",
-            "reliability": "high",
-            "repeatability": "very_high"
-          },
-          "description": "It repeatedly turns every opponent spell into a potential extra card, giving this deck a steady flow of real access that fits a long, interaction-rich game.",
-          "role": "card_advantage",
-          "score": 83
-        }
-      ]
-    },
-    "Sakura-Tribe Elder": {
-      "cached": false,
-      "card_name": "Sakura-Tribe Elder",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "e3afc704-220f-498f-9eaa-0821b17dc24c",
-      "overall_comment": "Sakura-Tribe Elder is a cheap, sacrificial ramp creature that fixes the deck\u2019s colors by putting a basic land onto the battlefield tapped, helping Tatyova-style landfall turns and early setup while trading a little tempo for durability.",
-      "overall_score": 77,
-      "roles": [
-        {
-          "answers": {
-            "curve_fit": "high",
-            "efficiency": "high",
             "fixing": "high",
             "permanence": "high",
-            "speed": "high"
+            "speed": "neutral"
           },
-          "description": "It accelerates the deck by sacrificing itself for a basic land that enters the battlefield tapped, giving permanent mana growth early and supporting landfall sequencing.",
+          "description": "Oracle of Mul Daya gives this deck repeatable acceleration through an extra land play each turn, lining up well with a land-heavy Tatyova shell, though it needs lands in hand or on top and survives as a vulnerable creature.",
           "role": "mana_ramp",
-          "score": 75
-        },
-        {
-          "answers": {
-            "access": "high",
-            "efficiency": "high",
-            "range": "low",
-            "setup_value": "high",
-            "timing": "high"
-          },
-          "description": "It is a one-for-one land tutor that finds a basic land from the library, improving access to missing colors or a needed land drop without generating extra cards.",
-          "role": "card_selection",
           "score": 67
-        },
-        {
-          "answers": {
-            "breadth": "neutral",
-            "directness": "high",
-            "reliability": "high",
-            "resilience": "neutral",
-            "timing": "high"
-          },
-          "description": "It directly fuels the deck\u2019s land-based engine by reliably turning a creature into an extra land drop, which helps start landfall sequencing and keep the plan moving through removal.",
-          "role": "enabler",
-          "score": 67
-        }
-      ]
-    },
-    "Simic Signet": {
-      "cached": false,
-      "card_name": "Simic Signet",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "44503105-3e13-408d-a44f-37d503c61d72",
-      "overall_comment": "Simic Signet is efficient permanent ramp for this blue-green lands deck, helping cast Tatyova and other spells a turn sooner while smoothing both colors, with its main limitation being that it needs mana to start producing mana.",
-      "overall_score": 79,
-      "roles": [
-        {
-          "answers": {
-            "curve_fit": "high",
-            "efficiency": "high",
-            "fixing": "very_high",
-            "permanence": "high",
-            "speed": "high"
-          },
-          "description": "It is a cheap, repeatable mana rock that fixes both Simic colors and accelerates into Tatyova and the deck\u2019s midgame plays without tying up land drops.",
-          "role": "mana_ramp",
-          "score": 79
-        }
-      ]
-    },
-    "Sol Ring": {
-      "cached": false,
-      "card_name": "Sol Ring",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
-      "overall_comment": "Sol Ring accelerates the deck very efficiently and helps power out Tatyova and the rest of the land-focused engine early, but its colorless output is a modest fit for a two-color deck built to spend mana on green-blue spells.",
-      "overall_score": 92,
-      "roles": [
-        {
-          "answers": {
-            "curve_fit": "very_high",
-            "efficiency": "very_high",
-            "fixing": "neutral",
-            "permanence": "very_high",
-            "speed": "very_high"
-          },
-          "description": "It is an exceptionally efficient permanent mana rock that comes down on turn one and keeps accelerating into Tatyova and the deck\u2019s landfall engine.",
-          "role": "mana_ramp",
-          "score": 92
-        }
-      ]
-    },
-    "Sylvan Library": {
-      "cached": false,
-      "card_name": "Sylvan Library",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "92eed395-62ca-4293-882b-8565c40daab5",
-      "overall_comment": "Sylvan Library is a premium card-selection engine for this deck, letting Tatyova-style landfall turns convert extra draw steps into controlled top-of-library access and a steady flow of keepable cards, with life payment as the main constraint.",
-      "overall_score": 79,
-      "roles": [
-        {
-          "answers": {
-            "access": "very_high",
-            "efficiency": "high",
-            "range": "neutral",
-            "setup_value": "high",
-            "timing": "high"
-          },
-          "description": "It turns the draw step into highly flexible filtering, letting you see extra cards every turn and keep the best draws for land-heavy engine turns or missing interaction.",
-          "role": "card_selection",
-          "score": 79
-        }
-      ]
-    },
-    "Tatyova, Benthic Druid": {
-      "cached": false,
-      "card_name": "Tatyova, Benthic Druid",
-      "deck_revision": 1,
-      "evaluator_version": "roles-v10",
-      "oracle_id": "0715e860-3b3b-4331-9718-207973e94fee",
-      "overall_comment": "Tatyova turns each land drop into steady life and extra cards, making the deck\u2019s land engine significantly deeper while staying excellent as a midgame value engine with only modest payoff when lands stop flowing.",
-      "overall_score": 81,
-      "roles": [
-        {
-          "answers": {
-            "floor": "low",
-            "net_gain": "very_high",
-            "quality": "high",
-            "reliability": "high",
-            "repeatability": "very_high"
-          },
-          "description": "Each land entering under your control replaces itself with a card and life, so this becomes a repeatable landfall draw engine that steadily outpaces the single card spent on Tatyova.",
-          "role": "card_advantage",
-          "score": 79
         },
         {
           "answers": {
@@ -711,20 +417,308 @@
             "resilience": "low",
             "timing": "high"
           },
-          "description": "Tatyova specifically fuels the deck\u2019s landfall-based value plan by turning the lands-heavy shell into sustained gas and life gain, making future land drops far more productive.",
+          "description": "Oracle of Mul Daya directly advances this deck\u2019s lands-matter engine by increasing landfall frequency and converting the top of the library into more land plays, a role that reaches far beyond generic green ramp in this shell.",
           "role": "enabler",
           "score": 67
         },
         {
           "answers": {
-            "attainability": "high",
+            "access": "neutral",
+            "efficiency": "neutral",
+            "range": "neutral",
+            "setup_value": "high",
+            "timing": "high"
+          },
+          "description": "Revealing the top card and letting you play lands from there improves draw quality by clearing lands off the top, giving this deck ongoing topdeck smoothing that helps reach engine pieces and action more consistently.",
+          "role": "card_selection",
+          "score": 58
+        }
+      ]
+    },
+    "Ponder": {
+      "cached": false,
+      "card_name": "Ponder",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "02090581-61aa-4348-ad57-451be8ee91c2",
+      "overall_comment": "Ponder gives this Tatyova deck cheap early smoothing to line up lands, ramp, engine pieces, or interaction, with strong efficiency but only a modest digging range from a single look at three cards.",
+      "overall_score": 79,
+      "roles": [
+        {
+          "answers": {
+            "access": "high",
+            "efficiency": "very_high",
+            "range": "neutral",
+            "setup_value": "high",
+            "timing": "very_high"
+          },
+          "description": "Ponder is an efficient one-mana cantrip that filters the next draws, helping this deck find lands, ramp, Tatyova, or protection early while only seeing a small slice of the library at once.",
+          "role": "card_selection",
+          "score": 79
+        }
+      ]
+    },
+    "Rampant Growth": {
+      "cached": false,
+      "card_name": "Rampant Growth",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "8539f295-5d58-4436-a73a-b9277c4c7795",
+      "overall_comment": "Rampant Growth is efficient permanent ramp that fixes both colors, advances this lands-focused curve toward Tatyova, and trades some tempo for a tapped land.",
+      "overall_score": 83,
+      "roles": [
+        {
+          "answers": {
+            "curve_fit": "high",
+            "efficiency": "high",
+            "fixing": "high",
+            "permanence": "very_high",
+            "speed": "high"
+          },
+          "description": "Rampant Growth gives this deck an early extra land on the battlefield with solid color fixing and strong alignment with casting Tatyova on time, though the tapped land trims some immediate tempo.",
+          "role": "mana_ramp",
+          "score": 83
+        }
+      ]
+    },
+    "Ramunap Excavator": {
+      "cached": false,
+      "card_name": "Ramunap Excavator",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "4f819ba4-52ef-4fdd-8e4c-5ae3b2f44db5",
+      "overall_comment": "Ramunap Excavator is a plan-specific enabler that turns lands in the graveyard into continued land drops for Tatyova and rebuilds the deck's engine well, though it needs lands to reach the graveyard before its value becomes substantial.",
+      "overall_score": 71,
+      "roles": [
+        {
+          "answers": {
+            "breadth": "high",
+            "directness": "high",
+            "reliability": "neutral",
+            "resilience": "high",
+            "timing": "high"
+          },
+          "description": "Ramunap Excavator directly fuels this lands-matter engine by replaying lands from the graveyard, extending landfall with Tatyova and helping the deck recover key mana development after interaction, though its impact depends on graveyarded lands already being available.",
+          "role": "enabler",
+          "score": 71
+        }
+      ]
+    },
+    "Regrowth": {
+      "cached": false,
+      "card_name": "Regrowth",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "e6e4a8bd-5c40-4654-8de1-0da9afed90fd",
+      "overall_comment": "Regrowth gives this deck efficient, broad graveyard-to-hand selection that reliably rebuy key lands, ramp, protection, engines, answers, or finishers at any stage, with power capped by costing a card for a single return.",
+      "overall_score": 88,
+      "roles": [
+        {
+          "answers": {
+            "access": "very_high",
+            "efficiency": "high",
+            "range": "very_high",
+            "setup_value": "high",
+            "timing": "high"
+          },
+          "description": "Regrowth is highly flexible one-shot selection here, turning any card in your graveyard into the best missing piece for the moment, from a land or ramp spell to protection, Tatyova support, or a finisher.",
+          "role": "card_selection",
+          "score": 88
+        }
+      ]
+    },
+    "Reliquary Tower": {
+      "cached": false,
+      "card_name": "Reliquary Tower",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "c23e5b80-08d2-4e24-9908-fe2aa4f30f6f",
+      "overall_comment": "Reliquary Tower serves this deck as a low-tempo-cost land whose main upside is preserving the large hand sizes Tatyova can generate, though its colorless mana makes it a narrower land slot in a blue-green list.",
+      "overall_score": 60,
+      "roles": [
+        {
+          "answers": {
+            "mana_reliability": "low",
+            "opportunity_cost": "neutral",
+            "resilience": "high",
+            "tempo_efficiency": "high",
+            "utility": "high"
+          },
+          "description": "It enters untapped and its no-maximum-hand-size text can preserve a Tatyova-fueled grip, but producing only colorless mana makes it a narrower fit than colored sources in this two-color deck.",
+          "role": "land",
+          "score": 60
+        }
+      ]
+    },
+    "Rhystic Study": {
+      "cached": false,
+      "card_name": "Rhystic Study",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "53236dd7-845a-444c-96d5-f41ed7325d8f",
+      "overall_comment": "Rhystic Study is a strong repeatable card-advantage engine for this Tatyova deck, keeping resources flowing across opponents\u2019 turns with a powerful ceiling that still depends on opponents\u2019 willingness or ability to pay the tax.",
+      "overall_score": 79,
+      "roles": [
+        {
+          "answers": {
+            "floor": "neutral",
+            "net_gain": "high",
+            "quality": "very_high",
+            "reliability": "high",
+            "repeatability": "very_high"
+          },
+          "description": "Rhystic Study is an above-average long-game draw engine here, generating repeated extra cards off opponents\u2019 spellcasting with excellent card quality, though its output varies with table behavior and removal.",
+          "role": "card_advantage",
+          "score": 79
+        }
+      ]
+    },
+    "Sakura-Tribe Elder": {
+      "cached": false,
+      "card_name": "Sakura-Tribe Elder",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "e3afc704-220f-498f-9eaa-0821b17dc24c",
+      "overall_comment": "Sakura-Tribe Elder is early permanent ramp that fixes colors through a basic land entering the battlefield, fitting the deck\u2019s curve well while costing a card and a creature body for a single tapped-land boost.",
+      "overall_score": 71,
+      "roles": [
+        {
+          "answers": {
+            "curve_fit": "high",
+            "efficiency": "neutral",
+            "fixing": "high",
+            "permanence": "high",
+            "speed": "high"
+          },
+          "description": "Sakura-Tribe Elder ramps early by turning into a basic land on the battlefield, giving permanent acceleration and color fixing that helps reach Tatyova on time, though the gain is only one tapped land for a card.",
+          "role": "mana_ramp",
+          "score": 71
+        }
+      ]
+    },
+    "Simic Signet": {
+      "cached": false,
+      "card_name": "Simic Signet",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "44503105-3e13-408d-a44f-37d503c61d72",
+      "overall_comment": "Simic Signet is early, repeatable two-color ramp that helps this lands deck cast Tatyova on time, though its activation cost makes the acceleration a touch slower than the best two-mana options.",
+      "overall_score": 79,
+      "roles": [
+        {
+          "answers": {
+            "curve_fit": "high",
+            "efficiency": "neutral",
+            "fixing": "very_high",
+            "permanence": "very_high",
+            "speed": "neutral"
+          },
+          "description": "Simic Signet is solid early ramp that fixes both deck colors and helps bridge into Tatyova, though needing an extra mana to activate makes its acceleration slightly slower than the strongest two-mana rocks.",
+          "role": "mana_ramp",
+          "score": 79
+        }
+      ]
+    },
+    "Sol Ring": {
+      "cached": false,
+      "card_name": "Sol Ring",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "6ad8011d-3471-4369-9d68-b264cc027487",
+      "overall_comment": "Sol Ring is elite early repeatable acceleration that helps this lands deck jump quickly into Tatyova and its expensive finishers, though its colorless output keeps the fixing piece of that ramp only average.",
+      "overall_score": 88,
+      "roles": [
+        {
+          "answers": {
+            "curve_fit": "high",
+            "efficiency": "very_high",
+            "fixing": "neutral",
+            "permanence": "very_high",
+            "speed": "very_high"
+          },
+          "description": "Sol Ring provides extremely fast, permanent acceleration that jumps this deck toward Tatyova and top-end landfall turns very efficiently, with colorless mana fitting acceptably but not perfectly in a blue-green shell.",
+          "role": "mana_ramp",
+          "score": 88
+        }
+      ]
+    },
+    "Solemn Simulacrum": {
+      "cached": false,
+      "card_name": "Solemn Simulacrum",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "00c0543c-2a1f-4425-8283-4062d74a1637",
+      "overall_comment": "Solemn Simulacrum serves this deck mainly as steady permanent ramp that advances land count for Tatyova while arriving late and at a modest acceleration rate.",
+      "overall_score": 58,
+      "roles": [
+        {
+          "answers": {
+            "curve_fit": "neutral",
+            "efficiency": "neutral",
+            "fixing": "high",
+            "permanence": "high",
+            "speed": "low"
+          },
+          "description": "It provides permanent ramp by putting a basic land onto the battlefield, which supports Tatyova and future land-based turns well, though four mana makes it slower and less efficient than stronger ramp options.",
+          "role": "mana_ramp",
+          "score": 58
+        }
+      ]
+    },
+    "Sylvan Library": {
+      "cached": false,
+      "card_name": "Sylvan Library",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "92eed395-62ca-4293-882b-8565c40daab5",
+      "overall_comment": "Sylvan Library is a highly efficient card-selection engine for this Tatyova lands deck, smoothing draws every turn to find lands, ramp, protection, and finishers while only becoming true extra cards when life can be spent.",
+      "overall_score": 92,
+      "roles": [
+        {
+          "answers": {
+            "access": "very_high",
+            "efficiency": "very_high",
+            "range": "high",
+            "setup_value": "high",
+            "timing": "very_high"
+          },
+          "description": "Sylvan Library gives excellent repeated top-of-draw-step selection, letting this deck continually curate draws toward lands, engine pieces, interaction, and closing threats for only two mana.",
+          "role": "card_selection",
+          "score": 92
+        }
+      ]
+    },
+    "Tatyova, Benthic Druid": {
+      "cached": false,
+      "card_name": "Tatyova, Benthic Druid",
+      "deck_revision": 1,
+      "evaluator_version": "roles-v11",
+      "oracle_id": "0715e860-3b3b-4331-9718-207973e94fee",
+      "overall_comment": "Tatyova is a premier landfall card-advantage engine for this lands deck, turning the deck\u2019s frequent land entries into a steady flow of real cards with a strong floor once lands keep coming.",
+      "overall_score": 89,
+      "roles": [
+        {
+          "answers": {
+            "floor": "neutral",
+            "net_gain": "very_high",
+            "quality": "high",
+            "reliability": "very_high",
+            "repeatability": "very_high"
+          },
+          "description": "Tatyova converts this deck\u2019s heavy land count and extra-land-drop plan into repeatable raw card draw, with excellent reliability here and a solid floor once any land drops continue.",
+          "role": "card_advantage",
+          "score": 88
+        },
+        {
+          "answers": {
+            "attainability": "very_high",
             "conversion": "high",
-            "decisiveness": "low",
+            "decisiveness": "high",
             "reward_size": "high"
           },
-          "description": "Once the land engine is online, Tatyova cashes those land drops into cards and life, giving the deck a strong value payoff that helps sustain pressure and refill after development.",
+          "description": "Tatyova rewards the deck\u2019s land-focused engine with accumulating cards every time lands enter, generating sustained advantage that strongly converts setup into momentum even if it is not the fastest closer alone.",
           "role": "payoff",
-          "score": 65
+          "score": 80
         }
       ]
     },
@@ -732,22 +726,22 @@
       "cached": false,
       "card_name": "Zendikar Resurgent",
       "deck_revision": 1,
-      "evaluator_version": "roles-v10",
+      "evaluator_version": "roles-v11",
       "oracle_id": "a0af158b-f42a-4022-a438-e0a2e1fd6d9e",
-      "overall_comment": "Zendikar Resurgent accelerates the deck by doubling land taps into extra mana and turns every creature cast into a card, giving Simic lands-matter a powerful midgame engine with a noticeable seven-mana setup cost.",
-      "overall_score": 73,
+      "overall_comment": "Zendikar Resurgent is a high-ceiling mana engine for this lands-heavy Tatyova deck that also turns creature casts into extra cards, though its seven-mana setup means it matters most once the deck is already established.",
+      "overall_score": 69,
       "roles": [
         {
           "answers": {
-            "curve_fit": "high",
+            "curve_fit": "low",
             "efficiency": "high",
-            "fixing": "neutral",
+            "fixing": "very_high",
             "permanence": "very_high",
-            "speed": "low"
+            "speed": "very_low"
           },
-          "description": "It permanently increases the mana produced by every land you tap, letting the deck jump far ahead once it resolves and helping cast large follow-up spells.",
+          "description": "It gives every land an additional mana for the rest of the game, providing powerful repeatable acceleration and excellent fixing in a lands-heavy deck, with its main constraint being a very late seven-mana entry point.",
           "role": "mana_ramp",
-          "score": 71
+          "score": 67
         },
         {
           "answers": {
@@ -757,31 +751,9 @@
             "reliability": "neutral",
             "repeatability": "high"
           },
-          "description": "It repeatedly draws cards whenever you cast creatures, which fits a deck that can keep deploying threats and use those draws to keep the engine flowing.",
+          "description": "Its creature-cast trigger can snowball into multiple extra cards over time, and this deck plays enough creatures to benefit, though the draw starts only after a costly setup turn and depends on having creature spells to cast.",
           "role": "card_advantage",
           "score": 67
-        },
-        {
-          "answers": {
-            "attainability": "neutral",
-            "conversion": "high",
-            "decisiveness": "neutral",
-            "reward_size": "high"
-          },
-          "description": "It converts an established mana base and creature-heavy turn cycle into extra resources, helping the deck cash in on its engine and push toward a decisive finish.",
-          "role": "payoff",
-          "score": 65
-        },
-        {
-          "answers": {
-            "amplification": "high",
-            "breadth": "high",
-            "necessity": "low",
-            "standalone_floor": "low"
-          },
-          "description": "It multiplies the output of the deck\u2019s lands and creature spells once the plan is already moving, but it still needs an active board and plenty of mana to matter most.",
-          "role": "enhancer",
-          "score": 55
         }
       ]
     }
