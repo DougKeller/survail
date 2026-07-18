@@ -6,8 +6,15 @@ import { Tab, TabList } from "../../../designsystem/primitives/tablist";
 import { SplitPane } from "../../../designsystem/layout/divided";
 import { Stack } from "../../../designsystem/layout/stack";
 
-import type { CardRoleEvaluation } from "../../decks/evaluations/contracts";
-import { CardAnalysisPanel, CardInfoPanel } from "./cardPresentationPanels";
+import type {
+  CardRoleEvaluation,
+  EvaluationFeedbackRequest,
+} from "../../decks/evaluations/contracts";
+import {
+  CardAnalysisPanel,
+  CardInfoPanel,
+  type CardFeedbackConfig,
+} from "./cardPresentationPanels";
 import {
   cardDetails,
   imageSource,
@@ -34,6 +41,15 @@ export function CardDetailsModal({
   const [evaluation, setEvaluation] = useState<CardRoleEvaluation | null>(null);
   const [loadingEvaluation, setLoadingEvaluation] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const feedback: CardFeedbackConfig | undefined =
+    deckEvaluation === undefined
+      ? undefined
+      : {
+          onSubmit: async (request: EvaluationFeedbackRequest) => {
+            await deckEvaluation.submitFeedback(deckEvaluation.deckId, request);
+          },
+          roleOrder: deckEvaluation.roleOrder,
+        };
 
   useEffect(() => {
     setActiveTab(deckEvaluation === undefined ? "info" : "analysis");
@@ -127,6 +143,7 @@ export function CardDetailsModal({
               error={evaluationError}
               evaluation={evaluation}
               loading={loadingEvaluation}
+              {...(feedback === undefined ? {} : { feedback })}
             />
           ) : (
             <CardInfoPanel card={card} finish={details.finish} />

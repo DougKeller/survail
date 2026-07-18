@@ -9,15 +9,18 @@ import { Inline } from "../../../designsystem/layout/inline";
 import { Stack } from "../../../designsystem/layout/stack";
 import { Heading, Kicker, Text } from "../../../designsystem/layout/typography";
 
-import type { CardRoleEvaluation } from "../../decks/evaluations/contracts";
+import type {
+  CardRoleEvaluation,
+  EvaluationFeedbackRequest,
+} from "../../decks/evaluations/contracts";
 import type { ScryfallCard } from "../contracts";
-
-function titleize(value: string): string {
-  return value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
+import {
+  FeedbackForm,
+  FeedbackThumbs,
+  useEvaluationFeedback,
+} from "./evaluationFeedback";
+import { RoleCriteriaList } from "./evaluationFeedbackCriteria";
+import { feedbackTitle, OVERALL_SCOPE } from "./evaluationFeedbackDiff";
 
 function FactRow({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -102,13 +105,106 @@ export function CardInfoPanel({
   );
 }
 
+export interface CardFeedbackConfig {
+  onSubmit: (request: EvaluationFeedbackRequest) => Promise<void>;
+  /** Preferred ordering of all possible roles for the role picker. */
+  roleOrder: readonly string[];
+}
+
+function AnalysisContent({
+  evaluation,
+  feedback,
+}: {
+  evaluation: CardRoleEvaluation;
+  feedback?: CardFeedbackConfig;
+}) {
+  const controller = useEvaluationFeedback({
+    evaluation,
+    onSubmit: feedback?.onSubmit ?? (() => Promise.resolve()),
+  });
+  const roleOrder = feedback?.roleOrder ?? [];
+  return (
+    <Stack gap={4}>
+      <Inline align="end" gap={4} justify="between">
+        <Stack gap={1}>
+          <Kicker>Overall score</Kicker>
+          <Inline align="center" gap={2}>
+            <Heading level={3} size="3xl">
+              {evaluation.overall_score}
+            </Heading>
+            {feedback !== undefined && (
+              <FeedbackThumbs
+                controller={controller}
+                scope={OVERALL_SCOPE}
+                subject="overall score"
+              />
+            )}
+          </Inline>
+        </Stack>
+        <Text as="span" muted size="sm">
+          {evaluation.cached
+            ? "Loaded from current deck cache"
+            : "Generated for the current deck"}
+        </Text>
+      </Inline>
+      <Card>
+        <Text size="md">{evaluation.overall_comment}</Text>
+      </Card>
+      {feedback !== undefined && (
+        <FeedbackForm
+          controller={controller}
+          roleOrder={roleOrder}
+          scope={OVERALL_SCOPE}
+        />
+      )}
+      <Stack gap={3}>
+        {evaluation.roles.map((role) => (
+          <Card as="article" key={role.role}>
+            <Stack gap={2}>
+              <Inline gap={3} justify="between">
+                <Inline align="center" gap={2}>
+                  <Tag tone="accent2">{feedbackTitle(role.role)}</Tag>
+                  {feedback !== undefined && (
+                    <FeedbackThumbs
+                      controller={controller}
+                      scope={role.role}
+                      subject={`${feedbackTitle(role.role)} score`}
+                    />
+                  )}
+                </Inline>
+                <Text as="span" size="base">
+                  <strong>{role.score}</strong>
+                </Text>
+              </Inline>
+              <Text size="md">{role.description}</Text>
+              <RoleCriteriaList
+                controller={feedback === undefined ? null : controller}
+                role={role}
+              />
+              {feedback !== undefined && (
+                <FeedbackForm
+                  controller={controller}
+                  roleOrder={roleOrder}
+                  scope={role.role}
+                />
+              )}
+            </Stack>
+          </Card>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
 export function CardAnalysisPanel({
   error,
   evaluation,
+  feedback,
   loading,
 }: {
   error: string | null;
   evaluation: CardRoleEvaluation | null;
+  feedback?: CardFeedbackConfig;
   loading: boolean;
 }) {
   if (loading)
@@ -122,50 +218,9 @@ export function CardAnalysisPanel({
   if (evaluation === null)
     return <Text muted>No deck-specific analysis is available.</Text>;
   return (
-    <Stack gap={4}>
-      <Inline align="end" gap={4} justify="between">
-        <Stack gap={1}>
-          <Kicker>Overall score</Kicker>
-          <Heading level={3} size="3xl">
-            {evaluation.overall_score}
-          </Heading>
-        </Stack>
-        <Text as="span" muted size="sm">
-          {evaluation.cached
-            ? "Loaded from current deck cache"
-            : "Generated for the current deck"}
-        </Text>
-      </Inline>
-      <Card>
-        <Text size="md">{evaluation.overall_comment}</Text>
-      </Card>
-      <Stack gap={3}>
-        {evaluation.roles.map((role) => (
-          <Card as="article" key={role.role}>
-            <Stack gap={2}>
-              <Inline gap={3} justify="between">
-                <Tag tone="accent2">{titleize(role.role)}</Tag>
-                <Text as="span" size="base">
-                  <strong>{role.score}</strong>
-                </Text>
-              </Inline>
-              <Text size="md">{role.description}</Text>
-              <Divided>
-                {Object.entries(role.answers).map(([criterion, rating]) => (
-                  <Inline gap={3} justify="between" key={criterion}>
-                    <Text as="span" size="sm">
-                      {titleize(criterion)}
-                    </Text>
-                    <Text as="span" size="sm">
-                      <strong>{titleize(rating)}</strong>
-                    </Text>
-                  </Inline>
-                ))}
-              </Divided>
-            </Stack>
-          </Card>
-        ))}
-      </Stack>
-    </Stack>
+    <AnalysisContent
+      evaluation={evaluation}
+      {...(feedback === undefined ? {} : { feedback })}
+    />
   );
 }

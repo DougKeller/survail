@@ -1,27 +1,25 @@
 import { ChevronDown, ChevronUp, Loader2, RefreshCw } from "lucide-react";
 
-import { Card } from "../../designsystem/primitives/card";
 import { IconButton } from "../../designsystem/primitives/button";
 import { SortableHeader } from "../../designsystem/primitives/table";
 import { Tag, type TagTone } from "../../designsystem/primitives/tag";
-import { Divided } from "../../designsystem/layout/divided";
-import { Grid } from "../../designsystem/layout/grid";
 import { Inline } from "../../designsystem/layout/inline";
 import { Stack } from "../../designsystem/layout/stack";
 import { Mark, Text } from "../../designsystem/layout/typography";
 
-import {
-  ClickableCardImage,
-  InlineCardText,
-} from "../../modules/cards/ui/cardPresentation";
+import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type { CardZone } from "../../modules/decks/contracts";
-import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
+import type {
+  CardRoleEvaluation,
+  EvaluationFeedbackRequest,
+} from "../../modules/decks/evaluations/contracts";
 import { CoreCardToggle } from "./coreCardToggle";
 import type {
   ScoreRow,
   ScoreSortDirection,
   ScoreSortKey,
 } from "./scoreHelpers";
+import { ScoreRowDetails } from "./scoreRowDetails";
 import { titleize, zoneLabel } from "./text";
 
 const ZONE_TONES: Partial<Record<CardZone, TagTone>> = {
@@ -120,68 +118,6 @@ export function ScoreTableHeader({
   );
 }
 
-function ScoreRowDetails({
-  row,
-  evaluation,
-  columnCount,
-}: {
-  row: ScoreRow;
-  evaluation: CardRoleEvaluation;
-  columnCount: number;
-}) {
-  return (
-    <tr>
-      <td colSpan={columnCount}>
-        <Stack gap={4}>
-          <Inline align="start" gap={4}>
-            {row.card !== undefined && (
-              <ClickableCardImage card={row.card} size="preview" />
-            )}
-            <Stack gap={1}>
-              <Text size="base">
-                <strong>{row.name}</strong>
-              </Text>
-              <Text muted size="sm">
-                Overall score {evaluation.overall_score}
-              </Text>
-              <Text size="md">
-                <InlineCardText text={evaluation.overall_comment} />
-              </Text>
-            </Stack>
-          </Inline>
-          <Grid gap={3}>
-            {evaluation.roles.map((role) => (
-              <Card as="article" key={role.role}>
-                <Inline gap={3} justify="between">
-                  <Tag tone="accent2">{titleize(role.role)}</Tag>
-                  <Text as="span" size="base">
-                    <strong>{role.score}</strong>
-                  </Text>
-                </Inline>
-                <Text size="md">
-                  <InlineCardText text={role.description} />
-                </Text>
-                <Divided>
-                  {Object.entries(role.answers).map(([criterion, rating]) => (
-                    <Inline gap={3} justify="between" key={criterion}>
-                      <Text as="span" size="sm">
-                        {titleize(criterion)}
-                      </Text>
-                      <Text as="span" size="sm">
-                        <strong>{titleize(rating)}</strong>
-                      </Text>
-                    </Inline>
-                  ))}
-                </Divided>
-              </Card>
-            ))}
-          </Grid>
-        </Stack>
-      </td>
-    </tr>
-  );
-}
-
 export function ScoreTableRow({
   row,
   nameFilter,
@@ -192,6 +128,7 @@ export function ScoreTableRow({
   refreshDisabled,
   onRefresh,
   onToggleCore,
+  submitFeedback,
 }: {
   row: ScoreRow;
   nameFilter: RegExp | null;
@@ -202,6 +139,7 @@ export function ScoreTableRow({
   refreshDisabled: boolean;
   onRefresh: () => void;
   onToggleCore: () => void;
+  submitFeedback: (request: EvaluationFeedbackRequest) => Promise<void>;
 }) {
   const roleMap = new Map<string, CardRoleEvaluation["roles"][number]>(
     row.evaluation?.roles.map((role) => [role.role, role]) ?? [],
@@ -300,6 +238,7 @@ export function ScoreTableRow({
           columnCount={3 + visibleRoleColumns.length}
           evaluation={row.evaluation}
           row={row}
+          submitFeedback={submitFeedback}
         />
       )}
     </>

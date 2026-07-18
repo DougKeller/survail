@@ -15,3 +15,8 @@
   background: var(--color-accent-100);
   color: var(--color-accent-800);
 }
+
+.ds-notice-success {
+  background: var(--color-accent-2-200);
+  color: var(--color-accent-2-800);
+}

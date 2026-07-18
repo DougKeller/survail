@@ -1,6 +1,9 @@
 import { createContext, useContext } from "react";
 
-import type { CardRoleEvaluation } from "../../decks/evaluations/contracts";
+import type {
+  CardRoleEvaluation,
+  EvaluationFeedbackRequest,
+} from "../../decks/evaluations/contracts";
 import type { CardSet } from "../../decks/contracts";
 import type { ScryfallCard } from "../contracts";
 
@@ -28,6 +31,13 @@ export interface DeckCardEvaluationContext {
     deckId: string,
     oracleIds: string[],
   ) => Promise<CardRoleEvaluation[]>;
+  /** Injected by the app layer for the same reason as evaluateCards. */
+  submitFeedback: (
+    deckId: string,
+    feedback: EvaluationFeedbackRequest,
+  ) => Promise<{ id: string }>;
+  /** Preferred ordering for the feedback role picker (all possible roles). */
+  roleOrder: readonly string[];
 }
 
 export const CardPresentationContext =

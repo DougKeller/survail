@@ -258,7 +258,10 @@ const judgeReference = {
   ],
 };
 
-async function mockApi(page: Page): Promise<void> {
+async function mockApi(
+  page: Page,
+  feedbackRequests: unknown[] = [],
+): Promise<void> {
   let currentDeck: Deck = cloneDeckState(deck);
 
   function currentValidation() {
@@ -320,6 +323,9 @@ async function mockApi(page: Page): Promise<void> {
           .map((event) => `data: ${JSON.stringify(event)}\n\n`)
           .join(""),
       });
+    } else if (url.pathname === "/decks/deck-1/card-evaluations/feedback") {
+      feedbackRequests.push(route.request().postDataJSON());
+      await fulfillJson(route, { id: "fb-1" });
     } else if (url.pathname === "/decks/deck-1/card-evaluations/evaluate") {
       const payload = route.request().postDataJSON() as {
         oracle_ids?: string[];
@@ -1262,7 +1268,7 @@ test("card scores only load after manual evaluation and cards sort by role score
   await expect(
     page.getByText("An efficient source of acceleration for this deck."),
   ).toBeVisible();
-  await page.getByRole("button", { name: /Mana Ramp/ }).click();
+  await page.getByRole("button", { name: "Mana Ramp", exact: true }).click();
   await page.getByRole("button", { name: "Cards", exact: true }).click();
   await page.getByLabel("Card sort").selectOption("score");
   await page.getByLabel("Group by").selectOption("type");
@@ -1289,6 +1295,137 @@ test("scores can sort by starred cards", async ({ page }) => {
   await page.getByRole("button", { name: "Starred" }).click();
 
   await expect(rows.first()).toContainText("Arcane Signet");
+});
+
+async function openSolRingScoreDetails(page: Page): Promise<void> {
+  await page.goto("/decks/deck-1");
+  await page.getByRole("button", { name: "Scores" }).click();
+  await page
+    .getByRole("button", { name: "Expand Sol Ring score details" })
+    .click();
+  await expect(
+    page.getByText("An efficient source of acceleration for this deck."),
+  ).toBeVisible();
+}
+
+test("overall thumbs-down feedback submits only the role diff", async ({
+  page,
+}) => {
+  const feedbackRequests: unknown[] = [];
+  await mockApi(page, feedbackRequests);
+  await openSolRingScoreDetails(page);
+
+  await page
+    .getByRole("button", { name: "Rate the overall score down" })
+    .click();
+  const details = page
+    .locator("tbody > tr")
+    .filter({ hasText: "Overall score 90" });
+  await expect(
+    details.getByText("Toggle the roles this card should have", {
+      exact: false,
+    }),
+  ).toBeVisible();
+
+  // Hide the pre-existing back-to-top affordance (it appears because the
+  // expanded row scrolls the page) so the scan targets the feedback form.
+  await page.evaluate(() => {
+    window.scrollTo(0, 0);
+  });
+  await expect(page.locator(".ds-back-to-top-visible")).toHaveCount(0);
+  const axeResults = await new AxeBuilder({ page }).analyze();
+  expect(axeResults.violations).toEqual([]);
+
+  // Toggle the judged role off (a removal) and a non-judged role on (an
+  // addition); every other role stays untouched.
+  await details.getByRole("button", { name: "Mana Ramp", exact: true }).click();
+  await details.getByRole("button", { name: "Payoff", exact: true }).click();
+  await details
+    .getByLabel("What did the judge miss? (optional)")
+    .fill("This is a payoff piece, not ramp.");
+  await details.getByRole("button", { name: "Submit feedback" }).click();
+
+  await expect(details.getByText("Thanks — feedback recorded.")).toBeVisible();
+  expect(feedbackRequests).toEqual([
+    {
+      oracle_id: "oracle-2",
+      scope: "overall",
+      verdict: "down",
+      reason: "This is a payoff piece, not ramp.",
+      expected_added_roles: ["payoff"],
+      expected_removed_roles: ["mana_ramp"],
+      expected_criteria: {},
+    },
+  ]);
+});
+
+test("overall thumbs-up feedback submits a reason with empty diffs", async ({
+  page,
+}) => {
+  const feedbackRequests: unknown[] = [];
+  await mockApi(page, feedbackRequests);
+  await openSolRingScoreDetails(page);
+
+  await page.getByRole("button", { name: "Rate the overall score up" }).click();
+  const details = page
+    .locator("tbody > tr")
+    .filter({ hasText: "Overall score 90" });
+  await details
+    .getByLabel("Anything to add? (optional)")
+    .fill("Matches my read of the deck.");
+  await details.getByRole("button", { name: "Submit feedback" }).click();
+
+  await expect(details.getByText("Thanks — feedback recorded.")).toBeVisible();
+  expect(feedbackRequests).toEqual([
+    {
+      oracle_id: "oracle-2",
+      scope: "overall",
+      verdict: "up",
+      reason: "Matches my read of the deck.",
+      expected_added_roles: [],
+      expected_removed_roles: [],
+      expected_criteria: {},
+    },
+  ]);
+});
+
+test("role thumbs-down feedback submits only the changed criterion", async ({
+  page,
+}) => {
+  const feedbackRequests: unknown[] = [];
+  await mockApi(page, feedbackRequests);
+  await openSolRingScoreDetails(page);
+
+  await page
+    .getByRole("button", { name: "Rate the Mana Ramp score down" })
+    .click();
+  const details = page
+    .locator("tbody > tr")
+    .filter({ hasText: "Overall score 90" });
+  const rankEditor = details.getByRole("combobox", {
+    name: "Expected Speed rating",
+  });
+  await expect(rankEditor).toHaveValue("very_high");
+  await rankEditor.selectOption("high");
+  // The changed criterion contrasts actual (terracotta) → expected (sage).
+  await expect(details.locator(".ds-tag-accent")).toHaveText("Very High");
+  await expect(
+    details.locator(".ds-tag-accent-2").filter({ hasText: "High" }),
+  ).toBeVisible();
+  await details.getByRole("button", { name: "Submit feedback" }).click();
+
+  await expect(details.getByText("Thanks — feedback recorded.")).toBeVisible();
+  expect(feedbackRequests).toEqual([
+    {
+      oracle_id: "oracle-2",
+      scope: "mana_ramp",
+      verdict: "down",
+      reason: "",
+      expected_added_roles: [],
+      expected_removed_roles: [],
+      expected_criteria: { speed: "high" },
+    },
+  ]);
 });
 
 test("completed card evaluations remain visible when a later evaluation fails", async ({

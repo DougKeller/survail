@@ -6,7 +6,7 @@ export interface NoticeProps {
   children?: ReactNode;
   /** "alert" for errors, "status" for polite updates. */
   role?: "alert" | "status";
-  tone?: "error" | "info";
+  tone?: "error" | "info" | "success";
 }
 
 /** Rounded inline message block (errors, empty states). */

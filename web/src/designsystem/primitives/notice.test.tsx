@@ -17,6 +17,16 @@ describe("Notice", () => {
     expect(alert.textContent).toBe("Request failed");
   });
 
+  it("renders a sage success status", () => {
+    render(
+      <Notice role="status" tone="success">
+        Feedback recorded
+      </Notice>,
+    );
+    const status = screen.getByRole("status");
+    expect(status.classList.contains("ds-notice-success")).toBe(true);
+  });
+
   it("defaults to a presentational info block", () => {
     const { container } = render(<Notice>Nothing here yet.</Notice>);
     const notice = container.firstElementChild;

@@ -9,6 +9,8 @@ import { Page } from "../../designsystem/layout/page";
 import { Stack } from "../../designsystem/layout/stack";
 import { Text } from "../../designsystem/layout/typography";
 import { PaneResizer, Workspace } from "../../designsystem/layout/workspace";
+import { api } from "../api";
+import { PREFERRED_CARD_ROLE_ORDER } from "../deck/constants";
 import { AgentDrawer } from "../editor/agentDrawer";
 import { BulkEditModal } from "../editor/bulkEditModal";
 import { CardNoteModal } from "../editor/cardNoteModal";
@@ -78,7 +80,9 @@ export function EditorScreen() {
         deckId: deck.id,
         deckRevision: deck.revision,
         evaluateCards,
+        roleOrder: PREFERRED_CARD_ROLE_ORDER,
         scores: scoring.scores,
+        submitFeedback: api.submitEvaluationFeedback,
       }}
     >
       <DeckEditorProvider advisor={advisor} editor={{ ...editor, deck }}>

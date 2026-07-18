@@ -14,7 +14,9 @@ import type { CardZone, Deck } from "../../modules/decks/contracts";
 import type {
   CardEvaluationProgress,
   CardRoleEvaluation,
+  EvaluationFeedbackRequest,
 } from "../../modules/decks/evaluations/contracts";
+import { api } from "../api";
 import {
   EvaluationStatus,
   EvaluationSummary,
@@ -110,6 +112,12 @@ export function DeckScoresView({
     (total, row) => total + (row.evaluation?.overall_score ?? 0),
     0,
   );
+
+  async function submitFeedback(
+    request: EvaluationFeedbackRequest,
+  ): Promise<void> {
+    await api.submitEvaluationFeedback(deck.id, request);
+  }
 
   function setSort(key: ScoreSortKey): void {
     const next = nextScoreSort(activeScoreSort, key);
@@ -256,6 +264,7 @@ export function DeckScoresView({
                       }
                       refreshing={refreshing}
                       row={row}
+                      submitFeedback={submitFeedback}
                       visibleRoleColumns={visibleRoleColumns}
                     />
                   );
