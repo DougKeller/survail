@@ -292,6 +292,7 @@ async function mockApi(
       await fulfillJson(route, {
         username: "local-developer",
         display_name: "Local Developer",
+        scoring_enabled: true,
       });
     } else if (url.pathname === "/evaluations/judge-reference") {
       await fulfillJson(route, judgeReference);
@@ -766,6 +767,7 @@ test("compact editor presents the advisor as a full-height supporting surface", 
   expect(Math.round((advisorBox?.y ?? 0) + (advisorBox?.height ?? 0))).toBe(
     844,
   );
+  await page.getByRole("button", { name: "Local Developer" }).click();
   await expect(page.getByLabel("Price marketplace")).toHaveValue("tcgplayer");
   await expect(page.getByLabel("Deck controls")).toBeVisible();
 });

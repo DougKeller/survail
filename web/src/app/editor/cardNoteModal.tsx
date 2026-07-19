@@ -13,6 +13,7 @@ export function CardNoteModal({ cardset }: { cardset: CardSet }) {
   const {
     actions: { updateCardNote },
     data: { busy },
+    display: { scoringEnabled },
     modals: { setActiveCardNote },
   } = useDeckEditorContext();
   const close = (): void => {
@@ -35,10 +36,12 @@ export function CardNoteModal({ cardset }: { cardset: CardSet }) {
           setActiveCardNote(null);
         }}
       >
-        <Text muted size="md">
-          This note is included when AI evaluates or reasons about this card in
-          the context of the deck.
-        </Text>
+        {scoringEnabled && (
+          <Text muted size="md">
+            This note is included when AI evaluates or reasons about this card
+            in the context of the deck.
+          </Text>
+        )}
         <Field label={cardset.card_name}>
           <TextArea
             aria-label={cardset.card_name}
@@ -47,7 +50,11 @@ export function CardNoteModal({ cardset }: { cardset: CardSet }) {
             onChange={(event) => {
               setNote(event.target.value);
             }}
-            placeholder="Add context for AI evaluation, combo lines, exclusions, or role expectations."
+            placeholder={
+              scoringEnabled
+                ? "Add context for AI evaluation, combo lines, exclusions, or role expectations."
+                : "Add context, combo lines, or exclusions."
+            }
             value={note}
           />
         </Field>

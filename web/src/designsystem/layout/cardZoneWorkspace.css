@@ -110,6 +110,8 @@
 
 .ds-cards-zone-column {
   border-right: 1px solid var(--color-divider);
+  contain-intrinsic-inline-size: var(--size-board-col);
+  content-visibility: auto;
   min-width: 0;
   padding: var(--space-3);
 }

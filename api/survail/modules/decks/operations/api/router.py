@@ -50,7 +50,11 @@ def _queue_added_card_scoring(
     operation: DeckOperation,
     deck_id: uuid.UUID,
     owner_id: uuid.UUID,
+    *,
+    scoring_enabled: bool = True,
 ) -> None:
+    if not scoring_enabled:
+        return
     oracle_ids = list(
         dict.fromkeys(change.oracle_id for change in operation.changes if change.quantity_delta > 0)
     )
@@ -95,7 +99,13 @@ def apply_operation(
     except DeckOperationError as exc:
         error_status = 404 if str(exc) == "Deck not found" else 422
         raise HTTPException(status_code=error_status, detail=str(exc)) from exc
-    _queue_added_card_scoring(background_tasks, operation, deck.id, user.id)
+    _queue_added_card_scoring(
+        background_tasks,
+        operation,
+        deck.id,
+        user.id,
+        scoring_enabled=user.scoring_enabled,
+    )
     result = DeckOperationResult(
         operation=_operation_read(operation),
         deck=_deck_read(deck),
@@ -177,7 +187,13 @@ def approve_operation_proposal(
         error_status = 404 if str(exc) == "Deck not found" else 422
         raise HTTPException(status_code=error_status, detail=str(exc)) from exc
     proposal_service.applied(proposal, operation)
-    _queue_added_card_scoring(background_tasks, operation, deck.id, user.id)
+    _queue_added_card_scoring(
+        background_tasks,
+        operation,
+        deck.id,
+        user.id,
+        scoring_enabled=user.scoring_enabled,
+    )
     result = DeckOperationResult(
         operation=_operation_read(operation),
         deck=_deck_read(deck),

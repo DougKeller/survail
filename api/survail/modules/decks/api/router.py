@@ -42,6 +42,7 @@ from survail.modules.decks.service.analytics import (
     role_distribution_counts,
     scoped_card_name_map,
     scoped_unique_oracle_ids,
+    tag_distribution_counts,
     total_cards,
     type_distribution_counts,
 )
@@ -156,7 +157,8 @@ def _cardset_read(cardset: CardSet) -> CardSetRead:
         collector_number=cardset.collector_number,
         note=cardset.note or "",
         tags=cardset.tags,
-        tag_ids=[tag.id for tag in cardset.deck_tags],
+        tag_ids=[tag.id for tag in sorted(cardset.deck_tags, key=lambda tag: tag.position)],
+        tag_weights={link.deck_tag.id: link.weight for link in cardset.tag_links},
         scryfall=ScryfallCardSnapshot.model_validate(cardset.scryfall, strict=False),
     )
 
@@ -182,7 +184,8 @@ def _deck_read(deck: Deck) -> DeckRead:
         metadata=_metadata(deck),
         cardsets=[_cardset_read(cardset) for cardset in deck.cardsets],
         tags=[
-            DeckTagRead(id=tag.id, name=tag.name, position=tag.position) for tag in deck.deck_tags
+            DeckTagRead(id=tag.id, name=tag.name, position=tag.position, target=tag.target)
+            for tag in deck.deck_tags
         ],
         is_sample=deck.is_sample,
         revision=deck.revision,
@@ -245,6 +248,7 @@ def _analytics_read(deck: Deck, user: User, db: DbSession) -> DeckAnalyticsRead:
     mana_curve = mana_curve_counts(deck)
     color_distribution = color_pip_counts(deck)
     type_distribution = type_distribution_counts(deck)
+    tag_distribution = tag_distribution_counts(deck)
     total_nonland_cards = nonland_total_cards(deck)
     evaluated_ids = {evaluation.oracle_id for evaluation in cached_evaluations}
     missing_ids = [oracle_id for oracle_id in scoped_oracle_ids if oracle_id not in evaluated_ids]
@@ -286,6 +290,17 @@ def _analytics_read(deck: Deck, user: User, db: DbSession) -> DeckAnalyticsRead:
             for bucket in percentage_buckets(
                 type_distribution,
                 order=(*CARD_TYPE_LABELS, "Other"),
+            )
+        ],
+        tag_distribution=[
+            AnalyticsBucketRead.model_validate(bucket, strict=False)
+            for bucket in percentage_buckets(
+                tag_distribution,
+                labels={
+                    "untagged": "Untagged",
+                    **{str(tag.id): tag.name for tag in deck.deck_tags},
+                },
+                order=("untagged", *(str(tag.id) for tag in deck.deck_tags)),
             )
         ],
         role_distribution=RoleDistributionRead(

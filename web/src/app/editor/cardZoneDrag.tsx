@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- The provider keeps one drag session's input modes and feedback synchronized. */
 import {
   useCallback,
   useMemo,
@@ -12,10 +13,14 @@ import type { CardSet } from "../../modules/decks/contracts";
 import type { CardZoneMatrixRowZone } from "../deck/cardZoneMatrix";
 import type {
   CardZoneDragProviderProps,
+  CardZoneDragStaticValue,
   CardZoneDragValue,
   DraggedCard,
 } from "./cardZoneDragTypes";
-import { CardZoneDragContext } from "./cardZoneDragContext";
+import {
+  CardZoneDragContext,
+  CardZoneDragStaticContext,
+} from "./cardZoneDragContext";
 import { CardZoneDragPreview } from "./cardZoneDragPreview";
 import { nextDropZone, tagAtPoint, zoneAtPoint } from "./cardZoneDropTargets";
 import { autoScrollCardRow } from "./dragAutoScroll";
@@ -24,6 +29,7 @@ import { clampDragPreviewPoint } from "./dragPreviewPosition";
 export {
   useCardZoneDrag,
   useOptionalCardZoneDrag,
+  useOptionalCardZoneDragStatic,
 } from "./cardZoneDragContext";
 
 export function CardZoneDragProvider({
@@ -34,6 +40,7 @@ export function CardZoneDragProvider({
   zones,
 }: CardZoneDragProviderProps) {
   const [dragged, setDragged] = useState<DraggedCard | null>(null);
+  const draggedRef = useRef<DraggedCard | null>(null);
   const [activeTarget, setActiveTarget] =
     useState<CardZoneMatrixRowZone | null>(null);
   const [activeTagTarget, setActiveTagTarget] = useState<string | null>(null);
@@ -75,6 +82,7 @@ export function CardZoneDragProvider({
 
   const cancel = useCallback(() => {
     stopAutoScroll();
+    draggedRef.current = null;
     setDragged(null);
     setActiveTarget(null);
     setActiveTagTarget(null);
@@ -83,7 +91,9 @@ export function CardZoneDragProvider({
   }, [stopAutoScroll]);
 
   const start = useCallback((card: CardSet, visualId: string) => {
-    setDragged({ card, visualId });
+    const nextDragged = { card, visualId };
+    draggedRef.current = nextDragged;
+    setDragged(nextDragged);
     setActiveTagTarget(null);
     setActiveTarget(card.zone as CardZoneMatrixRowZone);
     setInstruction(
@@ -93,20 +103,27 @@ export function CardZoneDragProvider({
 
   const commit = useCallback(
     (zone: CardZoneMatrixRowZone | null) => {
-      if (dragged !== null && zone !== null && dragged.card.zone !== zone) {
-        moveCard(dragged.card, zone);
+      const currentDragged = draggedRef.current;
+      if (
+        currentDragged !== null &&
+        zone !== null &&
+        currentDragged.card.zone !== zone
+      ) {
+        moveCard(currentDragged.card, zone);
       }
       cancel();
     },
-    [cancel, dragged, moveCard],
+    [cancel, moveCard],
   );
 
   const commitTag = useCallback(
     (tagId: string | null) => {
-      if (dragged !== null && tagId !== null) tagCard?.(dragged.card, tagId);
+      const currentDragged = draggedRef.current;
+      if (currentDragged !== null && tagId !== null)
+        tagCard?.(currentDragged.card, tagId);
       cancel();
     },
-    [cancel, dragged, tagCard],
+    [cancel, tagCard],
   );
 
   const draggableProps = useCallback(
@@ -123,7 +140,9 @@ export function CardZoneDragProvider({
           event.preventDefault();
           return;
         }
-        event.dataTransfer.effectAllowed = "move";
+        // Row drops move one card, while tag-column drops copy tag membership.
+        // Browsers may reject a `copy` drop when the source only permits move.
+        event.dataTransfer.effectAllowed = "copyMove";
         event.dataTransfer.setData("text/plain", card.id);
         const emptyDragImage = document.createElement("canvas");
         emptyDragImage.height = 1;
@@ -227,13 +246,13 @@ export function CardZoneDragProvider({
     (tagId: string) => ({
       "data-drop-tag-id": tagId,
       onDragEnter: (event: DragEvent<HTMLElement>) => {
-        if (dragged === null) return;
+        if (draggedRef.current === null) return;
         event.stopPropagation();
         setActiveTagTarget(tagId);
         setActiveTarget(null);
       },
       onDragOver: (event: DragEvent<HTMLElement>) => {
-        if (dragged === null) return;
+        if (draggedRef.current === null) return;
         event.preventDefault();
         event.stopPropagation();
         event.dataTransfer.dropEffect = "copy";
@@ -246,20 +265,20 @@ export function CardZoneDragProvider({
         commitTag(tagId);
       },
     }),
-    [commitTag, dragged],
+    [commitTag],
   );
 
   const rowProps = useCallback(
     (zone: CardZoneMatrixRowZone) => ({
       "data-drop-zone": zone,
       onDragEnter: () => {
-        if (dragged !== null) {
+        if (draggedRef.current !== null) {
           setActiveTagTarget(null);
           setActiveTarget(zone);
         }
       },
       onDragOver: (event: DragEvent<HTMLElement>) => {
-        if (dragged === null) return;
+        if (draggedRef.current === null) return;
         event.preventDefault();
         keepAutoScrolling(event.clientX, event.clientY);
         event.dataTransfer.dropEffect = "move";
@@ -271,7 +290,7 @@ export function CardZoneDragProvider({
         commit(zone);
       },
     }),
-    [commit, dragged, keepAutoScrolling],
+    [commit, keepAutoScrolling],
   );
 
   const value = useMemo<CardZoneDragValue>(
@@ -298,10 +317,16 @@ export function CardZoneDragProvider({
       tagColumnProps,
     ],
   );
+  const staticValue = useMemo<CardZoneDragStaticValue>(
+    () => ({ draggableProps }),
+    [draggableProps],
+  );
   return (
-    <CardZoneDragContext.Provider value={value}>
-      {children}
-      <CardZoneDragPreview dragged={dragged} point={previewPoint} />
-    </CardZoneDragContext.Provider>
+    <CardZoneDragStaticContext.Provider value={staticValue}>
+      <CardZoneDragContext.Provider value={value}>
+        {children}
+        <CardZoneDragPreview dragged={dragged} point={previewPoint} />
+      </CardZoneDragContext.Provider>
+    </CardZoneDragStaticContext.Provider>
   );
 }

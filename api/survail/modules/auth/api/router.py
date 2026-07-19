@@ -8,7 +8,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 from survail.core.config import Settings
 from survail.core.dependencies import AppSettings, CurrentUser, DbSession
 from survail.core.models import User
-from survail.modules.auth.api.schemas import UserRead
+from survail.modules.auth.api.schemas import UserRead, UserSettingsUpdate
 from survail.modules.auth.service.login import AuthService, DiscordOAuthError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -85,6 +85,11 @@ def discord_callback(
 @router.get("/me", response_model=UserRead)
 def me(user: CurrentUser) -> User:
     return user
+
+
+@router.patch("/me/settings", response_model=UserRead)
+def update_settings(payload: UserSettingsUpdate, db: DbSession, user: CurrentUser) -> User:
+    return AuthService(db).update_scoring_setting(user, enabled=payload.scoring_enabled)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

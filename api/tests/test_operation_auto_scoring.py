@@ -51,6 +51,24 @@ def test_remove_only_operation_does_not_queue_scoring() -> None:
     assert background_tasks.tasks == []
 
 
+def test_disabled_scoring_does_not_queue_added_cards() -> None:
+    operation = cast(
+        "DeckOperation",
+        SimpleNamespace(changes=[SimpleNamespace(oracle_id="new-card", quantity_delta=1)]),
+    )
+    background_tasks = BackgroundTasks()
+
+    _queue_added_card_scoring(
+        background_tasks,
+        operation,
+        uuid.uuid4(),
+        uuid.uuid4(),
+        scoring_enabled=False,
+    )
+
+    assert background_tasks.tasks == []
+
+
 def test_background_scoring_is_registered_as_a_worker_thread_task() -> None:
     deck_id = uuid.uuid4()
     owner_id = uuid.uuid4()

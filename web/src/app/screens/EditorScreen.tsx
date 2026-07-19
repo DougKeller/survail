@@ -74,14 +74,18 @@ export function EditorScreen() {
   return (
     <CardPresentationProvider
       cards={deck.cardsets}
-      deckEvaluation={{
-        deckId: deck.id,
-        deckRevision: deck.revision,
-        evaluateCards,
-        roleOrder: PREFERRED_CARD_ROLE_ORDER,
-        scores: scoring.scores,
-        submitFeedback: api.submitEvaluationFeedback,
-      }}
+      {...(display.scoringEnabled
+        ? {
+            deckEvaluation: {
+              deckId: deck.id,
+              deckRevision: deck.revision,
+              evaluateCards,
+              roleOrder: PREFERRED_CARD_ROLE_ORDER,
+              scores: scoring.scores,
+              submitFeedback: api.submitEvaluationFeedback,
+            },
+          }
+        : {})}
     >
       <DeckEditorProvider advisor={advisor} editor={{ ...editor, deck }}>
         <Workspace
@@ -128,10 +132,11 @@ export function EditorScreen() {
                   refresh={() => {
                     void analytics.loadAnalytics();
                   }}
+                  scoringEnabled={display.scoringEnabled}
                 />
               </Suspense>
             )}
-            {display.editorView === "scores" && (
+            {display.scoringEnabled && display.editorView === "scores" && (
               <DeckScoresView
                 clearScores={scoring.clearScoreCache}
                 clearing={scoring.clearingScores}

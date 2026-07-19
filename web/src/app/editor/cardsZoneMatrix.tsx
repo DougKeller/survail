@@ -26,14 +26,11 @@ import { VisuallyHidden } from "../../designsystem/primitives/visuallyHidden";
 import { useCardZoneDrag } from "./cardZoneDrag";
 import { MoveAllConfirmationDialog } from "./moveAllConfirmationDialog";
 import { bulkMoveSummary, type BulkMoveSource } from "./zoneMovement";
-import { useDeckEditorContext } from "./deckEditorContext";
-import {
-  calculateRoleTargetProgress,
-  storedRoleTargets,
-  storeRoleTargets,
-  withRoleTargetSetting,
-} from "../deck/roleTargets";
+import { useDeckCardsContext } from "./deckEditorContext";
+import { calculateRoleTargetProgress } from "../deck/roleTargets";
 import { CardsZoneColumn } from "./cardsZoneColumn";
+import { RoleQualityPicker } from "./roleTargetColumn";
+import { useRoleTargets } from "./useRoleTargets";
 
 type AuxiliaryRowZone = Exclude<CardZoneMatrixRowZone, "mainboard">;
 
@@ -44,25 +41,19 @@ function rowStartsCollapsed(
   return !cards.some((card) => card.zone === zone && card.quantity > 0);
 }
 
-function MatrixRows({
-  onPreview,
-}: {
-  onPreview: (
-    card: ReturnType<typeof useDeckEditorContext>["deck"]["cardsets"][number],
-  ) => void;
-}) {
+function MatrixRows({ onPreview }: { onPreview: (card: CardSet) => void }) {
   const {
     actions: { moveAllToConsidering },
     data: { busy },
     deck,
     display: { displayPreferences },
     scoring: { scores },
-  } = useDeckEditorContext();
+  } = useDeckCardsContext();
   const provider = useContext(PriceProviderContext);
   const drag = useCardZoneDrag();
   const [bulkSource, setBulkSource] = useState<BulkMoveSource | null>(null);
-  const [roleTargets, setRoleTargets] = useState(() =>
-    storedRoleTargets(deck.id),
+  const { changeRoleQuality, changeRoleTarget, roleTargets } = useRoleTargets(
+    deck.id,
   );
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => ({
     considering: storedCardRowCollapsed(
@@ -91,7 +82,8 @@ function MatrixRows({
       deck.cardsets,
       deck.format,
       deck.tags,
-      displayPreferences,
+      displayPreferences.groupBy,
+      displayPreferences.sortBy,
       provider,
       scores,
     ],
@@ -105,10 +97,6 @@ function MatrixRows({
       }),
     [deck.cardsets, roleTargets, scores],
   );
-
-  useEffect(() => {
-    setRoleTargets(storedRoleTargets(deck.id));
-  }, [deck.id]);
 
   useEffect(() => {
     setCollapsed({
@@ -193,21 +181,34 @@ function MatrixRows({
                     </Text>
                   )}
                 </Inline>
-                {bulkEligible && row.totalQuantity > 0 && (
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      if (
-                        row.zone === "mainboard" ||
-                        row.zone === "sideboard"
-                      ) {
-                        setBulkSource(row.zone);
-                      }
-                    }}
-                    variant="ghost"
-                  >
-                    Move all to Considering
-                  </Button>
+                {((row.zone === "mainboard" &&
+                  displayPreferences.groupBy === "role") ||
+                  (bulkEligible && row.totalQuantity > 0)) && (
+                  <Inline align="center" gap={3}>
+                    {row.zone === "mainboard" &&
+                      displayPreferences.groupBy === "role" && (
+                        <RoleQualityPicker
+                          onChange={changeRoleQuality}
+                          quality={roleTargets.quality}
+                        />
+                      )}
+                    {bulkEligible && row.totalQuantity > 0 && (
+                      <Button
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            row.zone === "mainboard" ||
+                            row.zone === "sideboard"
+                          ) {
+                            setBulkSource(row.zone);
+                          }
+                        }}
+                        variant="ghost"
+                      >
+                        Move all to Considering
+                      </Button>
+                    )}
+                  </Inline>
                 )}
               </CardZoneRowHeader>
               <CardZoneRowScroll
@@ -233,17 +234,7 @@ function MatrixRows({
                         }
                         label={column.label}
                         onPreview={onPreview}
-                        onRoleTargetChange={(role, setting) => {
-                          setRoleTargets((current) => {
-                            const next = withRoleTargetSetting(
-                              current,
-                              role,
-                              setting,
-                            );
-                            storeRoleTargets(deck.id, next);
-                            return next;
-                          });
-                        }}
+                        onRoleTargetChange={changeRoleTarget}
                         quantity={column.quantity}
                         roleProgress={roleProgress}
                         roleTargets={roleTargets}

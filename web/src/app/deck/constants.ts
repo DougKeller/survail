@@ -48,6 +48,7 @@ export const DEFAULT_IMPORT_PREFERENCES: ImportPreferences = {
 };
 
 export const PriceProviderContext = createContext<PriceProvider>("tcgplayer");
+export const ScoringEnabledContext = createContext(true);
 
 export type DeckView = "stacks" | "grid" | "text";
 export type EditorView = "cards" | "scores" | "charts" | "info";

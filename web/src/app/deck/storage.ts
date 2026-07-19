@@ -159,6 +159,27 @@ export function editorViewFromSearchParams(
   return view !== null && isEditorView(view) ? view : "cards";
 }
 
+export function scoringAwareEditorView(
+  view: EditorView,
+  scoringEnabled: boolean,
+): EditorView {
+  return !scoringEnabled && view === "scores" ? "cards" : view;
+}
+
+export function scoringAwareDeckDisplayPreferences(
+  preferences: DeckDisplayPreferences,
+  scoringEnabled: boolean,
+): DeckDisplayPreferences {
+  if (scoringEnabled) return preferences;
+  return {
+    ...preferences,
+    groupBy:
+      preferences.groupBy === "role" ? "mana-value" : preferences.groupBy,
+    sortBy:
+      preferences.sortBy === "score" ? "alphabetical" : preferences.sortBy,
+  };
+}
+
 export function deckDisplayPreferencesFromSearchParams(
   searchParams: URLSearchParams,
   fallback: DeckDisplayPreferences,

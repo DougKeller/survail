@@ -495,22 +495,44 @@ async function fulfillJson(route: Route, body: object): Promise<void> {
   });
 }
 
-export async function mockRichApi(page: Page): Promise<void> {
+export interface RichDeckMockOptions {
+  /** Repeat distinct cardset appearances to stress-test large projected views. */
+  cardsetMultiplier?: number;
+}
+
+export async function mockRichApi(
+  page: Page,
+  options: RichDeckMockOptions = {},
+): Promise<void> {
+  const multiplier = Math.max(1, options.cardsetMultiplier ?? 1);
+  const deckTags = [
+    ...new Set(cardsets.flatMap((cardset) => cardset.tags)),
+  ].map((name, position) => ({ id: name, name, position, target: 0 }));
+  let activeCardsets = Array.from({ length: multiplier }, (_, copyIndex) =>
+    cardsets.map((cardset) => ({
+      ...cardset,
+      id: `${cardset.id}-fixture-${String(copyIndex)}`,
+      tag_ids: [...cardset.tags],
+      tag_weights: Object.fromEntries(cardset.tags.map((tag) => [tag, 1])),
+    })),
+  ).flat();
+  let activeDeck = { ...deck, cardsets: activeCardsets, tags: deckTags };
   await page.route("http://localhost:8000/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/auth/me") {
       await fulfillJson(route, {
         username: "local-developer",
         display_name: "Local Developer",
+        scoring_enabled: true,
       });
     } else if (url.pathname === "/decks") {
-      await fulfillJson(route, [deck, secondDeck, thirdDeck]);
+      await fulfillJson(route, [activeDeck, secondDeck, thirdDeck]);
     } else if (url.pathname === "/decks/deck-1") {
-      await fulfillJson(route, deck);
+      await fulfillJson(route, activeDeck);
     } else if (url.pathname === "/decks/deck-1/validation") {
       await fulfillJson(route, {
         valid: true,
-        card_count: cardsets.reduce(
+        card_count: activeCardsets.reduce(
           (total, entry) => total + entry.quantity,
           0,
         ),
@@ -529,6 +551,24 @@ export async function mockRichApi(page: Page): Promise<void> {
         created_at: "2026-06-10T00:00:00Z",
         updated_at: "2026-06-10T00:00:00Z",
       });
+    } else if (
+      route.request().method() === "PUT" &&
+      /^\/decks\/deck-1\/cardsets\/[^/]+\/tags\/[^/]+$/.test(url.pathname)
+    ) {
+      const [, , , , cardsetId, , tagId] = url.pathname.split("/");
+      if (cardsetId === undefined || tagId === undefined) {
+        throw new Error(`Invalid cardset tag route: ${url.pathname}`);
+      }
+      activeCardsets = activeCardsets.map((cardset) =>
+        cardset.id === cardsetId
+          ? {
+              ...cardset,
+              tag_ids: [...new Set([...cardset.tag_ids, tagId])],
+            }
+          : cardset,
+      );
+      activeDeck = { ...activeDeck, cardsets: activeCardsets };
+      await fulfillJson(route, activeDeck);
     } else {
       await route.fulfill({ status: 204 });
     }

@@ -1,4 +1,7 @@
-import { RoleTargetControl } from "../../designsystem/patterns/roleTargetControl";
+import {
+  RoleQualityControl,
+  RoleTargetControl,
+} from "../../designsystem/patterns/roleTargetControl";
 import {
   ROLE_TARGET_QUALITY_OPTIONS,
   ROLE_TARGET_ROLES,
@@ -28,15 +31,11 @@ function RoleTargetColumn({
 }) {
   return (
     <RoleTargetControl
+      averageOverallScore={progress.averageOverallScore}
       contribution={progress.contribution}
-      onQualityChange={(quality) => {
-        onChange({ ...setting, quality: quality as RoleTargetQuality });
-      }}
       onTargetChange={(target) => {
         onChange({ ...setting, target });
       }}
-      quality={setting.quality}
-      qualityOptions={ROLE_TARGET_QUALITY_OPTIONS}
       roleLabel={label}
       target={setting.target}
     />
@@ -63,7 +62,25 @@ export function RoleTargetForColumn({
         onChange(role, setting);
       }}
       progress={progress[role]}
-      setting={targets[role]}
+      setting={targets.roles[role]}
+    />
+  );
+}
+
+export function RoleQualityPicker({
+  onChange,
+  quality,
+}: {
+  onChange: (quality: RoleTargetQuality) => void;
+  quality: RoleTargetQuality;
+}) {
+  return (
+    <RoleQualityControl
+      onChange={(value) => {
+        onChange(value as RoleTargetQuality);
+      }}
+      options={ROLE_TARGET_QUALITY_OPTIONS}
+      quality={quality}
     />
   );
 }

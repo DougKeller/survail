@@ -12,6 +12,7 @@ export function EditDeckModal() {
   const {
     data: { busy },
     deck,
+    display: { scoringEnabled },
     details: {
       description,
       goal,
@@ -39,10 +40,12 @@ export function EditDeckModal() {
           })();
         }}
       >
-        <Text muted size="md">
-          Define the deck&apos;s North Star. Card roles and scores are evaluated
-          manually.
-        </Text>
+        {scoringEnabled && (
+          <Text muted size="md">
+            Define the deck&apos;s North Star. Card roles and scores are
+            evaluated manually.
+          </Text>
+        )}
         <Field htmlFor={`${fieldId}-title`} label="Title">
           <Input
             autoFocus

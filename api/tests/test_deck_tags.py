@@ -25,8 +25,14 @@ from survail.modules.decks.service.tags import (
     remove_cardset_tag,
     rename_deck_tag,
     reorder_deck_tags,
+    update_deck_tag,
 )
 from survail.modules.decks.tags.api.router import router
+from survail.modules.decks.tags.api.schemas import (
+    CardsetTagUpdate,
+    DeckTagCreate,
+    DeckTagUpdate,
+)
 
 
 class FakeTagSession:
@@ -92,6 +98,7 @@ def test_tag_lifecycle_preserves_stable_id_and_order() -> None:
     original_id = ramp.id
     rename_deck_tag(db, deck.id, ramp.id, owner, name="Acceleration")
     reorder_deck_tags(db, deck.id, owner, tag_ids=[draw.id, ramp.id])
+    update_deck_tag(db, deck.id, ramp.id, owner, target=12.5)
 
     assert ramp.id == original_id
     assert ramp.name == "Acceleration"
@@ -99,6 +106,8 @@ def test_tag_lifecycle_preserves_stable_id_and_order() -> None:
         ("Draw", 0),
         ("Acceleration", 1),
     ]
+    assert draw.target == 0
+    assert ramp.target == 12.5
 
 
 def test_tag_relations_are_database_cascaded() -> None:
@@ -120,6 +129,7 @@ def test_tag_api_exposes_deck_and_whole_stack_mutations() -> None:
     assert ("/decks/{deck_id}/tags/{tag_id}", "DELETE") in routes
     cardset_tag_path = "/decks/{deck_id}/cardsets/{cardset_id}/tags/{tag_id}"
     assert (cardset_tag_path, "PUT") in routes
+    assert (cardset_tag_path, "PATCH") in routes
     assert (cardset_tag_path, "DELETE") in routes
 
 
@@ -147,16 +157,44 @@ def test_cardset_tag_is_idempotent_and_applies_to_the_whole_stack() -> None:
     db = _session(deck)
     tag = create_deck_tag(db, deck.id, owner, name="Graveyard")
 
-    add_cardset_tag(db, deck.id, cardset.id, tag.id, owner)
-    add_cardset_tag(db, deck.id, cardset.id, tag.id, owner)
+    add_cardset_tag(db, deck.id, cardset.id, tag.id, owner, weight=0.5)
+    add_cardset_tag(db, deck.id, cardset.id, tag.id, owner, weight=0.25)
 
     assert cardset.quantity == 4
     assert cardset.deck_tags == [tag]
     assert tag.cardsets == [cardset]
+    assert cardset.tag_links[0].weight == 0.25
 
     remove_cardset_tag(db, deck.id, cardset.id, tag.id, owner)
     remove_cardset_tag(db, deck.id, cardset.id, tag.id, owner)
     assert cardset.deck_tags == []
+
+
+def test_cardset_tag_rejects_unsupported_weights() -> None:
+    deck, owner, cardset = _deck()
+    tag = create_deck_tag(_session(deck), deck.id, owner, name="Graveyard")
+
+    with pytest.raises(DeckTagConflictError, match="must be one of"):
+        add_cardset_tag(
+            _session(deck),
+            deck.id,
+            cardset.id,
+            tag.id,
+            owner,
+            weight=0.6,
+        )
+
+
+def test_tag_payloads_default_metadata_and_validate_partial_updates() -> None:
+    assert DeckTagCreate(name="Ramp").target == 0
+    assert DeckTagUpdate(target=8).model_dump(exclude_none=True) == {"target": 8.0}
+    assert CardsetTagUpdate().weight == 1
+    for weight in (0.25, 0.5, 0.75, 1):
+        assert CardsetTagUpdate(weight=weight).weight == weight
+    with pytest.raises(ValueError, match="at least one"):
+        DeckTagUpdate()
+    with pytest.raises(ValueError, match="weight must be one of"):
+        CardsetTagUpdate(weight=0.6)
 
 
 def test_deleting_tag_removes_it_from_every_cardset() -> None:
@@ -207,8 +245,11 @@ def test_legacy_operation_tags_reuse_stable_deck_tag_ids() -> None:
 
     _sync_visual_tags(deck, cardset, ["Ramp"], db)
     original_id = deck.deck_tags[0].id
+    cardset.tag_links[0].weight = 0.5
     _sync_visual_tags(deck, other, ["ramp"], db)
+    _sync_visual_tags(deck, cardset, ["Ramp"], db)
 
     assert len(deck.deck_tags) == 1
     assert deck.deck_tags[0].id == original_id
     assert cardset.deck_tags == other.deck_tags == [deck.deck_tags[0]]
+    assert cardset.tag_links[0].weight == 0.5

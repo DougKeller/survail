@@ -48,6 +48,7 @@ interface SegmentedOption {
 
 export interface SegmentedProps {
   className?: string;
+  disabled?: boolean;
   /** Accessible name for the whole group. */
   label?: string;
   /** Shared radio-group name for the underlying inputs. */
@@ -60,6 +61,7 @@ export interface SegmentedProps {
 /** Pill segmented control (Organic .seg/.seg-opt) over a radio group. */
 export function Segmented({
   className,
+  disabled = false,
   label,
   name,
   onChange,
@@ -80,6 +82,7 @@ export function Segmented({
           <input
             checked={option.value === value}
             className="ds-seg-input"
+            disabled={disabled}
             name={name}
             onChange={() => {
               onChange(option.value);

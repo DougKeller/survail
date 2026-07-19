@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from survail.core.models import CardSet, Deck, User
+from survail.core.models import CardSet, CardSetDeckTag, Deck, User
 
 
 class DeckCardSetNotFoundError(LookupError):
@@ -22,7 +22,9 @@ def set_cardset_note(
     deck = db.scalar(
         select(Deck)
         .options(
-            selectinload(Deck.cardsets).selectinload(CardSet.deck_tags),
+            selectinload(Deck.cardsets)
+            .selectinload(CardSet.tag_links)
+            .selectinload(CardSetDeckTag.deck_tag),
             selectinload(Deck.deck_tags),
         )
         .where(Deck.id == deck_id, Deck.owner_id == actor.id)

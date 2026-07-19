@@ -104,7 +104,7 @@ export function DeckHeader() {
   const {
     data: { validation },
     deck,
-    display: { editorView, setEditorView },
+    display: { editorView, scoringEnabled, setEditorView },
     modals: { setOpenDialog },
   } = useDeckEditorContext();
   const { setShowAgent, showAgent } = useDeckAdvisorContext();
@@ -172,17 +172,19 @@ export function DeckHeader() {
         <DeckActionsMenu />
       </NavBar>
       <TabNav label="Deck views">
-        {(["cards", "scores", "charts", "info"] as const).map((view) => (
-          <TabButton
-            current={editorView === view}
-            key={view}
-            onClick={() => {
-              setEditorView(view);
-            }}
-          >
-            {titleize(view)}
-          </TabButton>
-        ))}
+        {(["cards", "scores", "charts", "info"] as const)
+          .filter((view) => scoringEnabled || view !== "scores")
+          .map((view) => (
+            <TabButton
+              current={editorView === view}
+              key={view}
+              onClick={() => {
+                setEditorView(view);
+              }}
+            >
+              {titleize(view)}
+            </TabButton>
+          ))}
       </TabNav>
     </>
   );

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from survail.core.models import CardSet, Deck, DeckTag, User
+from survail.core.models import CardSet, CardSetDeckTag, Deck, DeckTag, User
 
 
 class DeckTagNotFoundError(LookupError):
@@ -15,12 +15,16 @@ class DeckTagConflictError(ValueError):
     pass
 
 
+TAG_WEIGHTS = frozenset({0.25, 0.5, 0.75, 1.0})
+
+
 def create_deck_tag(
     db: Session,
     deck_id: uuid.UUID,
     actor: User,
     *,
     name: str,
+    target: float = 0,
 ) -> DeckTag:
     deck = _owned_deck(db, deck_id, actor.id)
     cleaned = _clean_name(name)
@@ -30,6 +34,7 @@ def create_deck_tag(
         deck_id=deck.id,
         name=cleaned,
         position=len(deck.deck_tags),
+        target=target,
     )
     deck.deck_tags.append(tag)
     db.add(tag)
@@ -45,10 +50,26 @@ def rename_deck_tag(
     *,
     name: str,
 ) -> DeckTag:
+    return update_deck_tag(db, deck_id, tag_id, actor, name=name)
+
+
+def update_deck_tag(
+    db: Session,
+    deck_id: uuid.UUID,
+    tag_id: uuid.UUID,
+    actor: User,
+    *,
+    name: str | None = None,
+    target: float | None = None,
+) -> DeckTag:
     deck = _owned_deck(db, deck_id, actor.id)
     tag = _tag(deck, tag_id)
-    cleaned = _clean_name(name)
-    _ensure_unique_name(deck, cleaned, except_id=tag.id)
+    changed = False
+    if name is not None:
+        cleaned = _clean_name(name)
+        _ensure_unique_name(deck, cleaned, except_id=tag.id)
+    else:
+        cleaned = tag.name
     if tag.name != cleaned:
         previous_name = tag.name
         tag.name = cleaned
@@ -57,6 +78,11 @@ def rename_deck_tag(
                 cleaned if value.casefold() == previous_name.casefold() else value
                 for value in cardset.tags
             ]
+        changed = True
+    if target is not None and tag.target != target:
+        tag.target = target
+        changed = True
+    if changed:
         _commit(db, deck)
     return tag
 
@@ -114,14 +140,25 @@ def add_cardset_tag(
     cardset_id: uuid.UUID,
     tag_id: uuid.UUID,
     actor: User,
+    *,
+    weight: float = 1,
 ) -> Deck:
+    if weight not in TAG_WEIGHTS:
+        raise DeckTagConflictError("Tag weight must be one of 0.25, 0.5, 0.75, or 1")
     deck = _owned_deck(db, deck_id, actor.id)
     cardset = _cardset(deck, cardset_id)
     tag = _tag(deck, tag_id)
+    changed = False
     if tag not in cardset.deck_tags:
         cardset.deck_tags.append(tag)
         if not any(value.casefold() == tag.name.casefold() for value in cardset.tags):
             cardset.tags = [*cardset.tags, tag.name]
+        changed = True
+    link = next(link for link in cardset.tag_links if link.deck_tag is tag)
+    if link.weight != weight:
+        link.weight = weight
+        changed = True
+    if changed:
         _commit(db, deck)
     return deck
 
@@ -147,8 +184,12 @@ def _owned_deck(db: Session, deck_id: uuid.UUID, owner_id: uuid.UUID) -> Deck:
     deck = db.scalar(
         select(Deck)
         .options(
-            selectinload(Deck.deck_tags).selectinload(DeckTag.cardsets),
-            selectinload(Deck.cardsets).selectinload(CardSet.deck_tags),
+            selectinload(Deck.deck_tags)
+            .selectinload(DeckTag.cardset_links)
+            .selectinload(CardSetDeckTag.cardset),
+            selectinload(Deck.cardsets)
+            .selectinload(CardSet.tag_links)
+            .selectinload(CardSetDeckTag.deck_tag),
         )
         .where(Deck.id == deck_id, Deck.owner_id == owner_id)
         .with_for_update()
@@ -206,4 +247,5 @@ __all__ = [
     "remove_cardset_tag",
     "rename_deck_tag",
     "reorder_deck_tags",
+    "update_deck_tag",
 ]

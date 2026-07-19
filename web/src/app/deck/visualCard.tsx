@@ -2,7 +2,7 @@ import { GripVertical, ShieldUser, TagX } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
-import type { CardSet } from "../../modules/decks/contracts";
+import type { CardSet, DeckTag } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
 import { IconButton } from "../../designsystem/primitives/button";
 import {
@@ -10,8 +10,45 @@ import {
   ImageTileActions,
   ImageTileBadge,
 } from "../../designsystem/patterns/imageTile";
-import { useOptionalCardZoneDrag } from "../editor/cardZoneDrag";
+import {
+  useOptionalCardZoneDrag,
+  useOptionalCardZoneDragStatic,
+} from "../editor/cardZoneDrag";
 import { CardNoteButton, QuantityStepper } from "./cardRowActions";
+import { formattedTagWeight, nonDefaultTagWeights } from "./tagTargets";
+
+function CardDragHandle({
+  card,
+  disabled,
+  visualId,
+}: {
+  card: CardSet;
+  disabled: boolean;
+  visualId: string;
+}) {
+  const drag = useOptionalCardZoneDrag();
+  const handleProps = drag?.handleProps(card, visualId);
+  if (handleProps === undefined) return null;
+  return (
+    <IconButton
+      aria-pressed={handleProps["aria-pressed"]}
+      disabled={disabled}
+      dragHandle
+      label={handleProps["aria-label"]}
+      onLostPointerCapture={handleProps.onLostPointerCapture}
+      onKeyDown={handleProps.onKeyDown}
+      onPointerCancel={handleProps.onPointerCancel}
+      onPointerDown={handleProps.onPointerDown}
+      onPointerMove={handleProps.onPointerMove}
+      onPointerUp={handleProps.onPointerUp}
+      size="sm"
+      title="Move one card"
+      variant="ghost"
+    >
+      <GripVertical size={14} strokeWidth={2.75} />
+    </IconButton>
+  );
+}
 
 export function VisualCard({
   add,
@@ -24,6 +61,7 @@ export function VisualCard({
   score,
   stacked,
   tagAction,
+  tags,
   visualId,
 }: {
   add: () => void;
@@ -36,11 +74,19 @@ export function VisualCard({
   score: CardRoleEvaluation | null;
   stacked: boolean;
   tagAction?: ReactNode;
+  tags: readonly DeckTag[];
   visualId: string;
 }) {
-  const drag = useOptionalCardZoneDrag();
+  const drag = useOptionalCardZoneDragStatic();
   const draggableProps = drag?.draggableProps(card, visualId);
-  const handleProps = drag?.handleProps(card, visualId);
+  const weightedTags = nonDefaultTagWeights(card, tags);
+  const showQuantity = !stacked && card.quantity > 1;
+  const badgeLabel = [
+    ...(showQuantity ? [`${String(card.quantity)} copies`] : []),
+    ...weightedTags.map(
+      (tag) => `${tag.name} weight ${formattedTagWeight(tag.weight)}`,
+    ),
+  ].join(", ");
   return (
     <ImageTile
       {...draggableProps}
@@ -49,9 +95,16 @@ export function VisualCard({
       data-zone={card.zone}
     >
       <ClickableCardImage card={card} />
-      {!stacked && card.quantity > 1 && (
-        <ImageTileBadge aria-label={`${String(card.quantity)} copies`}>
-          ×{card.quantity}
+      {(showQuantity || weightedTags.length > 0) && (
+        <ImageTileBadge
+          aria-label={badgeLabel}
+          title={weightedTags
+            .map((tag) => `${tag.name}: ${formattedTagWeight(tag.weight)}`)
+            .join(", ")}
+        >
+          {showQuantity ? `×${String(card.quantity)}` : ""}
+          {showQuantity && weightedTags.length > 0 ? " · " : ""}
+          {weightedTags.map((tag) => formattedTagWeight(tag.weight)).join("/")}
         </ImageTileBadge>
       )}
       {score !== null && (
@@ -87,25 +140,7 @@ export function VisualCard({
           onAdd={add}
           onRemove={remove}
         />
-        {handleProps !== undefined && (
-          <IconButton
-            aria-pressed={handleProps["aria-pressed"]}
-            disabled={disabled}
-            dragHandle
-            label={handleProps["aria-label"]}
-            onLostPointerCapture={handleProps.onLostPointerCapture}
-            onKeyDown={handleProps.onKeyDown}
-            onPointerCancel={handleProps.onPointerCancel}
-            onPointerDown={handleProps.onPointerDown}
-            onPointerMove={handleProps.onPointerMove}
-            onPointerUp={handleProps.onPointerUp}
-            size="sm"
-            title="Move one card"
-            variant="ghost"
-          >
-            <GripVertical size={14} strokeWidth={2.75} />
-          </IconButton>
-        )}
+        <CardDragHandle card={card} disabled={disabled} visualId={visualId} />
         {markCommander !== null && (
           <IconButton
             disabled={disabled}

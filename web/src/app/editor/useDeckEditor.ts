@@ -14,6 +14,8 @@ import {
   editorViewFromSearchParams,
   messageFor,
   PriceProviderContext,
+  scoringAwareDeckDisplayPreferences,
+  scoringAwareEditorView,
   storeDeckDisplayPreferences,
   storedDeckDisplayPreferences,
   storedImportPreferences,
@@ -29,7 +31,8 @@ import type {
 } from "../../modules/decks/contracts";
 import type { ImportPreferences } from "../../modules/imports/contracts";
 import type { DeckDisplayPreferences, EditorView } from "../deck/constants";
-import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
+import { ScoringEnabledContext } from "../deck/constants";
+import { useDeckAnalytics } from "./useDeckAnalytics";
 import { useDeckActions } from "./useDeckActions";
 import { useDeckScoring } from "./useDeckScoring";
 
@@ -38,6 +41,7 @@ export type EditorDialog = "describe" | "history" | "validation";
 
 export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const priceProvider = useContext(PriceProviderContext);
+  const scoringEnabled = useContext(ScoringEnabledContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const initialDisplayPreferences = useRef<DeckDisplayPreferences>(
@@ -53,9 +57,8 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const [description, setDescription] = useState("");
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
-  const [analytics, setAnalytics] = useState<DeckAnalytics | null>(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
+  const { analytics, analyticsError, analyticsLoading, loadAnalytics } =
+    useDeckAnalytics(id);
   const [printingPreferences] = useState<ImportPreferences>(
     storedImportPreferences,
   );
@@ -67,11 +70,18 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [activeCardNote, setActiveCardNote] = useState<CardSet | null>(null);
-  const displayPreferences = deckDisplayPreferencesFromSearchParams(
+  const requestedDisplayPreferences = deckDisplayPreferencesFromSearchParams(
     searchParams,
     initialDisplayPreferences.current,
   );
-  const editorView = editorViewFromSearchParams(searchParams);
+  const displayPreferences = scoringAwareDeckDisplayPreferences(
+    requestedDisplayPreferences,
+    scoringEnabled,
+  );
+  const editorView = scoringAwareEditorView(
+    editorViewFromSearchParams(searchParams),
+    scoringEnabled,
+  );
 
   const loadDeck = useCallback(async (): Promise<void> => {
     const [loadedDeck, loadedValidation, loadedOperations] = await Promise.all([
@@ -85,7 +95,15 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     setGoal(loadedDeck.goal);
     setValidation(loadedValidation);
     setOperations(loadedOperations);
-  }, [id]);
+  }, [
+    id,
+    setDeck,
+    setDescription,
+    setGoal,
+    setOperations,
+    setTitle,
+    setValidation,
+  ]);
 
   useEffect(() => {
     void loadDeck().catch((reason: unknown) => {
@@ -96,22 +114,6 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   useEffect(() => {
     storeDeckDisplayPreferences(displayPreferences);
   }, [displayPreferences]);
-
-  const loadAnalytics = useCallback(async (): Promise<void> => {
-    setAnalyticsLoading(true);
-    setAnalyticsError(null);
-    try {
-      setAnalytics(await api.deckAnalytics(id));
-    } catch (reason) {
-      setAnalyticsError(
-        reason instanceof Error
-          ? messageFor(reason)
-          : "Could not load deck analytics",
-      );
-    } finally {
-      setAnalyticsLoading(false);
-    }
-  }, [id]);
 
   // Derive updates from window.location, which history updates synchronously.
   // Render-time search params (even via the functional setter, which resolves
@@ -124,13 +126,18 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
         nextSearchParams,
         initialDisplayPreferences.current,
       );
-      const next = typeof update === "function" ? update(current) : update;
+      const effectiveCurrent = scoringAwareDeckDisplayPreferences(
+        current,
+        scoringEnabled,
+      );
+      const next =
+        typeof update === "function" ? update(effectiveCurrent) : update;
       nextSearchParams.set("view", next.view);
       nextSearchParams.set("group", next.groupBy);
       nextSearchParams.set("sort", next.sortBy);
       setSearchParams(nextSearchParams, { replace: true });
     },
-    [setSearchParams],
+    [scoringEnabled, setSearchParams],
   );
 
   const setEditorView = useCallback(
@@ -150,7 +157,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     loadCachedScores,
     scoring,
     scores,
-  } = useDeckScoring({ deck, setAnnouncement, setError });
+  } = useDeckScoring({ deck, scoringEnabled, setAnnouncement, setError });
   const {
     addTagToCard,
     addSearchResult,
@@ -168,7 +175,8 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     moveCardToZone,
     openBulkEdit,
     removeTagFromCard,
-    renameTag,
+    setTagWeight,
+    updateTag,
     updateCardNote,
   } = useDeckActions({
     bulkDecklist,
@@ -200,9 +208,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     setShowSearchResults(false);
     setResults([]);
     setQuery("");
-    requestAnimationFrame(() => {
-      searchInputRef.current?.focus();
-    });
+    requestAnimationFrame(() => searchInputRef.current?.focus());
   }
 
   useEffect(() => {
@@ -237,15 +243,11 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
       moveAllToConsidering,
       moveCardToZone,
       removeTagFromCard,
-      renameTag,
+      setTagWeight,
+      updateTag,
       updateCardNote,
     },
-    analytics: {
-      analytics,
-      analyticsError,
-      analyticsLoading,
-      loadAnalytics,
-    },
+    analytics: { analytics, analyticsError, analyticsLoading, loadAnalytics },
     data: {
       announcement,
       busy,
@@ -271,6 +273,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
       displayPreferences,
       editorView,
       priceProvider,
+      scoringEnabled,
       setDisplayPreferences,
       setEditorView,
     },

@@ -8,18 +8,18 @@ from sqlalchemy import (
     JSON,
     Boolean,
     CheckConstraint,
-    Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
     String,
-    Table,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -69,21 +69,28 @@ class TimestampMixin:
     )
 
 
-cardset_deck_tags = Table(
-    "cardset_deck_tags",
-    Base.metadata,
-    Column(
-        "cardset_id",
-        ForeignKey("cardsets.id", ondelete="CASCADE"),
-        primary_key=True,
-    ),
-    Column(
-        "deck_tag_id",
-        ForeignKey("deck_tags.id", ondelete="CASCADE"),
-        index=True,
-        primary_key=True,
-    ),
-)
+class CardSetDeckTag(Base):
+    __tablename__ = "cardset_deck_tags"
+    __table_args__ = (
+        CheckConstraint(
+            "weight IN (0.25, 0.5, 0.75, 1)",
+            name="ck_cardset_deck_tag_weight",
+        ),
+    )
+
+    cardset_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cardsets.id", ondelete="CASCADE"), primary_key=True
+    )
+    deck_tag_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("deck_tags.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    weight: Mapped[float] = mapped_column(Float, default=1.0, server_default="1", nullable=False)
+
+    cardset: Mapped["CardSet"] = relationship(back_populates="tag_links")
+    deck_tag: Mapped["DeckTag"] = relationship(back_populates="cardset_links")
+
+
+cardset_deck_tags = CardSetDeckTag.__table__
 
 
 class User(TimestampMixin, Base):
@@ -94,6 +101,7 @@ class User(TimestampMixin, Base):
     username: Mapped[str] = mapped_column(String(100))
     display_name: Mapped[str | None] = mapped_column(String(100))
     avatar_hash: Mapped[str | None] = mapped_column(String(100))
+    scoring_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
     decks: Mapped[list["Deck"]] = relationship(back_populates="owner", cascade="all, delete-orphan")
     sessions: Mapped[list["UserSession"]] = relationship(
@@ -194,10 +202,15 @@ class CardSet(TimestampMixin, Base):
     scryfall: Mapped[JsonObject] = mapped_column(JSON)
 
     deck: Mapped[Deck] = relationship(back_populates="cardsets")
-    deck_tags: Mapped[list["DeckTag"]] = relationship(
-        secondary=cardset_deck_tags,
-        back_populates="cardsets",
-        order_by="DeckTag.position",
+    tag_links: Mapped[list[CardSetDeckTag]] = relationship(
+        back_populates="cardset",
+        cascade="all, delete-orphan",
+        order_by="CardSetDeckTag.deck_tag_id",
+    )
+    deck_tags: AssociationProxy[list["DeckTag"]] = association_proxy(
+        "tag_links",
+        "deck_tag",
+        creator=lambda tag: CardSetDeckTag(deck_tag=tag, weight=1.0),
     )
 
 
@@ -205,6 +218,7 @@ class DeckTag(TimestampMixin, Base):
     __tablename__ = "deck_tags"
     __table_args__ = (
         CheckConstraint("position >= 0", name="ck_deck_tag_position"),
+        CheckConstraint("target >= 0", name="ck_deck_tag_target"),
         UniqueConstraint("deck_id", "name", name="uq_deck_tag_name"),
         UniqueConstraint("deck_id", "position", name="uq_deck_tag_position"),
     )
@@ -215,11 +229,17 @@ class DeckTag(TimestampMixin, Base):
     )
     name: Mapped[str] = mapped_column(String(100))
     position: Mapped[int] = mapped_column(Integer)
+    target: Mapped[float] = mapped_column(Float, default=0.0, server_default="0", nullable=False)
 
     deck: Mapped[Deck] = relationship(back_populates="deck_tags")
-    cardsets: Mapped[list[CardSet]] = relationship(
-        secondary=cardset_deck_tags,
-        back_populates="deck_tags",
+    cardset_links: Mapped[list[CardSetDeckTag]] = relationship(
+        back_populates="deck_tag",
+        cascade="all, delete-orphan",
+    )
+    cardsets: AssociationProxy[list[CardSet]] = association_proxy(
+        "cardset_links",
+        "cardset",
+        creator=lambda cardset: CardSetDeckTag(cardset=cardset, weight=1.0),
     )
 
 

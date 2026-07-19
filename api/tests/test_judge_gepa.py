@@ -6,6 +6,7 @@ import dspy  # type: ignore[import-untyped]
 import pytest
 
 from scripts import judge_gepa
+from scripts.judge_eval import CatalogReadSession
 from scripts.judge_gepa import (
     InvalidInstructionProposalError,
     card_name_leaks,
@@ -15,6 +16,20 @@ from scripts.judge_gepa import (
     validating_instruction_proposer,
 )
 from survail.modules.decks.evaluations.service.evaluator import ROLE_NAMES, StructuredLLMaaJ
+
+
+def test_catalog_read_session_delegates_read_execute() -> None:
+    statement = object()
+    result = object()
+
+    class CatalogSession:
+        def execute(self, received: object) -> object:
+            assert received is statement
+            return result
+
+    adapter = CatalogReadSession(CatalogSession())
+
+    assert adapter.execute(statement) is result
 
 
 def test_golden_metric_ignores_historical_overall_range_without_changing_labels() -> None:

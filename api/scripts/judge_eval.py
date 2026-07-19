@@ -72,6 +72,9 @@ class CatalogReadSession:
         del statement
         return []
 
+    def execute(self, statement: object) -> object:
+        return self._session.execute(statement)  # type: ignore[attr-defined]
+
     def add(self, instance: object) -> None:
         del instance
 
@@ -181,7 +184,6 @@ def build_deck(spec: dict, snapshots: dict[str, dict]) -> Deck:
                     printing_id=snapshot["id"],
                     oracle_id=snapshot["oracle_id"],
                     card_name=snapshot["name"],
-                    core=False,
                     note=entry.get("note"),
                     scryfall=snapshot,
                 )

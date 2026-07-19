@@ -65,9 +65,8 @@ export function buildCardZoneMatrix({
   deckTags = [],
 }: BuildCardZoneMatrixOptions): CardZoneMatrix {
   const zones = cardMatrixRowZones(format);
-  const visibleCards = cards.filter((card) =>
-    zones.some((zone) => zone === card.zone),
-  );
+  const visibleZones = new Set<CardZone>(zones);
+  const visibleCards = cards.filter((card) => visibleZones.has(card.zone));
   const populatedGroups = groupedCards(
     visibleCards,
     groupBy,
@@ -91,21 +90,49 @@ export function buildCardZoneMatrix({
           ...(groupBy === "tags" ? { tagId: group.tagId ?? null } : {}),
         }));
   const columns = columnDefinitions.map((column) => column.label);
+  const groupKey = (group: { label: string; tagId?: string | null }) =>
+    groupBy === "tags" ? (group.tagId ?? "__untagged__") : group.label;
+  const cardsByZone = new Map<CardZoneMatrixRowZone, CardSet[]>(
+    zones.map((zone) => [zone, []]),
+  );
+  for (const card of visibleCards) {
+    cardsByZone.get(card.zone as CardZoneMatrixRowZone)?.push(card);
+  }
+
+  // Group and sort once for the whole matrix, then partition each already
+  // sorted group by zone. Besides preserving the same ordering, this avoids
+  // rescanning every card for every tag once per row.
+  const groupsByZone = new Map<
+    string,
+    Map<CardZoneMatrixRowZone, CardZoneMatrixColumn>
+  >();
+  for (const group of populatedGroups) {
+    const byZone = new Map<CardZoneMatrixRowZone, CardZoneMatrixColumn>();
+    for (const card of group.cards) {
+      const zone = card.zone as CardZoneMatrixRowZone;
+      let zoneGroup = byZone.get(zone);
+      if (zoneGroup === undefined) {
+        zoneGroup = {
+          label: group.label,
+          cards: [],
+          quantity: 0,
+          ...(groupBy === "tags" ? { tagId: group.tagId ?? null } : {}),
+        };
+        byZone.set(zone, zoneGroup);
+      }
+      zoneGroup.cards.push(card);
+      zoneGroup.quantity += card.quantity;
+    }
+    groupsByZone.set(groupKey(group), byZone);
+  }
 
   const rows = zones.map((zone): CardZoneMatrixRow => {
-    const rowCards = visibleCards.filter((card) => card.zone === zone);
-    const groupKey = (group: { label: string; tagId?: string | null }) =>
-      groupBy === "tags" ? (group.tagId ?? "__untagged__") : group.label;
-    const groups = new Map(
-      groupedCards(rowCards, groupBy, sortBy, provider, scores, deckTags).map(
-        (group) => [groupKey(group), group],
-      ),
-    );
+    const rowCards = cardsByZone.get(zone) ?? [];
     return {
       zone,
       cards: rowCards,
       columns: columnDefinitions.map((column) => {
-        const group = groups.get(groupKey(column));
+        const group = groupsByZone.get(groupKey(column))?.get(zone);
         return {
           label: column.label,
           cards: group?.cards ?? [],

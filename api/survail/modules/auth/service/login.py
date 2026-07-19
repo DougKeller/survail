@@ -64,6 +64,12 @@ class AuthService:
             self._repository.delete(session)
             self._repository.commit()
 
+    def update_scoring_setting(self, user: User, *, enabled: bool) -> User:
+        user.scoring_enabled = enabled
+        self._repository.commit()
+        self._repository.refresh(user)
+        return user
+
     def _discord_user(self, code: str, settings: Settings) -> DiscordUserResponse:
         try:
             with httpx.Client(timeout=10.0) as client:

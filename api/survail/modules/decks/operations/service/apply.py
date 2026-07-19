@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 from survail.core.models import (
     CardFinish,
     CardSet,
+    CardSetDeckTag,
     CardZone,
     Deck,
     DeckOperation,
@@ -223,7 +224,9 @@ def _locked_deck(db: Session, deck_id: uuid.UUID, owner_id: uuid.UUID) -> Deck:
     deck = db.scalar(
         select(Deck)
         .options(
-            selectinload(Deck.cardsets).selectinload(CardSet.deck_tags),
+            selectinload(Deck.cardsets)
+            .selectinload(CardSet.tag_links)
+            .selectinload(CardSetDeckTag.deck_tag),
             selectinload(Deck.deck_tags),
         )
         .where(Deck.id == deck_id, Deck.owner_id == owner_id)
@@ -255,7 +258,10 @@ def _sync_visual_tags(
             db.add(tag)
             tags_by_name[name.casefold()] = tag
         selected.append(tag)
-    cardset.deck_tags = selected
+    existing_links = {link.deck_tag.id: link for link in cardset.tag_links}
+    cardset.tag_links = [
+        existing_links.get(tag.id, CardSetDeckTag(deck_tag=tag, weight=1.0)) for tag in selected
+    ]
 
 
 def _request_hash(payload: DeckOperationCreate) -> str:

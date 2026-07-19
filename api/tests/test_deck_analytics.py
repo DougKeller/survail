@@ -1,12 +1,13 @@
 import uuid
 
-from survail.core.models import CardFinish, CardSet, CardZone, Deck, DeckFormat
+from survail.core.models import CardFinish, CardSet, CardZone, Deck, DeckFormat, DeckTag
 from survail.core.schemas import CardFace, ScryfallCardSnapshot
 from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead
 from survail.modules.decks.service.analytics import (
     color_pip_counts,
     mana_curve_counts,
     role_distribution_counts,
+    tag_distribution_counts,
     type_distribution_counts,
 )
 
@@ -161,3 +162,39 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
         "payoff": 2,
         "enhancer": 1,
     }
+
+
+def test_tag_distribution_counts_each_assignment_and_untagged_cards() -> None:
+    deck = Deck(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        title="Analytics",
+        format=DeckFormat.MODERN,
+        description="",
+        goal="",
+        metadata_json={"kind": "generic"},
+        revision=1,
+    )
+    ramp = DeckTag(id=uuid.uuid4(), deck_id=deck.id, name="Ramp", position=0)
+    engine = DeckTag(id=uuid.uuid4(), deck_id=deck.id, name="Engine", position=1)
+    tagged = _cardset("tagged", name="Tagged Card", quantity=2)
+    tagged.deck_tags = [ramp, engine]
+    tagged.tag_links[0].weight = 0.5
+    tagged.tag_links[1].weight = 0.25
+    untagged = _cardset("untagged", name="Untagged Card", quantity=1)
+    sideboard = _cardset(
+        "sideboard",
+        name="Sideboard Card",
+        quantity=9,
+        zone=CardZone.SIDEBOARD,
+    )
+    sideboard.deck_tags = [ramp]
+    deck.cardsets = [tagged, untagged, sideboard]
+    deck.deck_tags = [ramp, engine]
+
+    assert tag_distribution_counts(deck) == {
+        str(ramp.id): 1,
+        str(engine.id): 0.5,
+        "untagged": 1,
+    }
+    assert tag_distribution_counts(deck, exclude_oracle_id="tagged") == {"untagged": 1}

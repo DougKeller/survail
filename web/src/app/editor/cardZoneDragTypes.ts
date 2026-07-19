@@ -59,3 +59,5 @@ export interface CardZoneDragValue {
     onDrop: (event: DragEvent<HTMLElement>) => void;
   };
 }
+
+export type CardZoneDragStaticValue = Pick<CardZoneDragValue, "draggableProps">;

@@ -190,7 +190,9 @@ export function groupedCards(
   const groups = new Map<string, CardSet[]>();
   cards.forEach((card) => {
     groupLabels(card, groupBy, scores).forEach((label) => {
-      groups.set(label, [...(groups.get(label) ?? []), card]);
+      const group = groups.get(label);
+      if (group === undefined) groups.set(label, [card]);
+      else group.push(card);
     });
   });
   return [...groups.entries()]

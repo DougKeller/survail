@@ -1,6 +1,7 @@
 export {
   DECK_FORMATS,
   PriceProviderContext,
+  ScoringEnabledContext,
   searchAddZonesFor,
   zonesFor,
 } from "./deck/constants";
@@ -13,6 +14,8 @@ export {
   deckDisplayPreferencesFromSearchParams,
   editorViewFromSearchParams,
   isPriceProvider,
+  scoringAwareDeckDisplayPreferences,
+  scoringAwareEditorView,
   storeAdvisorOpen,
   storeAdvisorWidth,
   storeDeckSummaryOpen,

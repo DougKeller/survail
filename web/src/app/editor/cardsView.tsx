@@ -58,7 +58,7 @@ export function DeckCardsView() {
     actions: { createTag },
     data: { busy },
     deck,
-    display: { displayPreferences, setDisplayPreferences },
+    display: { displayPreferences, scoringEnabled, setDisplayPreferences },
     search: {
       addCardFromSearch,
       handleSearch: openSearch,
@@ -192,7 +192,9 @@ export function DeckCardsView() {
                 groupBy: event.target.value as GroupBy,
               }));
             }}
-            options={GROUP_OPTIONS}
+            options={GROUP_OPTIONS.filter(
+              (option) => scoringEnabled || option.value !== "role",
+            )}
             value={groupBy}
           />
         </Inline>
@@ -206,7 +208,9 @@ export function DeckCardsView() {
                 sortBy: event.target.value as SortBy,
               }));
             }}
-            options={SORT_OPTIONS}
+            options={SORT_OPTIONS.filter(
+              (option) => scoringEnabled || option.value !== "score",
+            )}
             value={sortBy}
           />
         </Inline>

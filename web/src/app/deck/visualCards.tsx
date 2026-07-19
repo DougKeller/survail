@@ -1,4 +1,8 @@
-import type { CardSet, DeckFormat } from "../../modules/decks/contracts";
+import type {
+  CardSet,
+  DeckFormat,
+  DeckTag,
+} from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
 import type { ReactNode } from "react";
 import { CardStack, ImageGrid } from "../../designsystem/layout/cardGallery";
@@ -18,6 +22,7 @@ export function VisualCardColumn({
   removeCard,
   scores,
   tagAction,
+  tags,
   view,
 }: {
   addCard: (card: CardSet) => void;
@@ -31,6 +36,7 @@ export function VisualCardColumn({
   removeCard: (card: CardSet) => void;
   scores: ReadonlyMap<string, CardRoleEvaluation>;
   tagAction?: ((card: CardSet) => ReactNode) | undefined;
+  tags: readonly DeckTag[];
   view: Exclude<DeckView, "text">;
 }) {
   const renderCard = (card: CardSet, index: number, stacked: boolean) => (
@@ -68,6 +74,7 @@ export function VisualCardColumn({
       score={scores.get(card.oracle_id) ?? null}
       stacked={stacked}
       tagAction={tagAction?.(card)}
+      tags={tags}
       visualId={`${card.zone}-${columnLabel}-${card.id}-${String(index)}`}
     />
   );

@@ -13,10 +13,10 @@ import type {
   RoleTargets,
 } from "../deck/roleTargets";
 import { TextCardColumn } from "./boardView";
-import { useDeckEditorContext } from "./deckEditorContext";
+import { useDeckCardsContext } from "./deckEditorContext";
 import { RoleTargetForColumn } from "./roleTargetColumn";
 import { useCardZoneDrag } from "./cardZoneDrag";
-import { TagColumnActions } from "./tagControls";
+import { TagColumnActions, TagTargetProgress } from "./tagControls";
 import { CardTagPicker } from "./cardTagPicker";
 
 export function CardsZoneColumn({
@@ -49,14 +49,14 @@ export function CardsZoneColumn({
       deleteTag,
       markAsCommander,
       removeTagFromCard,
-      renameTag,
+      updateTag,
     },
     data: { busy },
     deck,
     display: { displayPreferences },
     modals: { setActiveCardNote },
     scoring: { scores },
-  } = useDeckEditorContext();
+  } = useDeckCardsContext();
   const drag = useCardZoneDrag();
   const tag = deck.tags?.find((item) => item.id === tagId) ?? null;
   const tagDropProps =
@@ -77,13 +77,16 @@ export function CardsZoneColumn({
             onDelete={(target) => {
               return deleteTag(target.id, target.name);
             }}
-            onRename={(target, name) => {
-              return renameTag(target.id, name);
+            onUpdate={(target, name, nextTarget) => {
+              return updateTag(target.id, name, nextTarget);
             }}
             tag={tag}
           />
         )}
       </ColumnHeader>
+      {tag !== null && zone === "mainboard" && (
+        <TagTargetProgress cards={cards} tag={tag} />
+      )}
       {zone === "mainboard" && displayPreferences.groupBy === "role" && (
         <RoleTargetForColumn
           label={label}
@@ -133,11 +136,8 @@ export function CardsZoneColumn({
                   }
             }
             scores={scores}
-            tagAction={
-              displayPreferences.groupBy === "tags"
-                ? (card) => <CardTagPicker card={card} />
-                : undefined
-            }
+            tagAction={(card) => <CardTagPicker card={card} />}
+            tags={deck.tags ?? []}
             view={displayPreferences.view}
           />
         )}

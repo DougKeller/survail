@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from survail.core.models import CardSet, Deck, DeckOperation
+from survail.core.models import CardSet, CardSetDeckTag, Deck, DeckOperation
 
 
 class DeckRepository:
@@ -15,7 +15,9 @@ class DeckRepository:
         return self._db.scalar(
             select(Deck)
             .options(
-                selectinload(Deck.cardsets).selectinload(CardSet.deck_tags),
+                selectinload(Deck.cardsets)
+                .selectinload(CardSet.tag_links)
+                .selectinload(CardSetDeckTag.deck_tag),
                 selectinload(Deck.deck_tags),
             )
             .where(Deck.id == deck_id, Deck.owner_id == owner_id)
@@ -26,7 +28,9 @@ class DeckRepository:
             self._db.scalars(
                 select(Deck)
                 .options(
-                    selectinload(Deck.cardsets).selectinload(CardSet.deck_tags),
+                    selectinload(Deck.cardsets)
+                    .selectinload(CardSet.tag_links)
+                    .selectinload(CardSetDeckTag.deck_tag),
                     selectinload(Deck.deck_tags),
                 )
                 .where(Deck.owner_id == owner_id)

@@ -4,8 +4,8 @@ import type { CardSet, DeckTag } from "../../modules/decks/contracts";
 import { buildCardZoneMatrix } from "./cardZoneMatrix";
 
 const TAGS: DeckTag[] = [
-  { id: "graveyard", name: "Graveyard", position: 1 },
-  { id: "ramp", name: "Ramp", position: 0 },
+  { id: "graveyard", name: "Graveyard", position: 1, target: 0 },
+  { id: "ramp", name: "Ramp", position: 0, target: 0 },
 ];
 
 function card(
@@ -112,7 +112,7 @@ describe("tag grouping", () => {
   it("keeps a user tag named Untagged distinct from the fallback", () => {
     const result = matrix(
       [card("Tagged", ["named-untagged"]), card("Fallback", [])],
-      [{ id: "named-untagged", name: "Untagged", position: 0 }],
+      [{ id: "named-untagged", name: "Untagged", position: 0, target: 0 }],
     );
 
     expect(result.columns).toEqual(["Untagged", "Untagged"]);

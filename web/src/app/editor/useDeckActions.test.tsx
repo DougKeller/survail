@@ -11,7 +11,8 @@ const apiMocks = vi.hoisted(() => ({
   deleteDeckTag: vi.fn(),
   operations: vi.fn(),
   removeCardsetTag: vi.fn(),
-  renameDeckTag: vi.fn(),
+  setCardsetTagWeight: vi.fn(),
+  updateDeckTag: vi.fn(),
 }));
 
 vi.mock("../api", () => ({
@@ -165,7 +166,7 @@ describe("deck tag actions", () => {
     const currentDeck = deck();
     const created = {
       ...currentDeck,
-      tags: [{ id: "tag-1", name: "Ramp", position: 0 }],
+      tags: [{ id: "tag-1", name: "Ramp", position: 0, target: 0 }],
     };
     apiMocks.createDeckTag.mockResolvedValue(created);
     const options = props(currentDeck);
@@ -180,27 +181,44 @@ describe("deck tag actions", () => {
     expect(options.setAnnouncement).toHaveBeenCalledWith("Created tag Ramp");
   });
 
-  it("renames and deletes tags by stable id", async () => {
+  it("updates tag metadata and deletes tags by stable id", async () => {
     const currentDeck = deck();
-    apiMocks.renameDeckTag.mockResolvedValue(currentDeck);
+    apiMocks.updateDeckTag.mockResolvedValue(currentDeck);
     apiMocks.deleteDeckTag.mockResolvedValue(currentDeck);
     const { result, rerender } = renderHook(
       ({ options }) => useDeckActions(options),
       { initialProps: { options: props(currentDeck) } },
     );
 
-    await result.current.renameTag("tag-1", "Graveyard");
+    await result.current.updateTag("tag-1", "Graveyard", 12);
     await waitFor(() => {
-      expect(apiMocks.renameDeckTag).toHaveBeenCalledWith(
-        "deck-1",
-        "tag-1",
-        "Graveyard",
-      );
+      expect(apiMocks.updateDeckTag).toHaveBeenCalledWith("deck-1", "tag-1", {
+        name: "Graveyard",
+        target: 12,
+      });
     });
     rerender({ options: props(currentDeck) });
     await result.current.deleteTag("tag-1", "Graveyard");
     await waitFor(() => {
       expect(apiMocks.deleteDeckTag).toHaveBeenCalledWith("deck-1", "tag-1");
+    });
+  });
+
+  it("sets a card tag weight with the selected preset", async () => {
+    const taggedCard = card({ tag_ids: ["ramp"] });
+    const currentDeck = deck([taggedCard]);
+    apiMocks.setCardsetTagWeight.mockResolvedValue(currentDeck);
+    const { result } = renderHook(() => useDeckActions(props(currentDeck)));
+
+    void result.current.setTagWeight(taggedCard, "ramp", "Ramp", 0.5);
+
+    await waitFor(() => {
+      expect(apiMocks.setCardsetTagWeight).toHaveBeenCalledWith(
+        "deck-1",
+        "cardset-1",
+        "ramp",
+        0.5,
+      );
     });
   });
 
@@ -236,12 +254,12 @@ describe("deck tag actions", () => {
     );
 
     void result.current.createTag("  ");
-    void result.current.renameTag("ramp", " ");
+    void result.current.updateTag("ramp", " ", 0);
     result.current.addTagToCard(taggedCard, "ramp", "Ramp");
     result.current.removeTagFromCard(taggedCard, "missing", "Missing");
 
     expect(apiMocks.createDeckTag).not.toHaveBeenCalled();
-    expect(apiMocks.renameDeckTag).not.toHaveBeenCalled();
+    expect(apiMocks.updateDeckTag).not.toHaveBeenCalled();
     expect(apiMocks.addCardsetTag).not.toHaveBeenCalled();
     expect(apiMocks.removeCardsetTag).not.toHaveBeenCalled();
   });

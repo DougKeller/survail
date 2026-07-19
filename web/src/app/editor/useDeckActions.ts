@@ -149,58 +149,70 @@ export function useDeckActions({
     title,
   });
 
-  const changeQuantity = (cardset: CardSet, quantityDelta: number): void => {
-    applyChanges(
-      [
-        {
-          printing_id: cardset.printing_id,
-          quantity_delta: quantityDelta,
-          zone: cardset.zone,
-          finish: cardset.finish,
-          note: cardset.note,
-          tags: cardset.tags,
-        },
-      ],
-      `${quantityDelta > 0 ? "Add" : "Remove"} ${cardset.card_name}`,
-    );
-  };
+  const changeQuantity = useCallback(
+    (cardset: CardSet, quantityDelta: number): void => {
+      applyChanges(
+        [
+          {
+            printing_id: cardset.printing_id,
+            quantity_delta: quantityDelta,
+            zone: cardset.zone,
+            finish: cardset.finish,
+            note: cardset.note,
+            tags: cardset.tags,
+          },
+        ],
+        `${quantityDelta > 0 ? "Add" : "Remove"} ${cardset.card_name}`,
+      );
+    },
+    [applyChanges],
+  );
 
-  const markAsCommander = (cardset: CardSet): void => {
-    applyChanges(
-      [
-        {
-          printing_id: cardset.printing_id,
-          quantity_delta: -1,
-          zone: cardset.zone,
-          finish: cardset.finish,
-          note: cardset.note,
-        },
-        {
-          printing_id: cardset.printing_id,
-          quantity_delta: 1,
-          zone: "commander",
-          finish: cardset.finish,
-          note: cardset.note,
-          tags: cardset.tags,
-        },
-      ],
-      `Set ${cardset.card_name} as commander`,
-    );
-  };
+  const markAsCommander = useCallback(
+    (cardset: CardSet): void => {
+      applyChanges(
+        [
+          {
+            printing_id: cardset.printing_id,
+            quantity_delta: -1,
+            zone: cardset.zone,
+            finish: cardset.finish,
+            note: cardset.note,
+          },
+          {
+            printing_id: cardset.printing_id,
+            quantity_delta: 1,
+            zone: "commander",
+            finish: cardset.finish,
+            note: cardset.note,
+            tags: cardset.tags,
+          },
+        ],
+        `Set ${cardset.card_name} as commander`,
+      );
+    },
+    [applyChanges],
+  );
 
-  const moveCardToZone = (cardset: CardSet, zone: CardZone): void => {
-    const changes = moveOneChanges(cardset, zone);
-    if (changes.length === 0) return;
-    applyChanges(changes, moveOneAnnouncement(cardset.card_name, zone));
-  };
+  const moveCardToZone = useCallback(
+    (cardset: CardSet, zone: CardZone): void => {
+      const changes = moveOneChanges(cardset, zone);
+      if (changes.length === 0) return;
+      applyChanges(changes, moveOneAnnouncement(cardset.card_name, zone));
+    },
+    [applyChanges],
+  );
 
-  const moveAllToConsidering = (source: BulkMoveSource): void => {
-    if (deck === null) return;
-    const changes = moveAllToConsideringChanges(deck.cardsets, source);
-    if (changes.length === 0) return;
-    const { totalQuantity } = bulkMoveSummary(deck.cardsets, source);
-    applyChanges(changes, moveAllAnnouncement(source, totalQuantity));
-  };
+  const moveAllToConsidering = useCallback(
+    (source: BulkMoveSource): void => {
+      if (deck === null) return;
+      const changes = moveAllToConsideringChanges(deck.cardsets, source);
+      if (changes.length === 0) return;
+      const { totalQuantity } = bulkMoveSummary(deck.cardsets, source);
+      applyChanges(changes, moveAllAnnouncement(source, totalQuantity));
+    },
+    [applyChanges, deck],
+  );
 
   const updateCardNote = (cardset: CardSet, note: string): void => {
     runMutation(async (currentDeck) => {
@@ -228,46 +240,77 @@ export function useDeckActions({
     });
   };
 
-  const renameTag = (tagId: string, name: string): Promise<boolean> => {
-    const trimmedName = name.trim();
-    if (trimmedName === "") return Promise.resolve(false);
-    return runMutationAsync(async (currentDeck) => {
-      setDeck(await api.renameDeckTag(currentDeck.id, tagId, trimmedName));
-      setAnnouncement(`Renamed tag to ${trimmedName}`);
-    });
-  };
+  const updateTag = useCallback(
+    (tagId: string, name: string, target: number): Promise<boolean> => {
+      const trimmedName = name.trim();
+      if (trimmedName === "") return Promise.resolve(false);
+      return runMutationAsync(async (currentDeck) => {
+        setDeck(
+          await api.updateDeckTag(currentDeck.id, tagId, {
+            name: trimmedName,
+            target,
+          }),
+        );
+        setAnnouncement(`Updated ${trimmedName} tag`);
+      });
+    },
+    [runMutationAsync, setAnnouncement, setDeck],
+  );
 
-  const deleteTag = (tagId: string, name: string): Promise<boolean> => {
-    return runMutationAsync(async (currentDeck) => {
-      setDeck(await api.deleteDeckTag(currentDeck.id, tagId));
-      setAnnouncement(`Deleted tag ${name}`);
-    });
-  };
+  const setTagWeight = useCallback(
+    (
+      cardset: CardSet,
+      tagId: string,
+      tagName: string,
+      weight: number,
+    ): Promise<boolean> =>
+      runMutationAsync(async (currentDeck) => {
+        setDeck(
+          await api.setCardsetTagWeight(
+            currentDeck.id,
+            cardset.id,
+            tagId,
+            weight,
+          ),
+        );
+        setAnnouncement(
+          `Set ${cardset.card_name} ${tagName} weight to ${String(weight)}`,
+        );
+      }),
+    [runMutationAsync, setAnnouncement, setDeck],
+  );
 
-  const addTagToCard = (
-    cardset: CardSet,
-    tagId: string,
-    tagName: string,
-  ): void => {
-    if (cardset.tag_ids?.includes(tagId) === true) return;
-    runMutation(async (currentDeck) => {
-      setDeck(await api.addCardsetTag(currentDeck.id, cardset.id, tagId));
-      setAnnouncement(`Tagged ${cardset.card_name} with ${tagName}`);
-    });
-  };
+  const deleteTag = useCallback(
+    (tagId: string, name: string): Promise<boolean> =>
+      runMutationAsync(async (currentDeck) => {
+        setDeck(await api.deleteDeckTag(currentDeck.id, tagId));
+        setAnnouncement(`Deleted tag ${name}`);
+      }),
+    [runMutationAsync, setAnnouncement, setDeck],
+  );
 
-  const removeTagFromCard = (
-    cardset: CardSet,
-    tagId: string,
-    tagName: string,
-  ): void => {
-    if (cardset.tag_ids !== undefined && !cardset.tag_ids.includes(tagId))
-      return;
-    runMutation(async (currentDeck) => {
-      setDeck(await api.removeCardsetTag(currentDeck.id, cardset.id, tagId));
-      setAnnouncement(`Removed ${tagName} from ${cardset.card_name}`);
-    });
-  };
+  const addTagToCard = useCallback(
+    (cardset: CardSet, tagId: string, tagName: string): void => {
+      if (cardset.tag_ids?.includes(tagId) === true) return;
+      runMutation(async (currentDeck) => {
+        setDeck(await api.addCardsetTag(currentDeck.id, cardset.id, tagId));
+        setAnnouncement(`Tagged ${cardset.card_name} with ${tagName}`);
+      });
+    },
+    [runMutation, setAnnouncement, setDeck],
+  );
+
+  const removeTagFromCard = useCallback(
+    (cardset: CardSet, tagId: string, tagName: string): void => {
+      if (cardset.tag_ids !== undefined && !cardset.tag_ids.includes(tagId))
+        return;
+      runMutation(async (currentDeck) => {
+        setDeck(await api.removeCardsetTag(currentDeck.id, cardset.id, tagId));
+        setAnnouncement(`Removed ${tagName} from ${cardset.card_name}`);
+      });
+    },
+    [runMutation, setAnnouncement, setDeck],
+  );
 
   const addSearchResult = (card: ScryfallCard, zone: CardZone): void => {
     applyChanges(
@@ -344,7 +387,8 @@ export function useDeckActions({
     moveCardToZone,
     openBulkEdit,
     removeTagFromCard,
-    renameTag,
+    setTagWeight,
+    updateTag,
     updateCardNote,
     ...metadataActions,
   };

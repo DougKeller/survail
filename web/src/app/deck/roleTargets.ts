@@ -32,12 +32,16 @@ export type RoleTargetRole = (typeof ROLE_TARGET_ROLES)[number];
 
 export interface RoleTargetSetting {
   target: number;
-  quality: RoleTargetQuality;
 }
 
-export type RoleTargets = Record<RoleTargetRole, RoleTargetSetting>;
+export interface RoleTargets {
+  quality: RoleTargetQuality;
+  roles: Record<RoleTargetRole, RoleTargetSetting>;
+}
 
 export interface RoleTargetProgress {
+  /** Quantity-weighted across scored mainboard cards assigned to this role. */
+  averageOverallScore: number | null;
   contribution: number;
   target: number;
   remaining: number;
@@ -75,12 +79,15 @@ const DEFAULT_TARGET_QUANTITIES: Record<RoleTargetRole, number> = {
  * roughly 30 plan cards, represented as ten each for enabler/payoff/enhancer.
  * They do not publish a card-selection quantity, so its target is unconfigured.
  */
-export const DEFAULT_ROLE_TARGETS: RoleTargets = Object.fromEntries(
-  ROLE_TARGET_ROLES.map((role) => [
-    role,
-    { target: DEFAULT_TARGET_QUANTITIES[role], quality: "high" },
-  ]),
-) as RoleTargets;
+export const DEFAULT_ROLE_TARGETS: RoleTargets = {
+  quality: "high",
+  roles: Object.fromEntries(
+    ROLE_TARGET_ROLES.map((role) => [
+      role,
+      { target: DEFAULT_TARGET_QUANTITIES[role] },
+    ]),
+  ) as Record<RoleTargetRole, RoleTargetSetting>,
+};
 
 const QUALITY_VALUES = new Set<string>(Object.keys(ROLE_QUALITY_THRESHOLDS));
 
@@ -88,17 +95,16 @@ function isRoleTargetQuality(value: unknown): value is RoleTargetQuality {
   return typeof value === "string" && QUALITY_VALUES.has(value);
 }
 
-function validSetting(value: unknown): RoleTargetSetting | null {
+function validTarget(value: unknown): number | null {
   if (typeof value !== "object" || value === null) return null;
-  const candidate = value as { target?: unknown; quality?: unknown };
+  const candidate = value as { target?: unknown };
   if (
     typeof candidate.target !== "number" ||
     !Number.isInteger(candidate.target) ||
-    candidate.target < 0 ||
-    !isRoleTargetQuality(candidate.quality)
+    candidate.target < 0
   )
     return null;
-  return { target: candidate.target, quality: candidate.quality };
+  return candidate.target;
 }
 
 function storageKey(deckId: string): string {
@@ -106,9 +112,28 @@ function storageKey(deckId: string): string {
 }
 
 function defaultTargets(): RoleTargets {
-  return Object.fromEntries(
-    ROLE_TARGET_ROLES.map((role) => [role, { ...DEFAULT_ROLE_TARGETS[role] }]),
-  ) as RoleTargets;
+  return {
+    quality: DEFAULT_ROLE_TARGETS.quality,
+    roles: Object.fromEntries(
+      ROLE_TARGET_ROLES.map((role) => [
+        role,
+        { ...DEFAULT_ROLE_TARGETS.roles[role] },
+      ]),
+    ) as Record<RoleTargetRole, RoleTargetSetting>,
+  };
+}
+
+function legacyQuality(roles: Record<string, unknown>): RoleTargetQuality {
+  const qualities = ROLE_TARGET_ROLES.flatMap((role) => {
+    const value = roles[role];
+    if (typeof value !== "object" || value === null) return [];
+    const quality = (value as { quality?: unknown }).quality;
+    return isRoleTargetQuality(quality) ? [quality] : [];
+  });
+  const nonDefault = [
+    ...new Set(qualities.filter((quality) => quality !== "high")),
+  ];
+  return nonDefault.length === 1 ? (nonDefault[0] ?? "high") : "high";
 }
 
 export function storedRoleTargets(deckId: string): RoleTargets {
@@ -118,13 +143,23 @@ export function storedRoleTargets(deckId: string): RoleTargets {
   try {
     const parsed = JSON.parse(stored) as {
       version?: unknown;
-      roles?: Record<string, unknown>;
+      quality?: unknown;
+      roles?: unknown;
     };
-    if (parsed.version !== 1 || typeof parsed.roles !== "object")
+    if (
+      (parsed.version !== 1 && parsed.version !== 2) ||
+      typeof parsed.roles !== "object" ||
+      parsed.roles === null
+    )
       return defaults;
+    const storedRoles = parsed.roles as Record<string, unknown>;
+    defaults.quality =
+      parsed.version === 2 && isRoleTargetQuality(parsed.quality)
+        ? parsed.quality
+        : legacyQuality(storedRoles);
     for (const role of ROLE_TARGET_ROLES) {
-      const setting = validSetting(parsed.roles[role]);
-      if (setting !== null) defaults[role] = setting;
+      const target = validTarget(storedRoles[role]);
+      if (target !== null) defaults.roles[role] = { target };
     }
     return defaults;
   } catch {
@@ -135,7 +170,11 @@ export function storedRoleTargets(deckId: string): RoleTargets {
 export function storeRoleTargets(deckId: string, targets: RoleTargets): void {
   localStorage.setItem(
     storageKey(deckId),
-    JSON.stringify({ version: 1, roles: targets }),
+    JSON.stringify({
+      version: 2,
+      quality: targets.quality,
+      roles: targets.roles,
+    }),
   );
 }
 
@@ -144,7 +183,17 @@ export function withRoleTargetSetting(
   role: RoleTargetRole,
   setting: RoleTargetSetting,
 ): RoleTargets {
-  return { ...targets, [role]: { ...setting } };
+  return {
+    ...targets,
+    roles: { ...targets.roles, [role]: { ...setting } },
+  };
+}
+
+export function withRoleTargetQuality(
+  targets: RoleTargets,
+  quality: RoleTargetQuality,
+): RoleTargets {
+  return { ...targets, quality };
 }
 
 function roleScore(
@@ -163,14 +212,39 @@ export function calculateRoleTargetProgress({
   const contributions = Object.fromEntries(
     ROLE_TARGET_ROLES.map((role) => [role, 0]),
   ) as Record<RoleTargetRole, number>;
+  const overallScoreTotals = Object.fromEntries(
+    ROLE_TARGET_ROLES.map((role) => [role, 0]),
+  ) as Record<RoleTargetRole, number>;
+  const scoredQuantities = Object.fromEntries(
+    ROLE_TARGET_ROLES.map((role) => [role, 0]),
+  ) as Record<RoleTargetRole, number>;
 
   for (const card of cards) {
     if (card.zone !== "mainboard" || card.quantity <= 0) continue;
     const evaluation = evaluations.get(card.oracle_id);
+    const isLand = /\bLand\b/.test(card.scryfall.type_line);
+    if (isLand) {
+      contributions.land += card.quantity;
+      if (
+        evaluation !== undefined &&
+        Number.isFinite(evaluation.overall_score)
+      ) {
+        overallScoreTotals.land += card.quantity * evaluation.overall_score;
+        scoredQuantities.land += card.quantity;
+      }
+    }
     for (const role of ROLE_TARGET_ROLES) {
+      if (role === "land") continue;
       const score = roleScore(evaluation, role);
       if (score === null) continue;
-      const threshold = ROLE_QUALITY_THRESHOLDS[targets[role].quality];
+      if (
+        evaluation !== undefined &&
+        Number.isFinite(evaluation.overall_score)
+      ) {
+        overallScoreTotals[role] += card.quantity * evaluation.overall_score;
+        scoredQuantities[role] += card.quantity;
+      }
+      const threshold = ROLE_QUALITY_THRESHOLDS[targets.quality];
       const contribution = Math.min(1, Math.max(0, score) / threshold);
       contributions[role] += card.quantity * contribution;
     }
@@ -178,11 +252,15 @@ export function calculateRoleTargetProgress({
 
   return Object.fromEntries(
     ROLE_TARGET_ROLES.map((role) => {
-      const setting = targets[role];
+      const setting = targets.roles[role];
       const contribution = contributions[role];
       return [
         role,
         {
+          averageOverallScore:
+            scoredQuantities[role] === 0
+              ? null
+              : overallScoreTotals[role] / scoredQuantities[role],
           contribution,
           target: setting.target,
           remaining: Math.max(0, setting.target - contribution),
@@ -190,8 +268,8 @@ export function calculateRoleTargetProgress({
             setting.target === 0
               ? null
               : Math.min(1, contribution / setting.target),
-          quality: setting.quality,
-          qualityThreshold: ROLE_QUALITY_THRESHOLDS[setting.quality],
+          quality: targets.quality,
+          qualityThreshold: ROLE_QUALITY_THRESHOLDS[targets.quality],
         },
       ];
     }),

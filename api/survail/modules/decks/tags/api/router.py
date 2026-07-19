@@ -12,10 +12,11 @@ from survail.modules.decks.service.tags import (
     create_deck_tag,
     delete_deck_tag,
     remove_cardset_tag,
-    rename_deck_tag,
     reorder_deck_tags,
+    update_deck_tag,
 )
 from survail.modules.decks.tags.api.schemas import (
+    CardsetTagUpdate,
     DeckTagCreate,
     DeckTagReorder,
     DeckTagUpdate,
@@ -37,7 +38,7 @@ def create_tag(
     user: CurrentUser,
 ) -> DeckRead:
     try:
-        tag = create_deck_tag(db, deck_id, user, name=payload.name)
+        tag = create_deck_tag(db, deck_id, user, name=payload.name, target=payload.target)
     except (DeckTagNotFoundError, DeckTagConflictError) as exc:
         raise _error(exc) from exc
     return _deck_read(tag.deck)
@@ -66,7 +67,14 @@ def rename_tag(
     user: CurrentUser,
 ) -> DeckRead:
     try:
-        tag = rename_deck_tag(db, deck_id, tag_id, user, name=payload.name)
+        tag = update_deck_tag(
+            db,
+            deck_id,
+            tag_id,
+            user,
+            name=payload.name,
+            target=payload.target,
+        )
     except (DeckTagNotFoundError, DeckTagConflictError) as exc:
         raise _error(exc) from exc
     return _deck_read(tag.deck)
@@ -87,15 +95,24 @@ def delete_tag(
 
 
 @router.put("/cardsets/{cardset_id}/tags/{tag_id}", response_model=DeckRead)
+@router.patch("/cardsets/{cardset_id}/tags/{tag_id}", response_model=DeckRead)
 def tag_cardset(
     deck_id: uuid.UUID,
     cardset_id: uuid.UUID,
     tag_id: uuid.UUID,
     db: DbSession,
     user: CurrentUser,
+    payload: CardsetTagUpdate | None = None,
 ) -> DeckRead:
     try:
-        deck = add_cardset_tag(db, deck_id, cardset_id, tag_id, user)
+        deck = add_cardset_tag(
+            db,
+            deck_id,
+            cardset_id,
+            tag_id,
+            user,
+            weight=1 if payload is None else payload.weight,
+        )
     except (DeckTagNotFoundError, DeckTagConflictError) as exc:
         raise _error(exc) from exc
     return _deck_read(deck)

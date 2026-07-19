@@ -22,6 +22,7 @@ class CardSetRead(StrictModel):
     note: str
     tags: list[str]
     tag_ids: list[uuid.UUID]
+    tag_weights: dict[uuid.UUID, float]
     scryfall: ScryfallCardSnapshot
 
 
@@ -29,6 +30,7 @@ class DeckTagRead(StrictModel):
     id: uuid.UUID
     name: str
     position: int = Field(ge=0)
+    target: float = Field(ge=0)
 
 
 class DeckCreate(StrictModel):
@@ -134,7 +136,7 @@ class GeneratedDeckDescriptionRead(StrictModel):
 class AnalyticsBucketRead(StrictModel):
     key: str
     label: str
-    quantity: int = Field(ge=0)
+    quantity: float = Field(ge=0)
     percentage: float = Field(ge=0, le=100)
 
 
@@ -161,6 +163,7 @@ class DeckAnalyticsRead(StrictModel):
     mana_curve: list[AnalyticsBucketRead]
     color_distribution: list[AnalyticsBucketRead]
     type_distribution: list[AnalyticsBucketRead]
+    tag_distribution: list[AnalyticsBucketRead]
     role_distribution: RoleDistributionRead
 
 

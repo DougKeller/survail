@@ -27,17 +27,23 @@ import { Art } from "../designsystem/primitives/artPlaceholder";
 import { BrandMark } from "../designsystem/primitives/brandMark";
 import { Button, ButtonLink } from "../designsystem/primitives/button";
 import { Chip } from "../designsystem/primitives/chip";
+import { Checkbox } from "../designsystem/primitives/choice";
 import { NavBar, NavBrand, NavLink } from "../designsystem/primitives/nav";
+import { Notice } from "../designsystem/primitives/notice";
+import { Popover, PopoverAnchor } from "../designsystem/primitives/popover";
 import { Select } from "../designsystem/primitives/select";
 import { api } from "./api";
 import {
   isPriceProvider,
   PriceProviderContext,
+  ScoringEnabledContext,
   ScrollToTop,
   storedPriceProvider,
   storePriceProvider,
 } from "./deckPrimitives";
 import type { PriceProvider } from "../modules/decks/contracts";
+import type { CurrentUser } from "../modules/auth/contracts";
+import { useDismissibleSurface } from "./deck/hooks";
 
 const EditorScreen = lazy(async () => {
   const module = await import("./screens/EditorScreen");
@@ -80,16 +86,28 @@ function LoginScreen() {
 function AppChrome({
   onLogout,
   onPriceProvider,
+  onScoringEnabled,
   priceProvider,
+  settingsError,
   user,
 }: {
   onLogout: () => void;
   onPriceProvider: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onScoringEnabled: (enabled: boolean) => void;
   priceProvider: PriceProvider;
-  user: string;
+  settingsError: string | null;
+  user: CurrentUser;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useDismissibleSurface<HTMLDivElement>(
+    userMenuOpen,
+    () => {
+      setUserMenuOpen(false);
+    },
+    { manageFocus: false },
+  );
 
   function goTo(path: string) {
     return (event: MouseEvent<HTMLAnchorElement>) => {
@@ -126,22 +144,56 @@ function AppChrome({
         <NavLink current={onDesign} href="/design" onClick={goTo("/design")}>
           Design
         </NavLink>
-        <NavLink current={onJudge} href="/judge" onClick={goTo("/judge")}>
-          Judge
-        </NavLink>
+        {user.scoring_enabled && (
+          <NavLink current={onJudge} href="/judge" onClick={goTo("/judge")}>
+            Judge
+          </NavLink>
+        )}
         <FlexSpacer />
-        <Select
-          aria-label="Price marketplace"
-          onChange={onPriceProvider}
-          options={PRICE_PROVIDER_OPTIONS}
-          value={priceProvider}
-        />
-        <Chip icon={<CircleUserRound size={14} strokeWidth={2.75} />}>
-          {user}
-        </Chip>
-        <Button muted onClick={onLogout} variant="ghost">
-          Log out
-        </Button>
+        <PopoverAnchor ref={userMenuRef}>
+          <Chip
+            aria-expanded={userMenuOpen}
+            icon={<CircleUserRound size={14} strokeWidth={2.75} />}
+            onClick={() => {
+              setUserMenuOpen((current) => !current);
+            }}
+          >
+            {user.display_name ?? user.username}
+          </Chip>
+          {userMenuOpen && (
+            <Popover align="end" label="User settings">
+              <Stack gap={3}>
+                {settingsError !== null && (
+                  <Notice role="alert" tone="error">
+                    {settingsError}
+                  </Notice>
+                )}
+                <Select
+                  aria-label="Price marketplace"
+                  onChange={onPriceProvider}
+                  options={PRICE_PROVIDER_OPTIONS}
+                  value={priceProvider}
+                />
+                <Checkbox
+                  checked={user.scoring_enabled}
+                  label="Enable card scoring"
+                  onChange={(event) => {
+                    onScoringEnabled(event.target.checked);
+                  }}
+                />
+                <Button
+                  alignStart
+                  block
+                  muted
+                  onClick={onLogout}
+                  variant="ghost"
+                >
+                  Log out
+                </Button>
+              </Stack>
+            </Popover>
+          )}
+        </PopoverAnchor>
       </NavBar>
       <Suspense fallback={null}>
         <Routes>
@@ -149,7 +201,9 @@ function AppChrome({
           <Route path="/decks" element={<LibraryScreen mode="decks" />} />
           <Route path="/import" element={<LibraryScreen mode="import" />} />
           <Route path="/design" element={<DesignLibraryScreen />} />
-          <Route path="/judge" element={<JudgeGoldenScreen />} />
+          {user.scoring_enabled && (
+            <Route path="/judge" element={<JudgeGoldenScreen />} />
+          )}
           <Route path="/decks/:id" element={<EditorScreen />} />
         </Routes>
       </Suspense>
@@ -158,14 +212,15 @@ function AppChrome({
 }
 
 export function App() {
-  const [user, setUser] = useState<string | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const [priceProvider, setPriceProvider] =
     useState<PriceProvider>(storedPriceProvider);
 
   useEffect(() => {
     void api.me().then(
       (authenticatedUser) => {
-        setUser(authenticatedUser.display_name ?? authenticatedUser.username);
+        setUser(authenticatedUser);
         return undefined;
       },
       () => {
@@ -188,19 +243,30 @@ export function App() {
     setPriceProvider(event.target.value);
   }
 
+  function handleScoringEnabled(enabled: boolean): void {
+    setSettingsError(null);
+    void api.updateSettings(enabled).then(setUser, () => {
+      setSettingsError("Could not update scoring setting");
+    });
+  }
+
   if (user === null) return <LoginScreen />;
 
   return (
     <PriceProviderContext.Provider value={priceProvider}>
-      <BrowserRouter>
-        <ScrollToTop />
-        <AppChrome
-          onLogout={handleLogout}
-          onPriceProvider={handlePriceProvider}
-          priceProvider={priceProvider}
-          user={user}
-        />
-      </BrowserRouter>
+      <ScoringEnabledContext.Provider value={user.scoring_enabled}>
+        <BrowserRouter>
+          <ScrollToTop />
+          <AppChrome
+            onLogout={handleLogout}
+            onPriceProvider={handlePriceProvider}
+            onScoringEnabled={handleScoringEnabled}
+            priceProvider={priceProvider}
+            settingsError={settingsError}
+            user={user}
+          />
+        </BrowserRouter>
+      </ScoringEnabledContext.Provider>
     </PriceProviderContext.Provider>
   );
 }

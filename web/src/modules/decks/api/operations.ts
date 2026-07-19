@@ -70,14 +70,14 @@ export function createDeckTag(deckId: string, name: string): Promise<Deck> {
   });
 }
 
-export function renameDeckTag(
+export function updateDeckTag(
   deckId: string,
   tagId: string,
-  name: string,
+  update: { name?: string; target?: number },
 ): Promise<Deck> {
   return request<Deck>(`/decks/${deckId}/tags/${tagId}`, {
     method: "PATCH",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(update),
   });
 }
 
@@ -94,6 +94,18 @@ export function addCardsetTag(
 ): Promise<Deck> {
   return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/tags/${tagId}`, {
     method: "PUT",
+  });
+}
+
+export function setCardsetTagWeight(
+  deckId: string,
+  cardsetId: string,
+  tagId: string,
+  weight: number,
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/tags/${tagId}`, {
+    method: "PUT",
+    body: JSON.stringify({ weight }),
   });
 }
 

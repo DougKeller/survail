@@ -1,10 +1,15 @@
 import { createContext, useContext } from "react";
 
-import type { CardZoneDragValue } from "./cardZoneDragTypes";
+import type {
+  CardZoneDragStaticValue,
+  CardZoneDragValue,
+} from "./cardZoneDragTypes";
 
 export const CardZoneDragContext = createContext<CardZoneDragValue | null>(
   null,
 );
+export const CardZoneDragStaticContext =
+  createContext<CardZoneDragStaticValue | null>(null);
 
 export function useCardZoneDrag(): CardZoneDragValue {
   const value = useContext(CardZoneDragContext);
@@ -15,4 +20,8 @@ export function useCardZoneDrag(): CardZoneDragValue {
 
 export function useOptionalCardZoneDrag(): CardZoneDragValue | null {
   return useContext(CardZoneDragContext);
+}
+
+export function useOptionalCardZoneDragStatic(): CardZoneDragStaticValue | null {
+  return useContext(CardZoneDragStaticContext);
 }

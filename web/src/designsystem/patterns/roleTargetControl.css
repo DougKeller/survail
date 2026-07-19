@@ -4,12 +4,6 @@
   padding-block: var(--space-2);
 }
 
-.ds-role-target-fields {
-  display: grid;
-  gap: var(--space-2);
-  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
-}
-
 .ds-role-target-field {
   display: grid;
   font-size: var(--text-xs);
@@ -17,9 +11,73 @@
 }
 
 .ds-role-target-field > .ds-input,
-.ds-role-target-field > .ds-select {
+.ds-role-quality > .ds-select {
   inline-size: 100%;
   min-inline-size: 0;
+}
+
+.ds-role-quality {
+  align-items: center;
+  display: flex;
+  font-size: var(--text-xs);
+  gap: var(--space-2);
+}
+
+.ds-role-quality-label {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.ds-role-quality-hint {
+  display: inline-flex;
+  position: relative;
+}
+
+.ds-role-quality-hint-trigger {
+  align-items: center;
+  background: var(--color-surface);
+  block-size: 1rem;
+  border: 1px solid var(--color-divider);
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  cursor: help;
+  display: inline-flex;
+  font: inherit;
+  inline-size: 1rem;
+  justify-content: center;
+  padding: 0;
+}
+
+.ds-role-quality-hint-trigger:focus-visible {
+  outline: 2px solid var(--color-accent-700);
+  outline-offset: 2px;
+}
+
+.ds-role-quality-tooltip.ds-tooltip-surface {
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  inset-block-start: calc(100% + var(--space-2));
+  inset-inline-start: 50%;
+  opacity: 0;
+  padding: var(--space-2) var(--space-3);
+  position: absolute;
+  transform: translateX(-50%);
+  transition: opacity 120ms ease;
+  visibility: hidden;
+}
+
+.ds-role-quality-hint:hover .ds-role-quality-tooltip,
+.ds-role-quality-hint:focus-within .ds-role-quality-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ds-role-quality > .ds-select {
+  inline-size: auto;
+  min-inline-size: 8rem;
 }
 
 .ds-role-target-progress {

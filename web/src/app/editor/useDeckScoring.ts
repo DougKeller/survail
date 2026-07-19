@@ -9,12 +9,16 @@ import type {
   CardRoleEvaluation,
 } from "../../modules/decks/evaluations/contracts";
 
+const NO_SCORES = new Map<string, CardRoleEvaluation>();
+
 export function useDeckScoring({
   deck,
+  scoringEnabled,
   setAnnouncement,
   setError,
 }: {
   deck: Deck | null;
+  scoringEnabled: boolean;
   setAnnouncement: (value: string) => void;
   setError: (value: string | null) => void;
 }) {
@@ -40,7 +44,8 @@ export function useDeckScoring({
   }, [deck?.revision]);
 
   const loadCachedScores = useCallback(async (): Promise<void> => {
-    if (deck === null || cachedScoresLoadedFor === deck.id) return;
+    if (!scoringEnabled || deck === null || cachedScoresLoadedFor === deck.id)
+      return;
     try {
       const loadedScores = await api.cachedDeckEvaluation(deck.id);
       setScores(new Map(loadedScores.map((score) => [score.oracle_id, score])));
@@ -52,10 +57,10 @@ export function useDeckScoring({
           : "Could not load cached scores",
       );
     }
-  }, [cachedScoresLoadedFor, deck, setError]);
+  }, [cachedScoresLoadedFor, deck, scoringEnabled, setError]);
 
   const evaluateCurrentDeck = useCallback(async (): Promise<void> => {
-    if (deck === null || scoring) return;
+    if (!scoringEnabled || deck === null || scoring) return;
     if (deck.goal.trim() === "") {
       setAnnouncement("Add a Goal / North Star before evaluating cards");
       return;
@@ -87,7 +92,7 @@ export function useDeckScoring({
       setScoring(false);
       setEvaluationProgress(null);
     }
-  }, [deck, scoring, setAnnouncement, setError]);
+  }, [deck, scoring, scoringEnabled, setAnnouncement, setError]);
 
   const clearScoreCache = useCallback(async (): Promise<boolean> => {
     if (deck === null || scoring || clearingScores) return false;
@@ -118,6 +123,6 @@ export function useDeckScoring({
     evaluateCurrentDeck,
     loadCachedScores,
     scoring,
-    scores,
+    scores: scoringEnabled ? scores : NO_SCORES,
   };
 }

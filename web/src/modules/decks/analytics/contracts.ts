@@ -28,5 +28,6 @@ export interface DeckAnalytics {
   mana_curve: AnalyticsBucket[];
   color_distribution: AnalyticsBucket[];
   type_distribution: AnalyticsBucket[];
+  tag_distribution: AnalyticsBucket[];
   role_distribution: RoleDistribution;
 }

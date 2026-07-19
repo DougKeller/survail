@@ -2,7 +2,7 @@ import {
   createConversation,
   sendAgentMessage,
 } from "../modules/agent/api/conversations";
-import { me, logout } from "../modules/auth/api/session";
+import { me, logout, updateSettings } from "../modules/auth/api/session";
 import { printings, search } from "../modules/cards/api/search";
 import {
   createDeck,
@@ -23,7 +23,8 @@ import {
   deleteDeckTag,
   operations,
   removeCardsetTag,
-  renameDeckTag,
+  setCardsetTagWeight,
+  updateDeckTag,
   revertOperation,
   setCardNote,
 } from "../modules/decks/api/operations";
@@ -45,6 +46,7 @@ import {
 export const api = {
   me,
   logout,
+  updateSettings,
   decks,
   deck,
   createDeck,
@@ -61,7 +63,8 @@ export const api = {
   revertOperation,
   setCardNote,
   createDeckTag,
-  renameDeckTag,
+  updateDeckTag,
+  setCardsetTagWeight,
   deleteDeckTag,
   addCardsetTag,
   removeCardsetTag,

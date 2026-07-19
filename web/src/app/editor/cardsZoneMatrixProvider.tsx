@@ -1,19 +1,20 @@
+import { memo } from "react";
+import type { CardSet } from "../../modules/decks/contracts";
 import { CardZoneDragProvider } from "./cardZoneDrag";
 import { MatrixRows } from "./cardsZoneMatrix";
-import { useDeckEditorContext } from "./deckEditorContext";
+import { useDeckCardsContext } from "./deckEditorContext";
+import { CardTagPickerProvider } from "./cardTagPicker";
 
-export function CardsZoneMatrix({
+export const CardsZoneMatrix = memo(function CardsZoneMatrix({
   onPreview,
 }: {
-  onPreview: (
-    card: ReturnType<typeof useDeckEditorContext>["deck"]["cardsets"][number],
-  ) => void;
+  onPreview: (card: CardSet) => void;
 }) {
   const {
     actions: { addTagToCard, moveCardToZone },
     data: { busy },
     deck,
-  } = useDeckEditorContext();
+  } = useDeckCardsContext();
   const zones =
     deck.format === "commander" || deck.format === "brawl"
       ? (["mainboard", "considering"] as const)
@@ -28,7 +29,9 @@ export function CardsZoneMatrix({
       }}
       zones={zones}
     >
-      <MatrixRows onPreview={onPreview} />
+      <CardTagPickerProvider>
+        <MatrixRows onPreview={onPreview} />
+      </CardTagPickerProvider>
     </CardZoneDragProvider>
   );
-}
+});

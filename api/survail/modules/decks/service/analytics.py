@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Protocol
 
 from survail.core.models import CardSet, Deck
@@ -95,6 +95,22 @@ def type_distribution_counts(deck: Deck, *, exclude_oracle_id: str | None = None
     return counts
 
 
+def tag_distribution_counts(
+    deck: Deck,
+    *,
+    exclude_oracle_id: str | None = None,
+) -> dict[str, float]:
+    counts: dict[str, float] = {}
+    for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id):
+        if not cardset.tag_links:
+            counts["untagged"] = counts.get("untagged", 0) + cardset.quantity
+            continue
+        for link in cardset.tag_links:
+            key = str(link.deck_tag.id)
+            counts[key] = counts.get(key, 0) + cardset.quantity * link.weight
+    return counts
+
+
 def role_distribution_counts(
     deck: Deck,
     evaluations: Sequence[RoleEvaluationLike],
@@ -184,7 +200,7 @@ def mana_curve_sort_key(cost: str) -> tuple[float, str]:
 
 
 def percentage_buckets(
-    counts: dict[str, int],
+    counts: Mapping[str, int | float],
     *,
     labels: dict[str, str] | None = None,
     order: Sequence[str] | None = None,

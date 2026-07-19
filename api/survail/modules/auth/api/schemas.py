@@ -13,3 +13,8 @@ class UserRead(StrictModel):
     username: str
     display_name: str | None
     avatar_hash: str | None
+    scoring_enabled: bool
+
+
+class UserSettingsUpdate(StrictModel):
+    scoring_enabled: bool

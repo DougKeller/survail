@@ -29,41 +29,7 @@ import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
 import { chartRoleSwatch, COLOR_SWATCHES, TYPE_SWATCHES } from "./groupColors";
 import { titleize } from "./text";
 
-const SERIES_COLORS = {
-  manaCurve: "#ff8a5b",
-};
 type Bucket = DeckAnalytics["mana_curve"][number];
-
-function averageManaValue(buckets: DeckAnalytics["mana_curve"]): string {
-  let weightedTotal = 0;
-  let quantityTotal = 0;
-  for (const bucket of buckets) {
-    const value = Number(bucket.key);
-    if (!Number.isFinite(value)) continue;
-    weightedTotal += value * bucket.quantity;
-    quantityTotal += bucket.quantity;
-  }
-  if (quantityTotal === 0) return "0.00";
-  return (weightedTotal / quantityTotal).toFixed(2);
-}
-
-function peakManaBucket(buckets: DeckAnalytics["mana_curve"]): Bucket | null {
-  if (buckets.length === 0) return null;
-  return buckets.reduce((best, current) =>
-    current.quantity > best.quantity ? current : best,
-  );
-}
-
-function withBarColors<T extends { key: string; label: string }>(
-  buckets: T[],
-  palette: Record<string, string>,
-  fallback: string,
-): (T & { fill: string })[] {
-  return buckets.map((bucket) => ({
-    ...bucket,
-    fill: palette[bucket.key] ?? palette[bucket.label] ?? fallback,
-  }));
-}
 
 function RoundedBar(props: {
   fill?: string;
@@ -132,16 +98,94 @@ function DetailChip({
   );
 }
 
+const TAG_SWATCHES = [
+  "#d78bff",
+  "#7ee0d4",
+  "#ffd166",
+  "#ff8a5b",
+  "#4da3ff",
+  "#6fc17b",
+  "#ff6f91",
+];
+
+function tagSwatch(key: string): string {
+  if (key === "untagged") return "#8f95b2";
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
+  }
+  return TAG_SWATCHES[hash % TAG_SWATCHES.length] ?? "#8f95b2";
+}
+
+function DistributionChart({
+  after,
+  before,
+  buckets,
+  colorFor,
+  displayLabel = (bucket) => bucket.label,
+  title,
+}: {
+  after?: ReactNode;
+  before?: ReactNode;
+  buckets: Bucket[];
+  colorFor: (bucket: Bucket) => string;
+  displayLabel?: (bucket: Bucket) => string;
+  title: string;
+}) {
+  const data = buckets.map((bucket) => ({
+    ...bucket,
+    chartLabel: displayLabel(bucket),
+    fill: colorFor(bucket),
+  }));
+  return (
+    <ChartCard subtitle="Distribution" title={`${title} spread`}>
+      {before}
+      <ResponsiveContainer height={336} width="100%">
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis
+            angle={-18}
+            dataKey="chartLabel"
+            height={60}
+            interval={0}
+            textAnchor="end"
+          />
+          <YAxis allowDecimals={false} />
+          <Tooltip />
+          <Bar
+            dataKey="quantity"
+            radius={[2, 2, 0, 0]}
+            shape={<RoundedBar />}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+      <Inline gap={2} wrap>
+        {buckets.map((bucket) => (
+          <DetailChip
+            accent={colorFor(bucket)}
+            key={bucket.key}
+            label={displayLabel(bucket)}
+            value={`${String(bucket.quantity)} · ${bucket.percentage.toFixed(1)}%`}
+          />
+        ))}
+      </Inline>
+      {after}
+    </ChartCard>
+  );
+}
+
 export function DeckChartsView({
   analytics,
   error,
   loading,
   refresh,
+  scoringEnabled,
 }: {
   analytics: DeckAnalytics | null;
   error: string | null;
   loading: boolean;
   refresh: () => void;
+  scoringEnabled: boolean;
 }) {
   if (loading && analytics === null) {
     return (
@@ -166,32 +210,6 @@ export function DeckChartsView({
       </Stack>
     );
   }
-
-  const manaPeak = peakManaBucket(analytics.mana_curve);
-  const manaCurveTotal = analytics.mana_curve.reduce(
-    (total, bucket) => total + bucket.quantity,
-    0,
-  );
-  const colorData = withBarColors(
-    analytics.color_distribution,
-    COLOR_SWATCHES,
-    "#8ca1b3",
-  );
-  const typeData = withBarColors(
-    analytics.type_distribution,
-    TYPE_SWATCHES,
-    "#3ea4ff",
-  );
-  const roleData = withBarColors(
-    analytics.role_distribution.buckets,
-    Object.fromEntries(
-      analytics.role_distribution.buckets.map((bucket) => [
-        bucket.key,
-        chartRoleSwatch(bucket.key, bucket.label),
-      ]),
-    ),
-    "#8f95b2",
-  );
 
   return (
     <Stack as="section" gap={6} labelledBy="charts-title">
@@ -234,155 +252,59 @@ export function DeckChartsView({
         </Card>
       </Grid>
       <Grid columns={2} gap={4}>
-        <ChartCard subtitle="Distribution" title="Mana curve">
-          <ResponsiveContainer height={336} width="100%">
-            <BarChart data={analytics.mana_curve}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="label" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar
-                dataKey="quantity"
-                fill={SERIES_COLORS.manaCurve}
-                radius={[2, 2, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-          <Inline gap={2} wrap>
-            <DetailChip
-              label={averageManaValue(analytics.mana_curve)}
-              value="Average CMC"
-            />
-            <DetailChip
-              label={String(analytics.nonland_cards)}
-              value="Nonland cards"
-            />
-            {manaPeak !== null && (
-              <DetailChip
-                label={`${manaPeak.label} mana · ${String(manaPeak.quantity)}`}
-                value={`Peak slot · ${
-                  manaCurveTotal === 0
-                    ? "0.0"
-                    : ((manaPeak.quantity / manaCurveTotal) * 100).toFixed(1)
-                }%`}
-              />
-            )}
-          </Inline>
-        </ChartCard>
-        <ChartCard subtitle="Distribution" title="Color pip mix">
-          <ResponsiveContainer height={336} width="100%">
-            <BarChart data={colorData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="key" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar
-                dataKey="quantity"
-                radius={[2, 2, 0, 0]}
-                shape={<RoundedBar />}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-          <Inline gap={2} wrap>
-            {analytics.color_distribution.map((bucket) => (
-              <DetailChip
-                accent={COLOR_SWATCHES[bucket.key] ?? "#8ca1b3"}
-                key={bucket.key}
-                label={bucket.key}
-                value={`${bucket.label} · ${String(bucket.quantity)} · ${bucket.percentage.toFixed(1)}%`}
-              />
-            ))}
-          </Inline>
-        </ChartCard>
-        <ChartCard subtitle="Distribution" title="Type spread">
-          <ResponsiveContainer height={336} width="100%">
-            <BarChart data={typeData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                interval={0}
-                angle={-18}
-                textAnchor="end"
-                height={56}
-              />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar
-                dataKey="quantity"
-                radius={[2, 2, 0, 0]}
-                shape={<RoundedBar />}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-          <Inline gap={2} wrap>
-            {analytics.type_distribution.map((bucket) => (
-              <DetailChip
-                accent={TYPE_SWATCHES[bucket.key] ?? "#3ea4ff"}
-                key={bucket.key}
-                label={bucket.label}
-                value={`${String(bucket.quantity)} · ${bucket.percentage.toFixed(1)}%`}
-              />
-            ))}
-          </Inline>
-        </ChartCard>
-        <ChartCard subtitle="Distribution" title="Role spread">
-          {analytics.role_distribution.message !== null && (
-            <Notice role="status">{analytics.role_distribution.message}</Notice>
-          )}
-          <ResponsiveContainer height={336} width="100%">
-            <BarChart data={roleData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="label"
-                interval={0}
-                angle={-18}
-                textAnchor="end"
-                height={60}
-                tickFormatter={(value) => titleize(String(value))}
-              />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar
-                dataKey="quantity"
-                radius={[2, 2, 0, 0]}
-                shape={<RoundedBar />}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-          <Inline gap={2} wrap>
-            <DetailChip
-              label={String(analytics.role_distribution.evaluated_cards)}
-              value="Evaluated cards"
-            />
-            <DetailChip
-              label={String(analytics.role_distribution.unevaluated_cards)}
-              value="Unevaluated cards"
-            />
-            {analytics.role_distribution.buckets.map((bucket) => (
-              <DetailChip
-                accent={chartRoleSwatch(bucket.key, bucket.label)}
-                key={bucket.key}
-                label={titleize(bucket.label)}
-                value={`${String(bucket.quantity)} · ${bucket.percentage.toFixed(1)}%`}
-              />
-            ))}
-          </Inline>
-          {!analytics.role_distribution.complete &&
-            analytics.role_distribution.missing_cards.length > 0 && (
-              <Stack gap={1}>
-                <Kicker>Missing role evaluations</Kicker>
-                <Text muted size="md">
-                  {analytics.role_distribution.missing_cards
-                    .slice(0, 8)
-                    .map((card) => card.card_name)
-                    .join(", ")}
-                  {analytics.role_distribution.missing_cards.length > 8
-                    ? ", …"
-                    : ""}
-                </Text>
-              </Stack>
-            )}
-        </ChartCard>
+        <DistributionChart
+          buckets={analytics.type_distribution}
+          colorFor={(bucket) => TYPE_SWATCHES[bucket.key] ?? "#3ea4ff"}
+          title="Type"
+        />
+        <DistributionChart
+          buckets={analytics.color_distribution}
+          colorFor={(bucket) => COLOR_SWATCHES[bucket.key] ?? "#8ca1b3"}
+          title="Color"
+        />
+        <DistributionChart
+          buckets={analytics.mana_curve}
+          colorFor={() => "#ff8a5b"}
+          displayLabel={(bucket) => `Mana value ${bucket.label}`}
+          title="Mana value"
+        />
+        <DistributionChart
+          buckets={analytics.tag_distribution}
+          colorFor={(bucket) => tagSwatch(bucket.key)}
+          title="Tag"
+        />
+        {scoringEnabled && (
+          <DistributionChart
+            after={
+              !analytics.role_distribution.complete &&
+              analytics.role_distribution.missing_cards.length > 0 ? (
+                <Stack gap={1}>
+                  <Kicker>Missing role evaluations</Kicker>
+                  <Text muted size="md">
+                    {analytics.role_distribution.missing_cards
+                      .slice(0, 8)
+                      .map((card) => card.card_name)
+                      .join(", ")}
+                    {analytics.role_distribution.missing_cards.length > 8
+                      ? ", …"
+                      : ""}
+                  </Text>
+                </Stack>
+              ) : undefined
+            }
+            before={
+              analytics.role_distribution.message === null ? undefined : (
+                <Notice role="status">
+                  {analytics.role_distribution.message}
+                </Notice>
+              )
+            }
+            buckets={analytics.role_distribution.buckets}
+            colorFor={(bucket) => chartRoleSwatch(bucket.key, bucket.label)}
+            displayLabel={(bucket) => titleize(bucket.label)}
+            title="Role"
+          />
+        )}
       </Grid>
     </Stack>
   );

@@ -33,6 +33,7 @@ export interface CardSet {
   note: string;
   tags: string[];
   tag_ids?: string[];
+  tag_weights?: Record<string, number>;
   scryfall: ScryfallCard;
 }
 
@@ -40,6 +41,7 @@ export interface DeckTag {
   id: string;
   name: string;
   position: number;
+  target: number;
 }
 
 export interface Deck {
