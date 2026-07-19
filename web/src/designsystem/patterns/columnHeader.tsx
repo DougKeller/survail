@@ -12,6 +12,8 @@ interface ColumnHeaderProps extends Omit<
   /** Trailing slot: column menu, drag handle. */
   children?: ReactNode;
   count?: number;
+  /** Top-left control, normally a column drag handle. */
+  leading?: ReactNode;
   /** Semantic heading level; visual size is fixed by the pattern. */
   level?: ColumnHeaderLevel;
   /** Accent tone highlights the active drop target (wireframe 1d). */
@@ -24,6 +26,7 @@ export function ColumnHeader({
   children,
   count,
   level = 5,
+  leading,
   title,
   tone = "default",
   ...rest
@@ -35,15 +38,16 @@ export function ColumnHeader({
   const TitleTag = `h${String(level)}` as "h2" | "h3" | "h4" | "h5" | "h6";
   return (
     <div {...rest} className={className}>
+      {(leading !== undefined || children !== undefined) && (
+        <div className="ds-column-header-controls">
+          {leading}
+          <span className="ds-column-header-spacer" />
+          {children}
+        </div>
+      )}
       <TitleTag className="ds-column-header-title">{title}</TitleTag>
       {count === undefined ? null : (
         <span className="ds-column-header-count">{count}</span>
-      )}
-      {children === undefined ? null : (
-        <>
-          <span className="ds-column-header-spacer" />
-          {children}
-        </>
       )}
     </div>
   );

@@ -24,6 +24,8 @@ interface CardRowProps extends Omit<
   href?: string;
   /** Render as a button when no href is given. */
   interactive?: boolean;
+  /** Square, compact treatment for dense data views. */
+  dense?: boolean;
   /** Leading interactive control, such as a move handle. */
   leadingAction?: ReactNode;
   /** Leading slot: art thumb, status pip. */
@@ -54,6 +56,7 @@ function GripIcon(): ReactNode {
 export function CardRow({
   children,
   emphasis = false,
+  dense = false,
   grip = false,
   href,
   interactive = false,
@@ -68,6 +71,7 @@ export function CardRow({
   const className = [
     "ds-card-row",
     TONE_CLASS[tone],
+    dense ? "ds-card-row-dense" : "",
     href !== undefined || interactive ? "ds-card-row-interactive" : "",
   ]
     .filter(Boolean)

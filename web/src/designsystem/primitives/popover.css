@@ -39,3 +39,7 @@
   left: 0;
   right: 0;
 }
+
+.ds-popover-fixed {
+  position: fixed;
+}

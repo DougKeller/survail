@@ -1,5 +1,11 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CardSet, DeckTag } from "../../modules/decks/contracts";
 import {
@@ -7,6 +13,8 @@ import {
   TagNameDialog,
   TagTargetProgress,
 } from "./tagControls";
+
+afterEach(cleanup);
 
 describe("TagNameDialog", () => {
   it("trims and submits a non-empty tag name", () => {
@@ -68,7 +76,10 @@ describe("tag metadata controls", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit Ramp tag" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Options for Ramp tag column" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Edit tag" }));
     const dialog = within(screen.getByRole("dialog", { name: "Edit tag" }));
     const target = screen.getByRole("spinbutton", {
       name: "Target contribution",

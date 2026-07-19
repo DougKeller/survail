@@ -159,7 +159,6 @@ function MatrixRows({ onPreview }: { onPreview: (card: CardSet) => void }) {
                       onClick={() => {
                         if (row.zone !== "mainboard") toggleRow(row.zone);
                       }}
-                      size="sm"
                       variant="ghost"
                     >
                       {rowCollapsed ? (

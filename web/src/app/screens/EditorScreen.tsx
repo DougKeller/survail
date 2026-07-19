@@ -127,11 +127,13 @@ export function EditorScreen() {
               <Suspense fallback={<Text muted>Loading charts…</Text>}>
                 <DeckChartsView
                   analytics={analytics.analytics}
+                  cards={deck.cardsets}
                   error={analytics.analyticsError}
                   loading={analytics.analyticsLoading}
                   refresh={() => {
                     void analytics.loadAnalytics();
                   }}
+                  scores={scoring.scores}
                   scoringEnabled={display.scoringEnabled}
                 />
               </Suspense>

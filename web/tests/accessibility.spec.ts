@@ -767,6 +767,7 @@ test("compact editor presents the advisor as a full-height supporting surface", 
   expect(Math.round((advisorBox?.y ?? 0) + (advisorBox?.height ?? 0))).toBe(
     844,
   );
+  await page.getByRole("button", { name: "Close deck advisor" }).click();
   await page.getByRole("button", { name: "Local Developer" }).click();
   await expect(page.getByLabel("Price marketplace")).toHaveValue("tcgplayer");
   await expect(page.getByLabel("Deck controls")).toBeVisible();
@@ -963,7 +964,7 @@ test("card grid consolidates duplicate cards and opens shared card details", asy
   await expect(dialog).toContainText("Market prices");
 });
 
-test("hover actions use a drag handle instead of a Move dropdown", async ({
+test("card images drag directly without a redundant hover move control", async ({
   page,
 }) => {
   await page.goto("/decks/deck-1");
@@ -982,6 +983,23 @@ test("hover actions use a drag handle instead of a Move dropdown", async ({
     arcaneTile.getByRole("button", {
       name: "Move one Arcane Signet from mainboard",
     }),
+  ).toHaveCount(0);
+  await expect(arcaneTile).toHaveAttribute("draggable", "true");
+});
+
+test("card images retain keyboard movement without a hover drag icon", async ({
+  page,
+}) => {
+  await page.goto("/decks/deck-1?view=grid&group=type");
+  const image = page.getByRole("button", {
+    name: "View details for Arcane Signet",
+  });
+  await image.focus();
+  await image.press("ArrowDown");
+  await expect(image).toHaveAttribute("aria-pressed", "true");
+  await image.press("Enter");
+  await expect(
+    page.getByText("Moved one Arcane Signet to Considering"),
   ).toBeVisible();
 });
 

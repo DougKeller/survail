@@ -1,4 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ChevronDown, ChevronUp, GripVertical, TagX } from "lucide-react";
 
 import {
@@ -33,20 +40,50 @@ function CardQuickActions({
     modals: { setActiveCardNote },
   } = useDeckEditorContext();
   const [open, setOpen] = useState(false);
-  const containerRef = useDismissibleSurface<HTMLDivElement>(
+  const [position, setPosition] = useState({ left: 8, top: 8 });
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (trigger === null) return;
+    const rect = trigger.getBoundingClientRect();
+    const margin = 8;
+    const width = Math.min(220, window.innerWidth - margin * 2);
+    const left = Math.max(
+      margin,
+      Math.min(rect.right - width, window.innerWidth - width - margin),
+    );
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const top =
+      spaceBelow >= 72
+        ? rect.bottom + 4
+        : Math.max(margin, rect.top - 56);
+    setPosition({ left, top });
+  }, []);
+  const surfaceRef = useDismissibleSurface<HTMLDivElement>(
     open,
     () => {
       setOpen(false);
     },
-    { manageFocus: false },
+    { manageFocus: false, triggerRef },
   );
 
   useEffect(() => {
     if (card.quantity <= 0) setOpen(false);
   }, [card.quantity]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
   return (
-    <PopoverAnchor ref={containerRef}>
+    <PopoverAnchor ref={triggerRef}>
       <IconButton
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -65,48 +102,55 @@ function CardQuickActions({
           <ChevronDown size={14} strokeWidth={2.75} />
         )}
       </IconButton>
-      {open && (
-        <Popover align="end" label={`${card.card_name} quick actions`}>
-          <Stack gap={2}>
-            <Inline gap={1}>
-              <QuantityStepper
-                busy={busy}
-                card={card}
-                onAdd={() => {
-                  changeQuantity(card, 1);
-                }}
-                onRemove={() => {
-                  if (card.quantity <= 1) setOpen(false);
-                  changeQuantity(card, -1);
-                }}
-                showCount
-                withTitles
-              />
-              <CardNoteButton
-                busy={busy}
-                card={card}
-                onClick={() => {
-                  setOpen(false);
-                  setActiveCardNote(card);
-                }}
-                withTitle
-              />
-              {tagAction}
-              {removeContextTag !== undefined && (
-                <IconButton
-                  label={`Remove ${removeContextTag.name} tag from ${card.card_name}`}
-                  onClick={removeContextTag.remove}
-                  size="sm"
-                  title={`Remove ${removeContextTag.name} tag`}
-                  variant="ghost"
-                >
-                  <TagX size={14} strokeWidth={2.75} />
-                </IconButton>
-              )}
-            </Inline>
-          </Stack>
-        </Popover>
-      )}
+      {open &&
+        createPortal(
+          <Popover
+            fixed
+            label={`${card.card_name} quick actions`}
+            ref={surfaceRef}
+            style={position}
+          >
+            <Stack gap={2}>
+              <Inline gap={1}>
+                <QuantityStepper
+                  busy={busy}
+                  card={card}
+                  onAdd={() => {
+                    changeQuantity(card, 1);
+                  }}
+                  onRemove={() => {
+                    if (card.quantity <= 1) setOpen(false);
+                    changeQuantity(card, -1);
+                  }}
+                  showCount
+                  withTitles
+                />
+                <CardNoteButton
+                  busy={busy}
+                  card={card}
+                  onClick={() => {
+                    setOpen(false);
+                    setActiveCardNote(card);
+                  }}
+                  withTitle
+                />
+                {tagAction}
+                {removeContextTag !== undefined && (
+                  <IconButton
+                    label={`Remove ${removeContextTag.name} tag from ${card.card_name}`}
+                    onClick={removeContextTag.remove}
+                    size="sm"
+                    title={`Remove ${removeContextTag.name} tag`}
+                    variant="ghost"
+                  >
+                    <TagX size={14} strokeWidth={2.75} />
+                  </IconButton>
+                )}
+              </Inline>
+            </Stack>
+          </Popover>,
+          document.body,
+        )}
     </PopoverAnchor>
   );
 }
@@ -137,6 +181,7 @@ function BoardCardRow({
         data-cardset-id={card.id}
         data-group-appearance={visualId}
         data-zone={card.zone}
+        dense
         emphasis={commander}
         grip={false}
         leadingAction={

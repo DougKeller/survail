@@ -55,4 +55,24 @@ describe("Menu", () => {
     fireEvent.click(item);
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
+
+  it("moves menu focus with arrow, Home, and End keys", () => {
+    render(
+      <Menu id="m" label="Actions" onToggle={vi.fn()} open>
+        <MenuItem autoFocus onSelect={vi.fn()}>
+          Edit
+        </MenuItem>
+        <MenuItem onSelect={vi.fn()}>Delete</MenuItem>
+      </Menu>,
+    );
+    const edit = screen.getByRole("menuitem", { name: "Edit" });
+    const remove = screen.getByRole("menuitem", { name: "Delete" });
+    edit.focus();
+    fireEvent.keyDown(edit, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(remove);
+    fireEvent.keyDown(remove, { key: "Home" });
+    expect(document.activeElement).toBe(edit);
+    fireEvent.keyDown(edit, { key: "End" });
+    expect(document.activeElement).toBe(remove);
+  });
 });

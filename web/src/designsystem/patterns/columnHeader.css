@@ -1,13 +1,19 @@
 .ds-column-header {
-  align-items: center;
-  display: flex;
+  display: grid;
   gap: calc(var(--space-2) * 0.8);
   padding: 0 var(--space-1) calc(var(--space-1) * 0.7);
+}
+
+.ds-column-header-controls {
+  align-items: center;
+  display: flex;
+  min-height: 24px;
 }
 
 .ds-column-header-title {
   font-size: var(--text-base);
   margin: 0;
+  white-space: nowrap;
 }
 
 .ds-column-header-accent .ds-column-header-title {

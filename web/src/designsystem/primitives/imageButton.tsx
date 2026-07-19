@@ -1,15 +1,18 @@
-import type { ReactNode } from "react";
+import type { KeyboardEventHandler, ReactNode } from "react";
 
 import "./imageButton.css";
 
 type ImageButtonSize = "full" | "preview" | "thumb";
 
 interface ImageButtonProps {
+  ariaPressed?: boolean | undefined;
   children?: ReactNode;
   /** Accessible name for the interactive variant. */
   label?: string;
+  keyShortcuts?: string | undefined;
   /** When omitted, renders a plain (non-interactive) frame. */
   onClick?: (() => void) | undefined;
+  onKeyDown?: KeyboardEventHandler<HTMLButtonElement> | undefined;
   /** thumb: table-row art · preview: expanded-row art · full: fill parent. */
   size?: ImageButtonSize;
 }
@@ -23,9 +26,12 @@ function frameClass(size: ImageButtonSize): string {
 /** Borderless artwork button (card images that open a details view).
     Renders a static frame when no onClick is given. */
 export function ImageButton({
+  ariaPressed,
   children,
+  keyShortcuts,
   label,
   onClick,
+  onKeyDown,
   size = "full",
 }: ImageButtonProps): ReactNode {
   if (onClick === undefined) {
@@ -33,9 +39,12 @@ export function ImageButton({
   }
   return (
     <button
+      aria-keyshortcuts={keyShortcuts}
       aria-label={label}
+      aria-pressed={ariaPressed}
       className={frameClass(size)}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       type="button"
     >
       {children}

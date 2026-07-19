@@ -20,6 +20,7 @@ export interface MenuProps {
   /** MenuItem children shown while open. */
   children?: ReactNode;
   className?: string;
+  disabled?: boolean;
   /** Trigger icon; defaults to a horizontal ellipsis. */
   icon?: ReactNode;
   /** Popover id, wired to the trigger via aria-controls. */
@@ -34,6 +35,7 @@ export interface MenuProps {
 export function Menu({
   children,
   className,
+  disabled = false,
   icon,
   id,
   label,
@@ -49,6 +51,7 @@ export function Menu({
         aria-controls={id}
         aria-expanded={open}
         aria-haspopup="menu"
+        disabled={disabled}
         label={label}
         onClick={onToggle}
         variant="ghost"
@@ -56,7 +59,41 @@ export function Menu({
         {icon ?? <EllipsisIcon />}
       </IconButton>
       {open && (
-        <div className="ds-menu-popover" id={id} role="menu">
+        <div
+          className="ds-menu-popover"
+          id={id}
+          onKeyDown={(event) => {
+            if (
+              event.key !== "ArrowDown" &&
+              event.key !== "ArrowUp" &&
+              event.key !== "Home" &&
+              event.key !== "End"
+            )
+              return;
+            event.preventDefault();
+            const items = [
+              ...event.currentTarget.querySelectorAll<HTMLElement>(
+                '[role="menuitem"]:not([disabled])',
+              ),
+            ];
+            if (items.length === 0) return;
+            const current = items.indexOf(
+              document.activeElement as HTMLElement,
+            );
+            const next =
+              event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? items.length - 1
+                  : (current +
+                      (event.key === "ArrowDown" ? 1 : -1) +
+                      items.length) %
+                    items.length;
+            items[next]?.focus();
+          }}
+          role="menu"
+          tabIndex={-1}
+        >
           {children}
         </div>
       )}

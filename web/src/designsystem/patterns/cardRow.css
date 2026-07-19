@@ -13,6 +13,12 @@
   width: 100%;
 }
 
+.ds-card-row-dense {
+  border-radius: 0;
+  gap: var(--space-1);
+  padding: calc(var(--space-1) * 0.35) calc(var(--space-1) * 0.65);
+}
+
 .ds-card-row-accent {
   background: var(--color-accent-100);
   color: var(--color-accent-800);

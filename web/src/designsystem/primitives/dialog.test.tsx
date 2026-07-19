@@ -51,10 +51,10 @@ describe("Dialog", () => {
   });
 
   it("closes on backdrop pointerdown but not on inside pointerdown", () => {
-    const { onClose, view } = renderDialog();
+    const { onClose } = renderDialog();
     fireEvent.pointerDown(screen.getByRole("dialog"));
     expect(onClose).not.toHaveBeenCalled();
-    const backdrop = view.container.querySelector(".ds-dialog-backdrop");
+    const backdrop = document.body.querySelector(".ds-dialog-backdrop");
     expect(backdrop).not.toBeNull();
     if (backdrop !== null) fireEvent.pointerDown(backdrop);
     expect(onClose).toHaveBeenCalledTimes(1);

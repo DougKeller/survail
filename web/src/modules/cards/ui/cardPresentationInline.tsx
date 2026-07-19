@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type KeyboardEventHandler,
   type ReactNode,
 } from "react";
 
@@ -50,12 +51,18 @@ function CardImageContent({
 }
 
 export function ClickableCardImage({
+  ariaPressed,
   card,
+  keyShortcuts,
   loading = "lazy",
+  onKeyDown,
   size = "full",
 }: {
+  ariaPressed?: boolean | undefined;
   card: CardPresentationSource;
+  keyShortcuts?: string | undefined;
   loading?: "eager" | "lazy";
+  onKeyDown?: KeyboardEventHandler<HTMLButtonElement> | undefined;
   /** thumb: table row art · preview: expanded row art · full: fill parent. */
   size?: "full" | "preview" | "thumb";
 }) {
@@ -66,6 +73,8 @@ export function ClickableCardImage({
 
   return (
     <ImageButton
+      ariaPressed={ariaPressed}
+      keyShortcuts={keyShortcuts}
       label={`View details for ${name}`}
       onClick={
         presentation === null
@@ -74,6 +83,7 @@ export function ClickableCardImage({
               presentation.openCard(card);
             }
       }
+      onKeyDown={onKeyDown}
       size={size}
     >
       <CardImageContent loading={loading} name={name} source={source} />

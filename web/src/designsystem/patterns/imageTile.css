@@ -55,6 +55,14 @@
   pointer-events: auto;
 }
 
+/* On narrow percentage columns the badges can overlap the action controls.
+   Prioritize the active controls while the tile is being interacted with. */
+.ds-image-tile:hover .ds-image-tile-badge,
+.ds-image-tile:focus-within .ds-image-tile-badge {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Touch users do not have hover as a discovery step. Keep the controls
    available and enlarge compact icon targets without changing dense rows. */
 @media (any-hover: none), (any-pointer: coarse) {
@@ -82,6 +90,7 @@
   min-height: 30px;
   min-width: 30px;
   padding: var(--space-1) var(--space-2);
+  pointer-events: none;
   position: absolute;
   z-index: var(--layer-raised);
 }
@@ -104,6 +113,18 @@
 .ds-image-tile-badge-accent {
   background: var(--color-accent-200);
   color: var(--color-accent-800);
+}
+
+@media (width <= 480px) {
+  .ds-image-tile:hover {
+    transform: none;
+  }
+
+  .ds-image-tile-actions {
+    left: 50%;
+    max-width: none;
+    transform: translateX(-50%);
+  }
 }
 
 /* Group header tile — tinted by the consumer-provided --ds-group-accent. */

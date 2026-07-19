@@ -1,5 +1,5 @@
-import { GripVertical, ShieldUser, TagX } from "lucide-react";
-import type { ReactNode } from "react";
+import { ShieldUser, TagX } from "lucide-react";
+import type { KeyboardEvent, ReactNode } from "react";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type { CardSet, DeckTag } from "../../modules/decks/contracts";
@@ -16,39 +16,6 @@ import {
 } from "../editor/cardZoneDrag";
 import { CardNoteButton, QuantityStepper } from "./cardRowActions";
 import { formattedTagWeight, nonDefaultTagWeights } from "./tagTargets";
-
-function CardDragHandle({
-  card,
-  disabled,
-  visualId,
-}: {
-  card: CardSet;
-  disabled: boolean;
-  visualId: string;
-}) {
-  const drag = useOptionalCardZoneDrag();
-  const handleProps = drag?.handleProps(card, visualId);
-  if (handleProps === undefined) return null;
-  return (
-    <IconButton
-      aria-pressed={handleProps["aria-pressed"]}
-      disabled={disabled}
-      dragHandle
-      label={handleProps["aria-label"]}
-      onLostPointerCapture={handleProps.onLostPointerCapture}
-      onKeyDown={handleProps.onKeyDown}
-      onPointerCancel={handleProps.onPointerCancel}
-      onPointerDown={handleProps.onPointerDown}
-      onPointerMove={handleProps.onPointerMove}
-      onPointerUp={handleProps.onPointerUp}
-      size="sm"
-      title="Move one card"
-      variant="ghost"
-    >
-      <GripVertical size={14} strokeWidth={2.75} />
-    </IconButton>
-  );
-}
 
 export function VisualCard({
   add,
@@ -78,7 +45,9 @@ export function VisualCard({
   visualId: string;
 }) {
   const drag = useOptionalCardZoneDragStatic();
+  const dragInteraction = useOptionalCardZoneDrag();
   const draggableProps = drag?.draggableProps(card, visualId);
+  const handleProps = dragInteraction?.handleProps(card, visualId);
   const weightedTags = nonDefaultTagWeights(card, tags);
   const showQuantity = !stacked && card.quantity > 1;
   const badgeLabel = [
@@ -94,7 +63,26 @@ export function VisualCard({
       data-group-appearance={visualId}
       data-zone={card.zone}
     >
-      <ClickableCardImage card={card} />
+      <ClickableCardImage
+        ariaPressed={handleProps?.["aria-pressed"]}
+        card={card}
+        keyShortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Enter Escape"
+        onKeyDown={
+          handleProps === undefined
+            ? undefined
+            : (event: KeyboardEvent<HTMLButtonElement>) => {
+                const committing =
+                  handleProps["aria-pressed"] &&
+                  (event.key === "Enter" || event.key === " ");
+                if (
+                  event.key.startsWith("Arrow") ||
+                  event.key === "Escape" ||
+                  committing
+                )
+                  handleProps.onKeyDown(event);
+              }
+        }
+      />
       {(showQuantity || weightedTags.length > 0) && (
         <ImageTileBadge
           aria-label={badgeLabel}
@@ -140,7 +128,6 @@ export function VisualCard({
           onAdd={add}
           onRemove={remove}
         />
-        <CardDragHandle card={card} disabled={disabled} visualId={visualId} />
         {markCommander !== null && (
           <IconButton
             disabled={disabled}

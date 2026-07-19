@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api } from "../api";
 import { messageFor } from "../deckPrimitives";
@@ -29,35 +29,41 @@ export function useDeckScoring({
   const [clearingScores, setClearingScores] = useState(false);
   const [evaluationProgress, setEvaluationProgress] =
     useState<CardEvaluationProgress | null>(null);
-  const [cachedScoresLoadedFor, setCachedScoresLoadedFor] = useState<
-    string | null
-  >(null);
+  const cachedScoresLoadedForRef = useRef<string | null>(null);
+  const deckCacheKey =
+    deck === null ? null : `${deck.id}:${String(deck.revision)}`;
+  const observedDeckCacheKeyRef = useRef(deckCacheKey);
+  if (observedDeckCacheKeyRef.current !== deckCacheKey) {
+    observedDeckCacheKeyRef.current = deckCacheKey;
+    cachedScoresLoadedForRef.current = null;
+  }
 
   useEffect(() => {
     setScores(new Map());
     setEvaluationProgress(null);
-    setCachedScoresLoadedFor(null);
   }, [deck?.id]);
 
-  useEffect(() => {
-    setCachedScoresLoadedFor(null);
-  }, [deck?.revision]);
-
   const loadCachedScores = useCallback(async (): Promise<void> => {
-    if (!scoringEnabled || deck === null || cachedScoresLoadedFor === deck.id)
+    if (
+      !scoringEnabled ||
+      deck === null ||
+      deckCacheKey === null ||
+      cachedScoresLoadedForRef.current === deckCacheKey
+    )
       return;
+    cachedScoresLoadedForRef.current = deckCacheKey;
     try {
       const loadedScores = await api.cachedDeckEvaluation(deck.id);
       setScores(new Map(loadedScores.map((score) => [score.oracle_id, score])));
-      setCachedScoresLoadedFor(deck.id);
     } catch (reason) {
+      cachedScoresLoadedForRef.current = null;
       setError(
         reason instanceof Error
           ? messageFor(reason)
           : "Could not load cached scores",
       );
     }
-  }, [cachedScoresLoadedFor, deck, scoringEnabled, setError]);
+  }, [deck, deckCacheKey, scoringEnabled, setError]);
 
   const evaluateCurrentDeck = useCallback(async (): Promise<void> => {
     if (!scoringEnabled || deck === null || scoring) return;
@@ -101,7 +107,7 @@ export function useDeckScoring({
       await api.clearDeckEvaluationCache(deck.id);
       setScores(new Map());
       setEvaluationProgress(null);
-      setCachedScoresLoadedFor(deck.id);
+      cachedScoresLoadedForRef.current = deckCacheKey;
       setAnnouncement("Deck score cache cleared");
       return true;
     } catch (reason) {
@@ -114,7 +120,14 @@ export function useDeckScoring({
     } finally {
       setClearingScores(false);
     }
-  }, [clearingScores, deck, scoring, setAnnouncement, setError]);
+  }, [
+    clearingScores,
+    deck,
+    deckCacheKey,
+    scoring,
+    setAnnouncement,
+    setError,
+  ]);
 
   return {
     clearScoreCache,

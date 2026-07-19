@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { useModalBehavior } from "../interaction";
 import "./dialog.css";
@@ -16,6 +17,7 @@ export interface DialogProps {
   /** Supporting line under the title, wired up as the accessible
       description (aria-describedby). */
   description?: ReactNode;
+  id?: string;
   onClose: () => void;
   open: boolean;
   /** wide: media-heavy dialogs (card details, printings). */
@@ -49,6 +51,7 @@ export function Dialog({
   className,
   closeLabel,
   description,
+  id,
   onClose,
   open,
   size = "md",
@@ -67,7 +70,7 @@ export function Dialog({
   ]
     .filter((part) => typeof part === "string" && part !== "")
     .join(" ");
-  return (
+  return createPortal(
     <div className="ds-dialog-backdrop">
       <div
         aria-busy={busy || undefined}
@@ -75,6 +78,7 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-modal="true"
         className={classes}
+        id={id}
         ref={surfaceRef}
         role="dialog"
         tabIndex={-1}
@@ -106,6 +110,7 @@ export function Dialog({
           <div className="ds-dialog-actions">{actions}</div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

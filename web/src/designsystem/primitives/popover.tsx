@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from "react";
+import type { CSSProperties, ReactNode, Ref } from "react";
 
 import "./popover.css";
 
@@ -36,24 +36,29 @@ const ALIGN_CLASS: Record<PopoverAlign, string> = {
 export interface PopoverProps {
   align?: PopoverAlign;
   children?: ReactNode;
+  fixed?: boolean;
   /** Accessible name; when given the surface exposes role="dialog". */
   label?: string;
   ref?: Ref<HTMLDivElement>;
+  style?: CSSProperties;
 }
 
 /** Anchored floating surface (autocomplete drawer, quick actions, menus). */
 export function Popover({
   align = "start",
   children,
+  fixed = false,
   label,
   ref,
+  style,
 }: PopoverProps) {
   return (
     <div
       aria-label={label}
-      className={`ds-popover ${ALIGN_CLASS[align]}`}
+      className={`ds-popover ${ALIGN_CLASS[align]}${fixed ? " ds-popover-fixed" : ""}`}
       ref={ref}
       role={label === undefined ? undefined : "dialog"}
+      style={style}
     >
       {children}
     </div>

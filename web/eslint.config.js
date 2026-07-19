@@ -268,6 +268,7 @@ export default tseslint.config(
     // Sanctioned runtime-computed DOM style: the progress meter width.
     files: [
       "src/designsystem/primitives/progress.tsx",
+      "src/designsystem/primitives/popover.tsx",
       "src/designsystem/patterns/cardDragPreview.tsx",
     ],
     rules: {

@@ -1,15 +1,18 @@
+/* eslint-disable max-lines -- Tag display, editing, and menu behavior form one cohesive control family. */
 import { useEffect, useId, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
 import type { CardSet, DeckTag } from "../../modules/decks/contracts";
-import { Button, IconButton } from "../../designsystem/primitives/button";
+import { Button } from "../../designsystem/primitives/button";
 import { Dialog } from "../../designsystem/primitives/dialog";
 import { Field, Input } from "../../designsystem/primitives/input";
+import { Menu, MenuItem } from "../../designsystem/primitives/menu";
 import { Meter } from "../../designsystem/primitives/progress";
 import { Inline } from "../../designsystem/layout/inline";
 import { Stack } from "../../designsystem/layout/stack";
 import { Text } from "../../designsystem/layout/typography";
 import { formattedTagProgress, tagTargetProgress } from "../deck/tagTargets";
+import { useDismissibleSurface } from "../deckPrimitives";
 
 export function TagNameDialog({
   busy,
@@ -232,32 +235,49 @@ export function TagColumnActions({
 }) {
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuRef = useDismissibleSurface<HTMLDivElement>(menuOpen, () => {
+    setMenuOpen(false);
+  });
   return (
     <>
-      <IconButton
-        disabled={busy}
-        label={`Edit ${tag.name} tag`}
-        onClick={() => {
-          setRenaming(true);
-        }}
-        size="sm"
-        title="Edit tag"
-        variant="ghost"
-      >
-        <Pencil size={14} strokeWidth={2.75} />
-      </IconButton>
-      <IconButton
-        disabled={busy}
-        label={`Delete ${tag.name} tag`}
-        onClick={() => {
-          setDeleting(true);
-        }}
-        size="sm"
-        title="Delete tag"
-        variant="ghost"
-      >
-        <Trash2 size={14} strokeWidth={2.75} />
-      </IconButton>
+      <div ref={menuRef}>
+        <Menu
+          disabled={busy}
+          id={menuId}
+          label={`Options for ${tag.name} tag column`}
+          onToggle={() => {
+            if (!busy) setMenuOpen((current) => !current);
+          }}
+          open={menuOpen}
+        >
+          <MenuItem
+            autoFocus
+            onSelect={() => {
+              setMenuOpen(false);
+              setRenaming(true);
+            }}
+          >
+            <Inline align="center" gap={2}>
+              <Pencil aria-hidden="true" size={14} strokeWidth={2.75} />
+              Edit tag
+            </Inline>
+          </MenuItem>
+          <MenuItem
+            danger
+            onSelect={() => {
+              setMenuOpen(false);
+              setDeleting(true);
+            }}
+          >
+            <Inline align="center" gap={2}>
+              <Trash2 aria-hidden="true" size={14} strokeWidth={2.75} />
+              Delete tag
+            </Inline>
+          </MenuItem>
+        </Menu>
+      </div>
       <EditTagDialog
         busy={busy}
         onCancel={() => {

@@ -68,27 +68,27 @@ export function CardsZoneColumn({
       {...tagDropProps}
       active={tagId !== null && tagId === drag.activeTagTarget}
       aria-label={`${label}, ${String(quantity)} cards`}
+      data-reorder-tag-id={tag?.id}
     >
       <ColumnHeader
         {...tagOrder.dropProps}
+        count={quantity}
+        leading={tagOrder.handle}
         level={3}
         tone={tagOrder.active ? "accent" : "default"}
-        title={`${label} · ${String(quantity)} ${quantity === 1 ? "card" : "cards"}`}
+        title={label}
       >
         {tag !== null && (
-          <>
-            {tagOrder.handle}
-            <TagColumnActions
-              busy={busy}
-              onDelete={(target) => {
-                return deleteTag(target.id, target.name);
-              }}
-              onUpdate={(target, name, nextTarget) => {
-                return updateTag(target.id, name, nextTarget);
-              }}
-              tag={tag}
-            />
-          </>
+          <TagColumnActions
+            busy={busy}
+            onDelete={(target) => {
+              return deleteTag(target.id, target.name);
+            }}
+            onUpdate={(target, name, nextTarget) => {
+              return updateTag(target.id, name, nextTarget);
+            }}
+            tag={tag}
+          />
         )}
       </ColumnHeader>
       {tag !== null && zone === "mainboard" && (

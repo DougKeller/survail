@@ -498,6 +498,10 @@ async function fulfillJson(route: Route, body: object): Promise<void> {
 export interface RichDeckMockOptions {
   /** Repeat distinct cardset appearances to stress-test large projected views. */
   cardsetMultiplier?: number;
+  /** Limit deck tags for column-fit interaction tests. */
+  deckTagLimit?: number;
+  /** Override format to expose sideboard rows in interaction tests. */
+  format?: "commander" | "modern";
 }
 
 export async function mockRichApi(
@@ -505,18 +509,28 @@ export async function mockRichApi(
   options: RichDeckMockOptions = {},
 ): Promise<void> {
   const multiplier = Math.max(1, options.cardsetMultiplier ?? 1);
-  const deckTags = [
-    ...new Set(cardsets.flatMap((cardset) => cardset.tags)),
-  ].map((name, position) => ({ id: name, name, position, target: 0 }));
+  const deckTags = [...new Set(cardsets.flatMap((cardset) => cardset.tags))]
+    .map((name, position) => ({ id: name, name, position, target: 0 }))
+    .slice(0, options.deckTagLimit);
+  const availableTags = new Set(deckTags.map((tag) => tag.id));
   let activeCardsets = Array.from({ length: multiplier }, (_, copyIndex) =>
     cardsets.map((cardset) => ({
       ...cardset,
       id: `${cardset.id}-fixture-${String(copyIndex)}`,
-      tag_ids: [...cardset.tags],
-      tag_weights: Object.fromEntries(cardset.tags.map((tag) => [tag, 1])),
+      tag_ids: cardset.tags.filter((tag) => availableTags.has(tag)),
+      tag_weights: Object.fromEntries(
+        cardset.tags
+          .filter((tag) => availableTags.has(tag))
+          .map((tag) => [tag, 1]),
+      ),
     })),
   ).flat();
-  let activeDeck = { ...deck, cardsets: activeCardsets, tags: deckTags };
+  let activeDeck = {
+    ...deck,
+    cardsets: activeCardsets,
+    format: options.format ?? deck.format,
+    tags: deckTags,
+  };
   await page.route("http://localhost:8000/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/auth/me") {
@@ -537,6 +551,36 @@ export async function mockRichApi(
           0,
         ),
         errors: [],
+      });
+    } else if (url.pathname === "/decks/deck-1/analytics") {
+      const analyticsBucket = (
+        key: string,
+        label: string,
+        quantity: number,
+      ) => ({
+        key,
+        label,
+        percentage: 25,
+        quantity,
+      });
+      await fulfillJson(route, {
+        color_distribution: [analyticsBucket("W", "White", 24)],
+        mana_curve: [analyticsBucket("4", "4", 12)],
+        nonland_cards: 43,
+        role_distribution: {
+          available: true,
+          buckets: [analyticsBucket("aggro", "aggro", 30)],
+          complete: true,
+          evaluated_cards: 49,
+          message: null,
+          missing_cards: [],
+          total_cards: 49,
+          unevaluated_cards: 0,
+        },
+        tag_distribution: [analyticsBucket("ramp", "ramp", 9)],
+        total_cards: 70,
+        type_distribution: [analyticsBucket("Creature", "Creature", 32)],
+        unique_cards: 49,
       });
     } else if (
       url.pathname === "/decks/deck-1/card-evaluations/current/cached"
@@ -577,11 +621,38 @@ export async function mockRichApi(
       if (cardsetId === undefined || tagId === undefined) {
         throw new Error(`Invalid cardset tag route: ${url.pathname}`);
       }
+      const payload = route.request().postDataJSON() as {
+        weight?: number;
+      } | null;
       activeCardsets = activeCardsets.map((cardset) =>
         cardset.id === cardsetId
           ? {
               ...cardset,
               tag_ids: [...new Set([...cardset.tag_ids, tagId])],
+              tag_weights: {
+                ...cardset.tag_weights,
+                [tagId]: payload?.weight ?? cardset.tag_weights[tagId] ?? 1,
+              },
+            }
+          : cardset,
+      );
+      activeDeck = { ...activeDeck, cardsets: activeCardsets };
+      await fulfillJson(route, activeDeck);
+    } else if (
+      route.request().method() === "DELETE" &&
+      /^\/decks\/deck-1\/cardsets\/[^/]+\/tags\/[^/]+$/.test(url.pathname)
+    ) {
+      const [, , , , cardsetId, , tagId] = url.pathname.split("/");
+      activeCardsets = activeCardsets.map((cardset) =>
+        cardset.id === cardsetId
+          ? {
+              ...cardset,
+              tag_ids: cardset.tag_ids.filter((id) => id !== tagId),
+              tag_weights: Object.fromEntries(
+                Object.entries(cardset.tag_weights).filter(
+                  ([id]) => id !== tagId,
+                ),
+              ),
             }
           : cardset,
       );
