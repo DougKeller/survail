@@ -11,15 +11,22 @@ function joinClasses(parts: (string | undefined)[]): string {
 export interface NavBarProps extends ComponentPropsWithoutRef<"nav"> {
   /** Draw the divider along the bottom edge (wireframe top bars). */
   divided?: boolean;
+  scrollOnCompact?: boolean;
 }
 
 /** Horizontal navigation bar (Organic .nav). */
-export function NavBar({ className, divided = false, ...rest }: NavBarProps) {
+export function NavBar({
+  className,
+  divided = false,
+  scrollOnCompact = false,
+  ...rest
+}: NavBarProps) {
   return (
     <nav
       className={joinClasses([
         "ds-nav",
         divided ? "ds-nav-divided" : undefined,
+        scrollOnCompact ? "ds-nav-compact-scroll" : undefined,
         className,
       ])}
       {...rest}

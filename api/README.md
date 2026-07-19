@@ -149,3 +149,55 @@ cards.
 ```bash
 python -m pytest
 ```
+
+## Role evaluator optimization
+
+Production card-role evaluation is a typed DSPy program. The offline harness adapts the existing
+`judge_eval_deck.json`, `judge_eval_snapshots.json`, and `judge_eval_golden.json` files into DSPy
+examples in memory; optimization never rewrites those labeled files.
+
+Historical `overall_range` labels remain in `judge_eval_golden.json` for provenance but are ignored
+by both the behavioral golden check and GEPA. Overall score is deterministically recalculated from
+the labeled role scores and is covered by scorer tests; new evaluator labels should specify role
+presence, role score ranges, and rubric criteria instead of an overall range.
+
+From `api/`, run the existing evaluator and golden check with:
+
+```bash
+.venv/bin/python scripts/judge_eval.py run
+.venv/bin/python scripts/judge_eval.py check
+```
+
+Compile its instructions with GEPA and a separate validation split with:
+
+```bash
+.venv/bin/python scripts/judge_eval.py optimize \
+  --max-metric-calls 150
+```
+
+The evaluator defaults to `gpt-5.4-mini`; GEPA reflection defaults to `gpt-5.6-luna`.
+Override either with `OPENAI_ROLE_EVALUATION_MODEL`,
+`OPENAI_ROLE_EVALUATION_REFLECTION_MODEL`, or the optimizer's `--reflection-model` option.
+The default budget is approximately 150 `gpt-5.4-mini` evaluator calls. Luna reflection calls are
+adaptive—normally one per prompt proposal—and are additional to GEPA's metric-call budget.
+
+The command saves `scripts/judge_eval_program.json`. Harness runs load it automatically. Local
+Compose also loads that artifact by default from `/app/scripts/judge_eval_program.json`; other
+deployments should set `DSPY_ROLE_EVALUATION_PROGRAM_PATH` explicitly. Both the seed and compiled
+instructions are checked for labeled card names; a leaking GEPA candidate is rejected rather than
+saved.
+
+Production hashes the exact saved artifact into a `prompt_version`. That immutable version is
+stored with every evaluation, returned by the API, and included in the cache identity alongside the
+stable evaluator/scorer version. Promoting a different artifact therefore makes prior role scores
+cache misses without deleting their historical rows.
+
+Each optimization starts in a new timestamped directory under `scripts/judge_eval_gepa_runs/`, and
+GEPA checkpoints it after each iteration. Pass `--resume` to continue the most recently updated
+checkpoint; this also recognizes the legacy `scripts/judge_eval_gepa_run/` directory. Proposal-time
+validation gives Luna two repair attempts to remove any labeled card names before a candidate can
+consume evaluator rollouts; the final pre-save check remains as a defense-in-depth guard.
+
+For a graceful stop, create `gepa.stop` inside the run directory printed when optimization starts;
+GEPA notices it at an iteration boundary and saves state. Remove that stop file before running with
+`--resume`.

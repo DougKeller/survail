@@ -31,3 +31,7 @@ web/test-results/
 
 # Downloaded bulk data
 data/
+
+# Local GEPA optimizer checkpoints
+api/scripts/judge_eval_gepa_run/
+api/scripts/judge_eval_gepa_runs/

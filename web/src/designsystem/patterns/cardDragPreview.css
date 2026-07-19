@@ -1,0 +1,40 @@
+.ds-card-drag-preview {
+  aspect-ratio: 488 / 680;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 24%, transparent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  inline-size: clamp(84px, 8vw, 116px);
+  opacity: 0.62;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  transform: translate(12px, -50%) rotate(-7deg);
+  transform-origin: center;
+  z-index: var(--layer-modal);
+}
+
+.ds-card-drag-preview-image {
+  block-size: 100%;
+  display: block;
+  inline-size: 100%;
+  object-fit: cover;
+}
+
+.ds-card-drag-preview-fallback {
+  align-items: center;
+  block-size: 100%;
+  display: flex;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  inline-size: 100%;
+  justify-content: center;
+  padding: var(--space-3);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-card-drag-preview {
+    transform: translate(12px, -50%);
+  }
+}

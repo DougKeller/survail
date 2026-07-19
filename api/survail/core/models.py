@@ -8,12 +8,14 @@ from sqlalchemy import (
     JSON,
     Boolean,
     CheckConstraint,
+    Column,
     DateTime,
     Enum,
     ForeignKey,
     Integer,
     Numeric,
     String,
+    Table,
     Text,
     UniqueConstraint,
 )
@@ -65,6 +67,23 @@ class TimestampMixin:
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+cardset_deck_tags = Table(
+    "cardset_deck_tags",
+    Base.metadata,
+    Column(
+        "cardset_id",
+        ForeignKey("cardsets.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "deck_tag_id",
+        ForeignKey("deck_tags.id", ondelete="CASCADE"),
+        index=True,
+        primary_key=True,
+    ),
+)
 
 
 class User(TimestampMixin, Base):
@@ -122,6 +141,11 @@ class Deck(TimestampMixin, Base):
     cardsets: Mapped[list["CardSet"]] = relationship(
         back_populates="deck", cascade="all, delete-orphan", order_by="CardSet.card_name"
     )
+    deck_tags: Mapped[list["DeckTag"]] = relationship(
+        back_populates="deck",
+        cascade="all, delete-orphan",
+        order_by="DeckTag.position",
+    )
     operations: Mapped[list["DeckOperation"]] = relationship(
         back_populates="deck", cascade="all, delete-orphan"
     )
@@ -165,12 +189,38 @@ class CardSet(TimestampMixin, Base):
     card_name: Mapped[str] = mapped_column(String(200), index=True)
     set_code: Mapped[str] = mapped_column(String(10))
     collector_number: Mapped[str] = mapped_column(String(32))
-    core: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     note: Mapped[str | None] = mapped_column(String(2000))
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     scryfall: Mapped[JsonObject] = mapped_column(JSON)
 
     deck: Mapped[Deck] = relationship(back_populates="cardsets")
+    deck_tags: Mapped[list["DeckTag"]] = relationship(
+        secondary=cardset_deck_tags,
+        back_populates="cardsets",
+        order_by="DeckTag.position",
+    )
+
+
+class DeckTag(TimestampMixin, Base):
+    __tablename__ = "deck_tags"
+    __table_args__ = (
+        CheckConstraint("position >= 0", name="ck_deck_tag_position"),
+        UniqueConstraint("deck_id", "name", name="uq_deck_tag_name"),
+        UniqueConstraint("deck_id", "position", name="uq_deck_tag_position"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    deck_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    position: Mapped[int] = mapped_column(Integer)
+
+    deck: Mapped[Deck] = relationship(back_populates="deck_tags")
+    cardsets: Mapped[list[CardSet]] = relationship(
+        secondary=cardset_deck_tags,
+        back_populates="deck_tags",
+    )
 
 
 class DeckOperation(Base):
@@ -343,9 +393,8 @@ class CardRoleEvaluation(TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint(
             "deck_id",
-            "context_key",
-            "evaluator_version",
-            name="uq_card_role_evaluation_context_version",
+            "oracle_id",
+            name="uq_card_role_evaluation_deck_oracle",
         ),
     )
 
@@ -356,6 +405,7 @@ class CardRoleEvaluation(TimestampMixin, Base):
     deck_revision: Mapped[int] = mapped_column(Integer, index=True)
     context_key: Mapped[str] = mapped_column(String(64), index=True)
     evaluator_version: Mapped[str] = mapped_column(String(40), index=True)
+    prompt_version: Mapped[str] = mapped_column(String(80), index=True)
     oracle_id: Mapped[str] = mapped_column(String(40), index=True)
     overall_comment: Mapped[str] = mapped_column(Text)
     roles: Mapped[list[JsonObject]] = mapped_column(JSONB)
@@ -386,6 +436,7 @@ class CardEvaluationFeedback(TimestampMixin, Base):
     card_name: Mapped[str] = mapped_column(String(200))
     context_key: Mapped[str] = mapped_column(String(64), index=True)
     evaluator_version: Mapped[str] = mapped_column(String(40), index=True)
+    prompt_version: Mapped[str] = mapped_column(String(80), index=True)
     evaluation_model: Mapped[str] = mapped_column(String(80))
     scope: Mapped[str] = mapped_column(String(40))
     verdict: Mapped[str] = mapped_column(String(8))

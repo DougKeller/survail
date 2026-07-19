@@ -16,6 +16,7 @@ from survail.modules.decks.api.schemas import (
     DeckAnalyticsRead,
     DeckCreate,
     DeckRead,
+    DeckTagRead,
     DeckUpdate,
     DeckValidationRead,
     GeneratedDeckDescriptionContentRead,
@@ -24,8 +25,8 @@ from survail.modules.decks.api.schemas import (
     RoleDistributionRead,
     ValidationErrorRead,
 )
-from survail.modules.decks.evaluations.service.run import EvaluationService
 from survail.modules.decks.contracts import CloneDeckRequest
+from survail.modules.decks.evaluations.service.run import EvaluationService
 from survail.modules.decks.operations.contracts import (
     DeckOperationChangeRead,
     DeckOperationRead,
@@ -153,9 +154,9 @@ def _cardset_read(cardset: CardSet) -> CardSetRead:
         card_name=cardset.card_name,
         set_code=cardset.set_code,
         collector_number=cardset.collector_number,
-        core=bool(cardset.core),
         note=cardset.note or "",
         tags=cardset.tags,
+        tag_ids=[tag.id for tag in cardset.deck_tags],
         scryfall=ScryfallCardSnapshot.model_validate(cardset.scryfall, strict=False),
     )
 
@@ -180,6 +181,9 @@ def _deck_read(deck: Deck) -> DeckRead:
         ),
         metadata=_metadata(deck),
         cardsets=[_cardset_read(cardset) for cardset in deck.cardsets],
+        tags=[
+            DeckTagRead(id=tag.id, name=tag.name, position=tag.position) for tag in deck.deck_tags
+        ],
         is_sample=deck.is_sample,
         revision=deck.revision,
         created_at=deck.created_at,

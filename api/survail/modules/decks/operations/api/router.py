@@ -1,19 +1,19 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 
 from survail.core.dependencies import CurrentUser, DbSession
-from survail.core.models import DeckOperationProposal
+from survail.core.models import DeckOperation, DeckOperationProposal
+from survail.core.schemas import DeckOperationProposalChangeRead
 from survail.modules.decks.api.router import (
     _deck_read,
     _operation_read,
     _validation_read,
 )
 from survail.modules.decks.contracts import DeckRead
+from survail.modules.decks.evaluations.service.run import score_added_cards
 from survail.modules.decks.operations.api.schemas import (
-    CardSetCoreUpdate,
     CardSetNoteUpdate,
     DeckOperationCreate,
     DeckOperationProposalDecision,
@@ -27,10 +27,13 @@ from survail.modules.decks.operations.service.apply import (
     DeckOperationError,
     apply_deck_operation,
 )
+from survail.modules.decks.operations.service.proposals import (
+    OperationProposalNotFoundError,
+    OperationProposalRevisionError,
+    OperationProposalService,
+)
 from survail.modules.decks.service.cardsets import (
     DeckCardSetNotFoundError,
-    DeckCoreCardLimitError,
-    set_cardset_core,
     set_cardset_note,
 )
 from survail.modules.decks.service.manage import (
@@ -42,8 +45,22 @@ from survail.modules.decks.service.manage import (
 router = APIRouter(prefix="/decks", tags=["deck-operations"])
 
 
+def _queue_added_card_scoring(
+    background_tasks: BackgroundTasks,
+    operation: DeckOperation,
+    deck_id: uuid.UUID,
+    owner_id: uuid.UUID,
+) -> None:
+    oracle_ids = list(
+        dict.fromkeys(change.oracle_id for change in operation.changes if change.quantity_delta > 0)
+    )
+    if oracle_ids:
+        background_tasks.add_task(score_added_cards, deck_id, owner_id, oracle_ids)
+
+
 def _operation_proposal_read(proposal: DeckOperationProposal) -> DeckOperationProposalRead:
-    items = proposal.changes.get("items", [])
+    raw_items = proposal.changes.get("items", [])
+    items = raw_items if isinstance(raw_items, list) else []
     return DeckOperationProposalRead(
         id=proposal.id,
         deck_id=proposal.deck_id,
@@ -51,7 +68,9 @@ def _operation_proposal_read(proposal: DeckOperationProposal) -> DeckOperationPr
         reason=proposal.reason,
         status=proposal.status,
         operation_id=proposal.operation_id,
-        changes=items if isinstance(items, list) else [],
+        changes=[
+            DeckOperationProposalChangeRead.model_validate(item, strict=False) for item in items
+        ],
         created_at=proposal.created_at,
         updated_at=proposal.updated_at,
     )
@@ -65,6 +84,7 @@ def _operation_proposal_read(proposal: DeckOperationProposal) -> DeckOperationPr
 def apply_operation(
     deck_id: uuid.UUID,
     payload: DeckOperationCreate,
+    background_tasks: BackgroundTasks,
     db: DbSession,
     user: CurrentUser,
 ) -> DeckOperationResult:
@@ -75,11 +95,13 @@ def apply_operation(
     except DeckOperationError as exc:
         error_status = 404 if str(exc) == "Deck not found" else 422
         raise HTTPException(status_code=error_status, detail=str(exc)) from exc
-    return DeckOperationResult(
+    _queue_added_card_scoring(background_tasks, operation, deck.id, user.id)
+    result = DeckOperationResult(
         operation=_operation_read(operation),
         deck=_deck_read(deck),
         validation=_validation_read(deck),
     )
+    return result
 
 
 @router.get("/{deck_id}/operations", response_model=list[DeckOperationRead])
@@ -106,6 +128,7 @@ def revert_operation(
     deck_id: uuid.UUID,
     operation_id: uuid.UUID,
     payload: DeckOperationRevertCreate,
+    background_tasks: BackgroundTasks,
     db: DbSession,
     user: CurrentUser,
 ) -> DeckOperationResult:
@@ -113,7 +136,7 @@ def revert_operation(
         revert_payload = DeckService(db).revert_payload(user, deck_id, operation_id, payload)
     except (DeckNotFoundError, DeckOperationNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return apply_operation(deck_id, revert_payload, db, user)
+    return apply_operation(deck_id, revert_payload, background_tasks, db, user)
 
 
 @router.post(
@@ -124,47 +147,43 @@ def approve_operation_proposal(
     deck_id: uuid.UUID,
     proposal_id: uuid.UUID,
     payload: DeckOperationProposalDecision,
+    background_tasks: BackgroundTasks,
     db: DbSession,
     user: CurrentUser,
 ) -> DeckOperationResult:
-    proposal = db.scalar(
-        select(DeckOperationProposal).where(
-            DeckOperationProposal.id == proposal_id,
-            DeckOperationProposal.deck_id == deck_id,
-            DeckOperationProposal.owner_id == user.id,
-            DeckOperationProposal.status == "pending",
-        )
-    )
-    if proposal is None:
-        raise HTTPException(status_code=404, detail="Pending operation proposal not found")
-    if payload.expected_revision != proposal.expected_revision:
-        raise HTTPException(status_code=409, detail="Proposal revision does not match")
+    proposal_service = OperationProposalService(db)
     try:
-        operation_payload = DeckOperationCreate(
-            client_operation_id=uuid.uuid4(),
-            expected_revision=proposal.expected_revision,
-            reason=proposal.reason,
-            changes=proposal.changes.get("items", []),
+        proposal = proposal_service.pending(user, deck_id, proposal_id, payload.expected_revision)
+    except OperationProposalNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except OperationProposalRevisionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    try:
+        operation_payload = DeckOperationCreate.model_validate(
+            {
+                "client_operation_id": uuid.uuid4(),
+                "expected_revision": proposal.expected_revision,
+                "reason": proposal.reason,
+                "changes": proposal.changes.get("items", []),
+            },
+            strict=False,
         )
         operation, deck = apply_deck_operation(db, deck_id, user, operation_payload)
     except DeckOperationConflictError as exc:
-        proposal.status = "stale"
-        db.commit()
+        proposal_service.stale(proposal)
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except DeckOperationError as exc:
-        proposal.status = "stale"
-        db.commit()
+        proposal_service.stale(proposal)
         error_status = 404 if str(exc) == "Deck not found" else 422
         raise HTTPException(status_code=error_status, detail=str(exc)) from exc
-    proposal.status = "applied"
-    proposal.operation_id = operation.id
-    db.commit()
-    db.refresh(proposal)
-    return DeckOperationResult(
+    proposal_service.applied(proposal, operation)
+    _queue_added_card_scoring(background_tasks, operation, deck.id, user.id)
+    result = DeckOperationResult(
         operation=_operation_read(operation),
         deck=_deck_read(deck),
         validation=_validation_read(deck),
     )
+    return result
 
 
 @router.post(
@@ -178,39 +197,15 @@ def reject_operation_proposal(
     db: DbSession,
     user: CurrentUser,
 ) -> DeckOperationProposalRead:
-    proposal = db.scalar(
-        select(DeckOperationProposal).where(
-            DeckOperationProposal.id == proposal_id,
-            DeckOperationProposal.deck_id == deck_id,
-            DeckOperationProposal.owner_id == user.id,
-            DeckOperationProposal.status == "pending",
-        )
-    )
-    if proposal is None:
-        raise HTTPException(status_code=404, detail="Pending operation proposal not found")
-    if payload.expected_revision != proposal.expected_revision:
-        raise HTTPException(status_code=409, detail="Proposal revision does not match")
-    proposal.status = "rejected"
-    db.commit()
-    db.refresh(proposal)
-    return _operation_proposal_read(proposal)
-
-
-@router.patch("/{deck_id}/cardsets/{cardset_id}/core", response_model=DeckRead)
-def update_cardset_core(
-    deck_id: uuid.UUID,
-    cardset_id: uuid.UUID,
-    payload: CardSetCoreUpdate,
-    db: DbSession,
-    user: CurrentUser,
-) -> DeckRead:
     try:
-        deck = set_cardset_core(db, deck_id, cardset_id, user, core=payload.core)
-    except DeckCardSetNotFoundError as exc:
+        proposal = OperationProposalService(db).reject(
+            user, deck_id, proposal_id, payload.expected_revision
+        )
+    except OperationProposalNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except DeckCoreCardLimitError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return _deck_read(deck)
+    except OperationProposalRevisionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _operation_proposal_read(proposal)
 
 
 @router.patch("/{deck_id}/cardsets/{cardset_id}/note", response_model=DeckRead)

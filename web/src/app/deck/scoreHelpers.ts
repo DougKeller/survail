@@ -25,8 +25,6 @@ function preferredScoreRowCard(
   candidate: CardSet,
 ): CardSet {
   if (current === undefined) return candidate;
-  if (current.core !== candidate.core)
-    return candidate.core ? candidate : current;
   const zoneDelta =
     SCORE_ROW_ZONE_PRIORITY[current.zone] -
     SCORE_ROW_ZONE_PRIORITY[candidate.zone];
@@ -36,23 +34,8 @@ function preferredScoreRowCard(
     : candidate;
 }
 
-export function scoreContextDescription(deck: Deck): string {
-  const coreCount = new Set(
-    deck.cardsets
-      .filter((card) => card.core && card.zone !== "commander")
-      .map((card) => card.oracle_id),
-  ).size;
-  return [
-    "the deck's Goal / North Star",
-    deck.cardsets.some((card) => card.zone === "commander")
-      ? "the commander"
-      : null,
-    coreCount > 0
-      ? `${String(coreCount)} starred core card${coreCount === 1 ? "" : "s"}`
-      : null,
-  ]
-    .filter((part): part is string => part !== null)
-    .join(", ");
+export function scoreContextDescription(_deck: Deck): string {
+  return "the deck's Goal / North Star, expanded card mentions, and the card under evaluation";
 }
 
 export function createDeckScoreContext(deck: Deck) {
@@ -156,14 +139,6 @@ export function rankScores(
   return [...rows].sort((left, right) => {
     if (sort.key === "card") {
       return compareStrings(left.name, right.name);
-    }
-    if (sort.key === "starred") {
-      return (
-        compareOptionalNumbers(
-          left.card?.core === true ? 1 : 0,
-          right.card?.core === true ? 1 : 0,
-        ) || left.name.localeCompare(right.name)
-      );
     }
     if (left.evaluation === null && right.evaluation === null) {
       return left.name.localeCompare(right.name);

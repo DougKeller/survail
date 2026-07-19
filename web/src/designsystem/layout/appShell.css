@@ -1,0 +1,10 @@
+.ds-app-shell-viewport-locked {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.ds-app-shell-viewport-locked > .ds-nav {
+  min-height: 0;
+}

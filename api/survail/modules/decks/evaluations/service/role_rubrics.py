@@ -3,47 +3,43 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "A card that occupies a land slot. Applies only when the type line includes Land, "
         "including modal double-faced cards with a land face; treat those land faces as lands "
         "first and spells second. A land's non-mana abilities also earn the matching spell "
-        "roles alongside land: Bojuka Bog's graveyard exile is mass_disruption, a channel "
-        "removal mode is targeted_disruption, and a surveil or scry ability on a land is "
-        "card_selection for the deck that uses it (Undercity Sewers surveiling into a "
-        "graveyard plan)."
+        "roles alongside land: graveyard exile is mass_disruption, a channel removal "
+        "mode is targeted_disruption, and a surveil or scry ability on a land is "
+        "card_selection for a deck that uses the graveyard."
     ),
     "mana_ramp": (
         "Anything that gives you more available mana than the natural one-land-per-turn "
         "progression, whether once or repeatedly. This plainly includes mana dorks and "
-        "rocks (Llanowar Elves, Arcane Signet), ramp spells that put a land onto the "
-        "battlefield (Rampant Growth, Cultivate, Farseek, Sakura-Tribe Elder are all "
-        "mana_ramp), reliable extra land drops, and broad cost reduction — mark mana_ramp "
+        "rocks, ramp spells that put a land onto the battlefield, reliable extra land "
+        "drops, and broad cost reduction — mark mana_ramp "
         "applicable for these without hesitation. A one-shot ramp spell still counts, "
         "because the land or mana source it leaves is permanent. Count repeatable engines "
         "cumulatively: a permanent whose trigger returns lands to the battlefield or "
-        "makes Treasures each turn is ramp over a game (Teval, the Balanced Scale "
-        "returning a land from the graveyard each combat). Exclusions: an extra land play "
-        "that only offsets a land you sacrifice each turn nets zero acceleration and is "
-        "not ramp (The Gitrog Monster — its value is the card draw); lands themselves, "
+        "makes resource tokens each turn is ramp over a game. Exclusions: an extra land "
+        "play that only offsets a land you sacrifice each turn nets zero acceleration; "
+        "lands themselves, "
         "including fetch lands; tutors that find cards without producing mana; and "
-        "one-shot burst mana (Dark Ritual), which is an enabler only when the plan is "
+        "one-shot burst mana, which is an enabler only when the plan is "
         "built around one big turn."
     ),
     "card_advantage": (
         "An effect that nets more than one card of real access from the single card spent: "
         "multi-card draw, repeatable draw engines, impulse draw (exile and may play), "
-        "recurring land fetch like Land Tax, a spell that mills or digs and still ends "
-        "with two or more cards in your hand (Rakshasa's Bargain, on top of its "
-        "selection), repeatably playing or copying real cards out of any graveyard — "
-        "yours or an opponent's, including exile-and-token abilities like The Scarab "
-        "God — and self-mill only in decks that reliably play "
+        "recurring land fetch, a spell that mills or digs and still ends with two or more "
+        "cards in your hand, repeatably playing or copying real cards out of any graveyard "
+        "— yours or an opponent's — and self-mill only in decks that reliably play "
         "cards from the graveyard. Count only what you hold at once: a permanent that "
         "draws or retrieves a card as it arrives nets a card — you keep both the body and "
-        "the card (Elvish Visionary, Eternal Witness) — and is card advantage, while an "
+        "the card — and is card advantage, while an "
         "effect that only replaces its own card later, when it dies or is cashed in "
-        "(dies-draw creatures, Mind Stone), nets nothing at any moment and earns no draw "
+        "(such as a dies-draw creature or a permanent sacrificed to draw), nets nothing at "
+        "any moment and earns no draw "
         "role at all; count that replacement toward the floor or resilience of the card's "
         "real roles instead. Count repeatable effects cumulatively: a card that draws or "
-        "returns a card on each of several triggers or turns (Life from the Loam, landfall "
-        "draw) nets cards over a game and qualifies. Reanimation and one-shot chosen "
-        "retrieval that trade the whole spell for a single card or creature (Regrowth, "
-        "Persist) never give you both at once and are card_selection, not card advantage; "
+        "returns a card on each of several triggers or turns nets cards over a game and "
+        "qualifies. Reanimation and one-shot chosen retrieval that trade the whole spell "
+        "for a single card or creature never give you both at once and are card_selection, "
+        "not card advantage; "
         "cantrips that replace themselves are card_selection; loot effects that leave you "
         "net down are not card advantage; creating tokens or board material is never card "
         "advantage — tokens are not cards; conditional draw doublers are enhancers, not "
@@ -53,37 +49,46 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "Filtering, smoothing, or tutoring that improves card quality without netting extra "
         "cards: scry, surveil, cantrips, top-of-library manipulation, tutors that trade one "
         "card for a specific card, and one-shot chosen retrieval or reanimation that trades "
-        "the spell for a chosen card in any zone (Regrowth, Persist, mill-then-return-one "
-        "effects). A permanent that retrieves a card as it arrives keeps both body and card "
+        "the spell for a chosen card in any zone, including mill-then-return-one effects. "
+        "A permanent that retrieves a card as it arrives keeps both body and card "
         "and belongs to card_advantage instead. Ordinary fetch lands and mana fixing are "
         "not card selection."
     ),
     "targeted_disruption": (
         "Spending one card for a one-for-one trade against an opponent's card or play: "
-        "spot removal, counterspells, bounce, taps and freezes, targeted graveyard exile, "
-        "or single-land disruption. An effect that nets better than one-for-one — a "
-        "scalable or global sweep, a multi-part strip (sacrifice plus discard), or a "
-        "repeatable trigger that disrupts again every turn or attack at no further card "
-        "cost — is mass_disruption, not targeted_disruption, even when each piece aims at "
-        "a single threat. Protecting your own cards is not disruption; that belongs to "
-        "the enabler role."
+        "spot removal, stack interaction, bounce, taps and freezes, targeted graveyard exile, "
+        "or single-land disruption. An effect that reaches the whole table at once — a "
+        "scalable or global sweep, or a spell that takes a permanent, card, or resource "
+        "from each opponent — is mass_disruption instead, as is one that empties a whole "
+        "zone such as a graveyard or a hand in a single shot. Answering one thing at a "
+        "time keeps a card in this role even when it repeats: a recurring trigger that "
+        "disrupts a single opponent every turn or attack is an outstanding "
+        "targeted_disruption piece, not mass_disruption, because the rest of the table is "
+        "untouched. Protecting your own cards is not disruption; that belongs to the "
+        "enabler role."
     ),
     "mass_disruption": (
-        "One card that sets back many opponent cards or whole turns at once: board wipes, "
-        "mass artifact or enchantment removal, mass graveyard exile, fogs, Propaganda-style "
-        "attack taxes, stax or silence pieces, and full-turn lockouts that stop opponents "
-        "from acting. An effect that only shields your own permanents or plan — even from a "
-        "board wipe (Heroic Intervention, or Teferi's Protection used defensively) — is the "
-        "enabler role, never disruption of any kind. Count repeatable disruption "
-        "cumulatively, exactly like repeatable card advantage: a permanent whose trigger "
-        "or activated ability repeatedly makes opponents sacrifice, discard, bounce, "
-        "lose resources, or lose graveyard cards (an Archon of Cruelty attack trigger, a "
-        "bounce-on-each-spell dragon, The Scarab God repeatably exiling creatures from "
-        "every opponent's graveyard) nets far "
-        "better than one-for-one over a game and is mass_disruption even though each "
-        "use is targeted and the value arrives across turns. Rule of thumb: after it resolves — "
-        "or after a couple of triggers — your opponents are down more cards or turns than "
-        "you spent; a one-for-one trade is targeted_disruption instead."
+        "One card that answers many cards at once, or that answers something from every "
+        "opponent at the same time: board wipes and other resets that clear a permanent "
+        "type across the table, mass artifact or enchantment removal, graveyard exile, "
+        "effects that make each opponent sacrifice or discard, fogs, attack taxes, stax "
+        "or silence pieces, and full-turn lockouts that stop the table from acting. Apply "
+        "the table-parity test: after the card resolves, are you level with the whole "
+        "table, or still behind at least one player? A spell that takes a permanent or "
+        "card from each opponent trades your one card for several of theirs and reaches "
+        "parity, so it belongs here even though it never removes more than one thing per "
+        "player. An effect that empties a whole zone or resource pool in one shot — "
+        "exiling an entire graveyard, emptying a hand — also belongs here even when it "
+        "hits a single player, because it answers many cards simultaneously and undoes "
+        "setup that player spent several cards building. What keeps a card out of this "
+        "role is answering one thing at a time: a spell or ability pointed at a single "
+        "permanent, spell, or card leaves the rest of the table untouched and is "
+        "targeted_disruption. Repeatability does not change that: a permanent whose "
+        "trigger or activated ability disrupts again every turn is an elite repeatable "
+        "engine, but when each use answers one thing from one opponent it stays "
+        "targeted_disruption and rates as a strong example of that role. An effect that "
+        "only shields your own permanents or plan — even from a board wipe — is the "
+        "enabler role, never disruption of any kind."
     ),
     "enabler": (
         "A card that does plan-specific work the deck's core plan cannot function without: "
@@ -91,10 +96,11 @@ ROLE_DEFINITIONS: dict[str, str] = {
         "protection (hexproof, indestructible, regeneration, haste, flash) that keeps key "
         "pieces alive. Protection means shielding your own cards; removing or answering "
         "opponents' cards is disruption, never enabler work, even when doing so protects "
-        "the plan indirectly — score that mode once, as disruption. Apply the staple test before marking this role: if the card would "
+        "the plan indirectly — score that mode once, as disruption. Apply the staple "
+        "test before marking this role: if the card would "
         "contribute the same way in any deck of these colors — any land whose only "
         "contribution is producing or fixing mana (basics, fetches, duals), a generic "
-        "mana rock like Sol Ring, generic ramp spells and mana dorks, one-shot burst "
+        "mana rock, generic ramp spells and mana dorks, one-shot burst "
         "mana, generic removal, or generic card draw and filtering — it is NOT an "
         "enabler here, even when the plan uses lands, mana, or the graveyard. A land "
         "whose non-mana ability does plan-specific work (a surveil land feeding a "
@@ -142,8 +148,8 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
             "How lasting is the acceleration it leaves behind? Judge the mana it leaves, "
             "not whether the spell was cast once: a land put onto the battlefield or a "
             "permanent mana source is high or very_high even when a one-shot spell created "
-            "it (Rampant Growth, Cultivate, and Sakura-Tribe Elder all leave a permanent "
-            "land, so they are high). Only genuinely one-shot mana that is gone the same "
+            "it (a spell that puts a land onto the battlefield leaves permanent mana and "
+            "therefore rates high). Only genuinely one-shot mana that is gone the same "
             "turn (a ritual) is low or very_low."
         ),
         "efficiency": (
@@ -176,7 +182,8 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
         "quality": "How relevant and playable are the cards or resources it provides?",
         "floor": (
-            "How useful is the card when the deck's ideal engine or synergy pieces are not assembled?"
+            "How useful is the card when the deck's ideal engine or synergy pieces are "
+            "not assembled?"
         ),
     },
     "card_selection": {
@@ -191,8 +198,7 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
         "range": "How broad and relevant is the set of cards it can find or dig through?",
         "setup_value": (
-            "How well does it assemble the deck's key engines, answers, payoffs, or missing "
-            "lands?"
+            "How well does it assemble the deck's key engines, answers, payoffs, or missing lands?"
         ),
         "timing": (
             "How well does the effect fit the stage of the game when this deck wants card "
@@ -222,14 +228,18 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
             "How strongly does it set back multiple opponents' boards, plans, or turns at once?"
         ),
         "asymmetry": (
-            "How well does it leave this deck at parity or ahead, sparing or advancing its own "
-            "plan while disrupting the table?"
+            "How well does the disruption fall on opponents rather than on this deck, "
+            "leaving it level with the whole table rather than behind any one player? "
+            "An effect that only shields this deck's own board disrupts nobody and does "
+            "not belong to this role at all."
         ),
         "coverage": (
             "How well does it answer the permanent types or attack angles this deck is "
             "otherwise soft to?"
         ),
-        "recoverability": "How well can this deck rebuild, recur, or benefit after the effect resolves?",
+        "recoverability": (
+            "How well can this deck rebuild, recur, or benefit after the effect resolves?"
+        ),
         "timing": (
             "How well does it line up with the turns when this deck needs a reset, a stall, or "
             "containment?"
@@ -249,11 +259,12 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
         "reliability": "How consistently can this deck deploy it and have it matter?",
         "resilience": (
-            "How well does it protect, recur, or rebuild the plan against removal and "
-            "disruption?"
+            "How well does it protect, recur, or rebuild the plan against removal and disruption?"
         ),
         "timing": "How well does it come online before or as the deck wants to start its plan?",
-        "breadth": "How many of the deck's important cards, zones, mechanics, or lines does it enable?",
+        "breadth": (
+            "How many of the deck's important cards, zones, mechanics, or lines does it enable?"
+        ),
     },
     "payoff": {
         "reward_size": "How large is the reward when the deck executes its core plan?",
@@ -277,8 +288,7 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
             "it improve?"
         ),
         "standalone_floor": (
-            "How useful is the card when the plan is not yet assembled or has just been "
-            "disrupted?"
+            "How useful is the card when the plan is not yet assembled or has just been disrupted?"
         ),
         "necessity": (
             "How much does the deck actually need this multiplier to close games, rather than "
@@ -286,17 +296,4 @@ ROLE_RUBRICS: dict[str, dict[str, str]] = {
         ),
     },
 }
-
 ROLE_NAMES = tuple(ROLE_RUBRICS)
-
-# Each role's defining criterion: when the judge rates it low or very_low, the card is
-# not materially performing the role and the whole role is dropped from the evaluation.
-ROLE_GATE_CRITERIA: dict[str, str] = {
-    "mana_ramp": "permanence",
-    "card_advantage": "net_gain",
-    "card_selection": "access",
-    "mass_disruption": "impact",
-    "enabler": "directness",
-    "payoff": "reward_size",
-    "enhancer": "amplification",
-}

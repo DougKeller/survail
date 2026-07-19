@@ -31,7 +31,12 @@ export function useDeckAdvisor({
   setAnnouncement: (value: string) => void;
   setError: (value: string | null) => void;
 }) {
-  const [showAgent, setShowAgent] = useState(storedAdvisorOpen);
+  const [showAgent, setShowAgent] = useState(() => {
+    const fitsBesideWorkspace =
+      typeof window.matchMedia !== "function" ||
+      window.matchMedia("(width > 900px)").matches;
+    return fitsBesideWorkspace && storedAdvisorOpen();
+  });
   const [advisorWidth, setAdvisorWidth] = useState(storedAdvisorWidth);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [agentMessage, setAgentMessage] = useState("");

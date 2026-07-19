@@ -6,6 +6,7 @@ import pytest
 from survail.core.schemas import CardFace, ScryfallCardSnapshot
 from survail.core.types import json_object
 from survail.embedding_backfill import (
+    BACKFILL_MAX_ATTEMPTS,
     DIMENSIONS,
     MODEL,
     EmbeddingClient,
@@ -154,13 +155,18 @@ def test_embedding_client_retries_transient_response_and_preserves_order() -> No
 
     async def run() -> list[list[float]]:
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
-            client = EmbeddingClient("test-key", http_client=http_client, sleep=sleep)
+            client = EmbeddingClient(
+                "test-key",
+                http_client=http_client,
+                sleep=sleep,
+                random_value=lambda: 0,
+            )
             return await client.embed(["first", "second"])
 
     vectors = asyncio.run(run())
 
     assert attempts == 2
-    assert delays == [0]
+    assert delays == [0.5]
     assert vectors[0][0] == 1.0
     assert vectors[1][0] == 2.0
 
@@ -181,6 +187,89 @@ def test_embedding_client_does_not_retry_non_transient_response() -> None:
 
     asyncio.run(run())
     assert attempts == 1
+
+
+def test_embedding_client_uses_jittered_exponential_backoff_beyond_six_attempts() -> None:
+    attempts = 0
+    delays: list[float] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 8:
+            return httpx.Response(429, request=request)
+        return httpx.Response(
+            200,
+            json={"data": [{"index": 0, "embedding": [1.0] * DIMENSIONS}]},
+            request=request,
+        )
+
+    async def sleep(delay: float) -> None:
+        delays.append(delay)
+
+    async def run() -> list[list[float]]:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http_client:
+            client = EmbeddingClient(
+                "test-key",
+                http_client=http_client,
+                max_attempts=8,
+                sleep=sleep,
+                random_value=lambda: 0,
+            )
+            return await client.embed(["first"])
+
+    assert asyncio.run(run())[0][0] == 1.0
+    assert attempts == 8
+    assert delays == [0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 30.0]
+
+
+def test_embedding_client_honors_retry_after_headers() -> None:
+    request = httpx.Request("POST", "https://example.test")
+    seconds_response = httpx.Response(429, headers={"retry-after": "90"}, request=request)
+    milliseconds_response = httpx.Response(
+        429,
+        headers={"retry-after-ms": "2500"},
+        request=request,
+    )
+
+    with pytest.raises(httpx.HTTPStatusError) as seconds_error:
+        seconds_response.raise_for_status()
+    with pytest.raises(httpx.HTTPStatusError) as milliseconds_error:
+        milliseconds_response.raise_for_status()
+
+    assert EmbeddingClient._retry_delay(seconds_error.value, 0, 0) == 90
+    assert EmbeddingClient._retry_delay(milliseconds_error.value, 0, 0) == 2.5
+
+
+def test_sync_missing_embeddings_uses_extended_backfill_retry_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from survail import embedding_backfill
+    from survail.core.config import Settings
+
+    configured_attempts: list[int] = []
+
+    class FakeClient:
+        def __init__(self, api_key: str, *, max_attempts: int) -> None:
+            assert api_key == "test-key"
+            configured_attempts.append(max_attempts)
+
+        async def close(self) -> None:
+            return
+
+    async def fake_backfill(client: FakeClient, *, batch_size: int, concurrency: int) -> int:
+        return 0
+
+    monkeypatch.setattr(
+        embedding_backfill,
+        "get_settings",
+        lambda: Settings(openai_api_key="test-key"),
+    )
+    monkeypatch.setattr(embedding_backfill, "EmbeddingClient", FakeClient)
+    monkeypatch.setattr(embedding_backfill, "backfill_embeddings", fake_backfill)
+
+    assert sync_missing_embeddings() == 0
+    assert configured_attempts == [BACKFILL_MAX_ATTEMPTS]
 
 
 def test_sync_missing_embeddings_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, Trash2 } from "lucide-react";
 
 import { Button } from "../../designsystem/primitives/button";
 import { Field, Input } from "../../designsystem/primitives/input";
@@ -40,6 +40,7 @@ import {
 } from "./scoreHelpers";
 import { regexFilter, ScoreTableHeader, ScoreTableRow } from "./scoreTable";
 import { BackToTop } from "./text";
+import { ClearScoreCacheDialog } from "./clearScoreCacheDialog";
 
 function toggled<T>(current: readonly T[], item: T): T[] {
   return current.includes(item)
@@ -48,25 +49,23 @@ function toggled<T>(current: readonly T[], item: T): T[] {
 }
 
 export function DeckScoresView({
+  clearScores,
+  clearing,
   deck,
   scores,
   scoring,
   scoreCards,
   progress,
   editGoal,
-  refreshCardScore,
-  refreshingOracleIds,
-  toggleCoreCard,
 }: {
+  clearScores: () => Promise<boolean>;
+  clearing: boolean;
   deck: Deck;
   scores: ReadonlyMap<string, CardRoleEvaluation>;
   scoring: boolean;
   scoreCards: () => void;
   progress: CardEvaluationProgress | null;
   editGoal: () => void;
-  refreshCardScore: (oracleId: string) => void;
-  refreshingOracleIds: ReadonlySet<string>;
-  toggleCoreCard: (oracleId: string) => void;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [expandedOracleId, setExpandedOracleId] = useState<string | null>(null);
@@ -76,6 +75,7 @@ export function DeckScoresView({
   const [excludedRoles, setExcludedRoles] = useState<string[]>([]);
   const [excludedZones, setExcludedZones] = useState<CardZone[]>([]);
   const [nameFilter, setNameFilter] = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
   const nameFilterId = useId();
   const { uniqueCards, roleScore, rows } = createDeckScoreContext(deck);
   const scoreRows = rows(scores);
@@ -133,13 +133,30 @@ export function DeckScoresView({
     <Stack as="section" gap={6} labelledBy="scores-title">
       <PageHeader
         actions={
-          <Button
-            disabled={scoring || uniqueCards === 0 || deck.goal.trim() === ""}
-            icon={<ClipboardCheck size={16} strokeWidth={2.75} />}
-            onClick={scoreCards}
-          >
-            {scoring ? "Evaluating cards…" : "Evaluate cards"}
-          </Button>
+          <Inline gap={2} wrap>
+            <Button
+              disabled={scoring || clearing || scores.size === 0}
+              icon={<Trash2 size={16} strokeWidth={2.75} />}
+              onClick={() => {
+                setConfirmClear(true);
+              }}
+              variant="secondary"
+            >
+              Clear score cache
+            </Button>
+            <Button
+              disabled={
+                scoring ||
+                clearing ||
+                uniqueCards === 0 ||
+                deck.goal.trim() === ""
+              }
+              icon={<ClipboardCheck size={16} strokeWidth={2.75} />}
+              onClick={scoreCards}
+            >
+              {scoring ? "Evaluating cards…" : "Evaluate cards"}
+            </Button>
+          </Inline>
         }
       >
         <Stack gap={1}>
@@ -241,40 +258,40 @@ export function DeckScoresView({
                 visibleRoleColumns={visibleRoleColumns}
               />
               <tbody>
-                {filteredScores.map((row) => {
-                  const refreshing = refreshingOracleIds.has(row.oracleId);
-                  return (
-                    <ScoreTableRow
-                      expanded={expandedOracleId === row.oracleId}
-                      key={row.oracleId}
-                      nameFilter={activeNameFilter}
-                      onRefresh={() => {
-                        refreshCardScore(row.oracleId);
-                      }}
-                      onToggleCore={() => {
-                        toggleCoreCard(row.oracleId);
-                      }}
-                      onToggleExpanded={() => {
-                        setExpandedOracleId((current) =>
-                          current === row.oracleId ? null : row.oracleId,
-                        );
-                      }}
-                      refreshDisabled={
-                        scoring || refreshing || deck.goal.trim() === ""
-                      }
-                      refreshing={refreshing}
-                      row={row}
-                      submitFeedback={submitFeedback}
-                      visibleRoleColumns={visibleRoleColumns}
-                    />
-                  );
-                })}
+                {filteredScores.map((row) => (
+                  <ScoreTableRow
+                    expanded={expandedOracleId === row.oracleId}
+                    key={row.oracleId}
+                    nameFilter={activeNameFilter}
+                    onToggleExpanded={() => {
+                      setExpandedOracleId((current) =>
+                        current === row.oracleId ? null : row.oracleId,
+                      );
+                    }}
+                    row={row}
+                    submitFeedback={submitFeedback}
+                    visibleRoleColumns={visibleRoleColumns}
+                  />
+                ))}
               </tbody>
             </Table>
           </TableScroll>
         </Stack>
       )}
       <BackToTop />
+      <ClearScoreCacheDialog
+        clearing={clearing}
+        onCancel={() => {
+          if (!clearing) setConfirmClear(false);
+        }}
+        onConfirm={() => {
+          void clearScores().then((cleared) => {
+            if (cleared) setConfirmClear(false);
+            return undefined;
+          });
+        }}
+        open={confirmClear}
+      />
     </Stack>
   );
 }

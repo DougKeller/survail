@@ -86,3 +86,20 @@
   display: inline-flex;
   flex: none;
 }
+
+.ds-btn-drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.ds-btn-drag-handle[aria-pressed="true"] {
+  cursor: grabbing;
+}
+
+@media (pointer: coarse) {
+  .ds-btn-icon-sm {
+    height: 44px;
+    min-height: 44px;
+    width: 44px;
+  }
+}

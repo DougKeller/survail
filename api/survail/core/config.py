@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     openai_agent_model: str = Field(default="gpt-4.1-mini", min_length=1)
     openai_import_model: str = Field(default="gpt-5.4", min_length=1)
     openai_role_evaluation_model: str = Field(default="gpt-5.4-mini", min_length=1)
+    openai_role_evaluation_reflection_model: str = Field(default="gpt-5.6-luna", min_length=1)
+    dspy_role_evaluation_program_path: str | None = None
     deck_description_cache_ttl_seconds: int = Field(default=2_592_000, ge=60)
     scryfall_user_agent: str = Field(default="Survail/0.1", min_length=1)
     scryfall_requests_per_second: float = Field(default=5.0, gt=0, le=9)

@@ -10,6 +10,7 @@ const evaluation: CardRoleEvaluation = {
   oracle_id: "oracle-2",
   deck_revision: 0,
   evaluator_version: "roles-v2",
+  prompt_version: "gepa-1234567890abcdef",
   overall_score: 90,
   overall_comment: "Great acceleration.",
   roles: [
@@ -40,6 +41,8 @@ describe("buildFeedbackRequest", () => {
     });
     expect(request).toEqual({
       oracle_id: "oracle-2",
+      evaluator_version: "roles-v2",
+      prompt_version: "gepa-1234567890abcdef",
       scope: "overall",
       verdict: "up",
       reason: "Spot on.",

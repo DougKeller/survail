@@ -16,6 +16,7 @@ import {
 } from "../../modules/cards/ui/evaluationFeedback";
 import { RoleCriteriaList } from "../../modules/cards/ui/evaluationFeedbackCriteria";
 import { OVERALL_SCOPE } from "../../modules/cards/ui/evaluationFeedbackDiff";
+import { evaluationProvenanceLabel } from "../../modules/cards/ui/evaluationProvenance";
 import type {
   CardRoleEvaluation,
   EvaluationFeedbackRequest,
@@ -60,6 +61,17 @@ export function ScoreRowDetails({
                   scope={OVERALL_SCOPE}
                   subject="overall score"
                 />
+              </Inline>
+              <Inline gap={2} wrap>
+                <Tag
+                  title={`Exact prompt: ${evaluation.prompt_version}`}
+                  tone="neutral"
+                >
+                  {evaluationProvenanceLabel(evaluation)}
+                </Tag>
+                <Text as="span" muted size="sm">
+                  {evaluation.cached ? "Cached result" : "New result"}
+                </Text>
               </Inline>
               <Text size="md">
                 <InlineCardText text={evaluation.overall_comment} />

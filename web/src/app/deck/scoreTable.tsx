@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Loader2, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { IconButton } from "../../designsystem/primitives/button";
 import { SortableHeader } from "../../designsystem/primitives/table";
@@ -13,7 +13,6 @@ import type {
   CardRoleEvaluation,
   EvaluationFeedbackRequest,
 } from "../../modules/decks/evaluations/contracts";
-import { CoreCardToggle } from "./coreCardToggle";
 import type {
   ScoreRow,
   ScoreSortDirection,
@@ -90,7 +89,6 @@ export function ScoreTableHeader({
 }) {
   const columns: [string, ScoreSortKey][] = [
     ["Card", "card"],
-    ["Starred", "starred"],
     ["Overall", "overall"],
     ...visibleRoleColumns.map((role): [string, ScoreSortKey] => [
       titleize(role),
@@ -124,10 +122,6 @@ export function ScoreTableRow({
   visibleRoleColumns,
   expanded,
   onToggleExpanded,
-  refreshing,
-  refreshDisabled,
-  onRefresh,
-  onToggleCore,
   submitFeedback,
 }: {
   row: ScoreRow;
@@ -135,10 +129,6 @@ export function ScoreTableRow({
   visibleRoleColumns: readonly string[];
   expanded: boolean;
   onToggleExpanded: () => void;
-  refreshing: boolean;
-  refreshDisabled: boolean;
-  onRefresh: () => void;
-  onToggleCore: () => void;
   submitFeedback: (request: EvaluationFeedbackRequest) => Promise<void>;
 }) {
   const roleMap = new Map<string, CardRoleEvaluation["roles"][number]>(
@@ -174,18 +164,6 @@ export function ScoreTableRow({
                     <ChevronDown size={15} strokeWidth={2.75} />
                   )}
                 </IconButton>
-                <IconButton
-                  disabled={refreshDisabled}
-                  label={`Reload ${row.name} score`}
-                  onClick={onRefresh}
-                  variant="ghost"
-                >
-                  {refreshing ? (
-                    <Loader2 size={15} strokeWidth={2.75} />
-                  ) : (
-                    <RefreshCw size={15} strokeWidth={2.75} />
-                  )}
-                </IconButton>
               </Inline>
               <Inline gap={1} wrap>
                 {row.zones.map((zone) => (
@@ -197,14 +175,6 @@ export function ScoreTableRow({
             </Stack>
           </Inline>
         </th>
-        <td>
-          <CoreCardToggle
-            active={row.card?.core === true}
-            disabled={row.card === undefined}
-            label={row.name}
-            onClick={onToggleCore}
-          />
-        </td>
         <td>
           {row.evaluation === null ? (
             <Text as="span" muted size="md">
@@ -235,7 +205,7 @@ export function ScoreTableRow({
       </tr>
       {expanded && row.evaluation !== null && (
         <ScoreRowDetails
-          columnCount={3 + visibleRoleColumns.length}
+          columnCount={2 + visibleRoleColumns.length}
           evaluation={row.evaluation}
           row={row}
           submitFeedback={submitFeedback}

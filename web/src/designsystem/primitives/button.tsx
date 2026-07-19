@@ -94,6 +94,8 @@ export function ButtonLink({
 export interface IconButtonProps extends ComponentPropsWithoutRef<"button"> {
   /** Accessible name — icon-only buttons have no visible label. */
   label: string;
+  /** Pointer/keyboard drag affordance with grab cursor and touch isolation. */
+  dragHandle?: boolean;
   /** sm: 24px inline row action (quick-actions caret). */
   size?: "md" | "sm";
   variant?: ButtonVariant;
@@ -103,6 +105,7 @@ export interface IconButtonProps extends ComponentPropsWithoutRef<"button"> {
 export function IconButton({
   children,
   className,
+  dragHandle = false,
   label,
   size = "md",
   type = "button",
@@ -115,6 +118,7 @@ export function IconButton({
       className={buttonClass(variant, [
         "ds-btn-icon",
         size === "sm" && "ds-btn-icon-sm",
+        dragHandle && "ds-btn-drag-handle",
         className,
       ])}
       type={type}

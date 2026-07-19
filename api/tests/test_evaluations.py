@@ -20,6 +20,13 @@ class FakeDb:
         del statement
         return self.deck
 
+    def execute(self, statement: object) -> object:
+        self.statement = statement
+        return type("Result", (), {"rowcount": 3})()
+
+    def commit(self) -> None:
+        pass
+
 
 def _deck(owner_id: uuid.UUID, *, goal: str = "Win through artifacts.") -> Deck:
     deck = Deck(
@@ -46,6 +53,7 @@ def test_single_card_evaluation_uses_owned_deck_and_returns_cached_revision(
         oracle_id="oracle-1",
         deck_revision=7,
         evaluator_version="roles-v2",
+        prompt_version="gepa-test-v2",
         overall_score=75,
         overall_comment="This card advances the deck's plan.",
         roles=[],
@@ -123,6 +131,7 @@ def test_cached_current_scores_allow_blank_goal_and_return_existing_scores(
         oracle_id="oracle-1",
         deck_revision=7,
         evaluator_version="roles-v5",
+        prompt_version="gepa-test-v5",
         overall_score=75,
         overall_comment="This card advances the deck's plan.",
         roles=[],
@@ -132,7 +141,7 @@ def test_cached_current_scores_allow_blank_goal_and_return_existing_scores(
     monkeypatch.setattr(
         evaluation_service,
         "read_cached_oracle_ids",
-        lambda db, subject, oracle_ids, contexts: [expected],
+        lambda db, subject, oracle_ids: [expected],
     )
 
     result = evaluations.cached_current_deck_evaluations(
@@ -142,3 +151,52 @@ def test_cached_current_scores_allow_blank_goal_and_return_existing_scores(
     )
 
     assert asyncio.run(result) == [expected]
+
+
+def test_current_score_regeneration_forces_overwrite(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    owner_id = uuid.uuid4()
+    deck = _deck(owner_id)
+    user = User(id=owner_id, discord_id="1", username="owner")
+    forced: list[bool] = []
+
+    async def fake_evaluate(
+        db: Session,
+        subject: Deck,
+        oracle_ids: list[str],
+        evaluator: object,
+        progress: object = None,
+        result: object = None,
+        *,
+        force: bool = False,
+    ) -> list[CardRoleEvaluationRead]:
+        del db, subject, oracle_ids, evaluator, progress, result
+        forced.append(force)
+        return []
+
+    monkeypatch.setattr(evaluation_service, "evaluate_oracle_ids", fake_evaluate)
+    monkeypatch.setattr(evaluation_service.EvaluationService, "_evaluator", lambda self: None)
+
+    result = asyncio.run(
+        evaluation_service.EvaluationService(cast("Session", FakeDb(deck))).current(user, deck.id)
+    )
+
+    assert result == []
+    assert forced == [True]
+
+
+def test_clear_deck_score_cache_deletes_only_owned_deck_scores() -> None:
+    owner_id = uuid.uuid4()
+    deck = _deck(owner_id)
+    user = User(id=owner_id, discord_id="1", username="owner")
+    db = FakeDb(deck)
+
+    result = evaluations.clear_deck_evaluation_cache(
+        deck.id,
+        cast("Session", db),
+        user,
+    )
+
+    assert asyncio.run(result).status_code == 204
+    assert hasattr(db, "statement")

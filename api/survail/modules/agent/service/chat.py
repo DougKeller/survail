@@ -31,7 +31,6 @@ from survail.core.models import (
     DeckConversationMessage,
     DeckGuidanceProposal,
     DeckOperationProposal,
-    User,
 )
 from survail.core.schemas import ScryfallCardSnapshot
 from survail.core.telemetry import (
@@ -46,14 +45,9 @@ from survail.modules.agent.service.events import AgentEventSink, AgentUiEvent
 from survail.modules.cards.repository.cards import CatalogQueryError, CatalogRepository
 from survail.modules.cards.service.printings import PrintingSelection, catalog_printing_selection
 from survail.modules.decks.evaluations.service.evaluator import (
-    OpenAIRoleEvaluator,
+    DSPyRoleEvaluator,
     evaluate_oracle_ids,
 )
-from survail.modules.decks.operations.contracts import (
-    DeckOperationChangeCreate,
-    DeckOperationCreate,
-)
-from survail.modules.decks.operations.service.apply import DeckOperationError, apply_deck_operation
 from survail.modules.decks.service.context import format_cardset_group_for_llm
 from survail.modules.decks.service.formats import strategy_for
 from survail.modules.decks.service.validate import deck_validation_summary, validate_deck
@@ -247,7 +241,7 @@ def _search_refinement_tips(
         )
     if '"' not in query:
         tips.append(
-            'If you are searching for rules text, try quoting an exact phrase such as '
+            "If you are searching for rules text, try quoting an exact phrase such as "
             '`o:"draw a card"` before broadening further.'
         )
     if total_cards > 0 and filtered_cards == 0 and identity_known:
@@ -275,7 +269,6 @@ def _deck_details_payload(deck: Deck) -> dict[str, object]:
                 "quantity": card.quantity,
                 "zone": card.zone.value,
                 "printing_id": card.printing_id,
-                "core": card.core,
                 "note": card.note or "",
                 "details": format_cardset_group_for_llm([card]),
             }
@@ -294,41 +287,10 @@ def _attached_owned_deck_with_cards(
     )
 
 
-def _assert_agent_changes_do_not_touch_core_cards(
-    db: Session,
-    owner_id: uuid.UUID,
-    deck_id: uuid.UUID,
-    changes: list[DeckOperationChangeCreate],
-) -> None:
-    deck = _attached_owned_deck_with_cards(db, owner_id, deck_id)
-    if deck is None:
-        raise DeckOperationError("Deck not found")
-    core_cardsets = [cardset for cardset in deck.cardsets if cardset.core]
-    if not core_cardsets:
-        return
-    locked_by_identity = {
-        (cardset.printing_id, cardset.finish, cardset.zone): cardset for cardset in core_cardsets
-    }
-    locked_oracle_ids = {cardset.oracle_id for cardset in core_cardsets}
-    catalog = CatalogRepository(db)
-    for change in changes:
-        if (change.printing_id, change.finish, change.zone) in locked_by_identity:
-            raise DeckOperationError(
-                "Agent may not edit starred core cards. Ask the user to unstar the card first."
-            )
-        printing = catalog.get_printing(change.printing_id)
-        if printing is not None and printing.oracle_id in locked_oracle_ids:
-            raise DeckOperationError(
-                "Agent may not edit starred core cards. Ask the user to unstar the card first."
-            )
-
-
 def _deck_fundamentals_payload(deck: Deck) -> dict[str, object]:
     color_identity, color_identity_source = _deck_color_identity(deck)
     return {
-        "format_deckbuilding_fundamentals": strategy_for(
-            deck.format
-        ).deckbuilding_fundamentals(),
+        "format_deckbuilding_fundamentals": strategy_for(deck.format).deckbuilding_fundamentals(),
         "color_identity": color_identity,
         "color_identity_source": color_identity_source,
     }
@@ -434,7 +396,7 @@ async def get_deck_summary(context: RunContextWrapper[DeckAgentContext]) -> str:
         "get_deck_summary",
         "Reading the current deck state",
         (
-            f"Loaded deck \"{deck.title}\" at revision {deck.revision} in "
+            f'Loaded deck "{deck.title}" at revision {deck.revision} in '
             f"{deck.format.value} with {len(deck.cardsets)} card entries."
         ),
     )
@@ -768,7 +730,11 @@ async def evaluate_oracle_id(
             }
         )
     settings = get_settings()
-    evaluator = OpenAIRoleEvaluator(settings.openai_api_key, settings.openai_role_evaluation_model)
+    evaluator = DSPyRoleEvaluator(
+        settings.openai_api_key,
+        settings.openai_role_evaluation_model,
+        program_path=settings.dspy_role_evaluation_program_path,
+    )
     with SessionLocal() as db:
         attached = db.scalar(
             select(Deck)
@@ -817,10 +783,7 @@ async def propose_deck_guidance(
         context.context,
         "propose_deck_guidance",
         "Preparing a guidance proposal",
-        (
-            f"Drafting a user-approval proposal for deck revision {deck.revision}.\n"
-            f"Reason: {reason}"
-        ),
+        (f"Drafting a user-approval proposal for deck revision {deck.revision}.\nReason: {reason}"),
     )
     with SessionLocal() as db:
         proposal = DeckGuidanceProposal(
@@ -862,7 +825,7 @@ def build_agent() -> Agent[DeckAgentContext]:
             "verified printing IDs returned by that tool when proposing additions. "
             "Use search_legal_cards for card discovery. Translate strategic needs into precise "
             "Scryfall search syntax instead of broad natural-language searches. Useful operators "
-            "include o:\"rules text\", t:type, -t:type, id:colors, c:colors, mv comparisons, "
+            'include o:"rules text", t:type, -t:type, id:colors, c:colors, mv comparisons, '
             "is:commander, keywords, and parentheses with OR. Search iteratively: begin with the "
             "essential rules-text or type constraint, inspect results, then refine. The tool "
             "automatically adds format legality and enforces the deck color identity. "
@@ -877,9 +840,6 @@ def build_agent() -> Agent[DeckAgentContext]:
             "subset of the deck color identity. Never recommend off-identity cards or off-identity "
             "basic lands. If color identity is unknown, establish it before making "
             "recommendations. "
-            "Cards marked as core are locked. Never propose adding, removing, moving, or "
-            "changing a starred core card. If a core card needs to change, tell the user "
-            "to unstar it first. "
             "A proposed operation has not changed the deck. Never claim a deck change happened "
             "just because a proposal was created. Present proposed deck changes for human review "
             "and let the user apply or discard them manually. "
@@ -1010,8 +970,7 @@ async def _run_agent_with_retry(context: DeckAgentContext, prompt: str) -> str:
                 "status",
                 {
                     "message": (
-                        "OpenAI temporarily rate-limited this run; "
-                        f"retrying in {delay:.1f}s."
+                        f"OpenAI temporarily rate-limited this run; retrying in {delay:.1f}s."
                     ),
                     "detail": str(exc),
                 },

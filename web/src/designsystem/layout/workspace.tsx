@@ -12,12 +12,15 @@ export interface WorkspaceProps extends ComponentProps<"main"> {
   /** Reserve trailing grid columns for a PaneResizer + Panel pair.
       The panel column reads var(--ds-panel-width), settable inline. */
   panelOpen?: boolean;
+  /** Lock the workspace to the viewport so nested content owns scrolling. */
+  viewportLocked?: boolean;
 }
 
 /** Full-width working surface: content column plus optional side panel. */
 export function Workspace({
   className,
   panelOpen = false,
+  viewportLocked = false,
   ...rest
 }: WorkspaceProps) {
   return (
@@ -25,6 +28,7 @@ export function Workspace({
       className={joinClasses([
         "ds-workspace",
         panelOpen ? "ds-workspace-panel-open" : undefined,
+        viewportLocked ? "ds-workspace-viewport-locked" : undefined,
         className,
       ])}
       {...rest}

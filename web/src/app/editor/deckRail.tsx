@@ -16,6 +16,7 @@ import { useDeckEditorContext } from "./deckEditorContext";
 
 const CURVE_LABELS = ["0", "1", "2", "3", "4", "5+"];
 const IDENTITY_ORDER = ["W", "U", "B", "R", "G", "C"];
+export const DECK_SUMMARY_ID = "deck-summary";
 
 function deckTarget(format: Deck["format"]): number {
   return format === "commander" || format === "brawl" ? 100 : 60;
@@ -43,7 +44,13 @@ function identityColors(cards: CardSet[]): string[] {
   return IDENTITY_ORDER.filter((symbol) => union.has(symbol));
 }
 
-export function DeckRail({ previewCard }: { previewCard: CardSet | null }) {
+export function DeckRail({
+  contained = false,
+  previewCard,
+}: {
+  contained?: boolean;
+  previewCard: CardSet | null;
+}) {
   const {
     data: { validation },
     deck,
@@ -57,12 +64,35 @@ export function DeckRail({ previewCard }: { previewCard: CardSet | null }) {
       .reduce((total, card) => total + card.quantity, 0);
   const valid = validation?.valid === true;
   const colors = identityColors(deck.cardsets);
+  const specialCards = deck.cardsets.filter(
+    (card) => card.zone === "commander" || card.zone === "companion",
+  );
+  const previewIsSpecial =
+    previewCard !== null &&
+    specialCards.some((card) => card.id === previewCard.id);
   return (
-    <Rail label="Deck summary">
-      {previewCard === null ? (
+    <Rail
+      as={contained ? "section" : "aside"}
+      contained={contained}
+      id={DECK_SUMMARY_ID}
+      label="Deck summary"
+    >
+      {specialCards.map((card) => (
+        <Stack gap={1} key={card.id}>
+          <Kicker>
+            {card.zone === "commander" ? "Commander" : "Companion"}
+          </Kicker>
+          <ClickableCardImage card={card} size="preview" />
+        </Stack>
+      ))}
+      {previewCard === null && specialCards.length === 0 ? (
         <Art label="Card preview" rounded size="lg" />
-      ) : (
-        <ClickableCardImage card={previewCard} />
+      ) : null}
+      {previewCard !== null && !previewIsSpecial && (
+        <Stack gap={1}>
+          <Kicker>Preview</Kicker>
+          <ClickableCardImage card={previewCard} size="preview" />
+        </Stack>
       )}
       <Inline gap={1} wrap>
         {zonesFor(deck.format).map((zone) => (

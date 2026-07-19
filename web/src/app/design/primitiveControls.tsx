@@ -17,7 +17,6 @@ import { Field, Input, TextArea } from "../../designsystem/primitives/input";
 import { Menu, MenuItem } from "../../designsystem/primitives/menu";
 import { Meter } from "../../designsystem/primitives/progress";
 import { Select } from "../../designsystem/primitives/select";
-import { StarToggle } from "../../designsystem/primitives/starToggle";
 import { TooltipSurface } from "../../designsystem/primitives/tooltip";
 import { Art } from "../../designsystem/primitives/artPlaceholder";
 
@@ -77,7 +76,6 @@ export function SelectionControlsCard() {
   const [copies, setCopies] = useState("1");
   const [zone, setZone] = useState("mainboard");
   const [view, setView] = useState("stacks");
-  const [starred, setStarred] = useState(true);
 
   function toggleZone(zone: string): void {
     setZones((current) =>
@@ -137,18 +135,6 @@ export function SelectionControlsCard() {
           ]}
           value={view}
         />
-        <Inline gap={2}>
-          <StarToggle
-            active={starred}
-            label="Mark as core card"
-            onClick={() => {
-              setStarred((current) => !current);
-            }}
-          />
-          <Text as="span" muted size="sm">
-            {starred ? "Core card" : "Flex slot"}
-          </Text>
-        </Inline>
         <Meter label="Deck completion" max={99} value={58} />
         <Meter label="Ramp coverage" size="sm" tone="accent2" value={80} />
       </Stack>

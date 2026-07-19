@@ -70,7 +70,6 @@ def _cardset(deck_id: uuid.UUID, oracle_id: str) -> CardSet:
         printing_id=card.id,
         oracle_id=oracle_id,
         card_name=oracle_id,
-        core=False,
         note=None,
         scryfall=card.model_dump(mode="json"),
     )
@@ -97,6 +96,7 @@ def _evaluation(deck: Deck) -> CardRoleEvaluation:
         deck_revision=deck.revision,
         context_key="key",
         evaluator_version=EVALUATOR_VERSION,
+        prompt_version="gepa-feedback-test",
         oracle_id="oracle-1",
         overall_comment="A premier mana rock.",
         roles=[
@@ -117,6 +117,8 @@ def _user(owner_id: uuid.UUID) -> User:
 def _request(**overrides: object) -> EvaluationFeedbackRequest:
     payload: dict[str, object] = {
         "oracle_id": "oracle-1",
+        "evaluator_version": EVALUATOR_VERSION,
+        "prompt_version": "gepa-feedback-test",
         "scope": "overall",
         "verdict": "down",
     }
@@ -153,11 +155,13 @@ def test_overall_feedback_stores_role_diff_and_verbatim_context() -> None:
     assert feedback.card_name == "oracle-1"
     assert feedback.deck_revision == deck.revision
     assert feedback.evaluator_version == EVALUATOR_VERSION
+    assert feedback.prompt_version == "gepa-feedback-test"
     assert len(feedback.context_key) == 64
     context = feedback.evaluation_context
     assert context["goal"] == deck.goal
     assert "oracle-1" in str(context["card_under_evaluation"])
     assert context["evaluator_version"] == EVALUATOR_VERSION
+    assert context["prompt_version"] == "gepa-feedback-test"
 
 
 def test_thumbs_up_with_no_corrections_stores_empty_diff() -> None:

@@ -1,0 +1,29 @@
+.ds-role-target {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+}
+
+.ds-role-target-fields {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+}
+
+.ds-role-target-field {
+  display: grid;
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+}
+
+.ds-role-target-field > .ds-input,
+.ds-role-target-field > .ds-select {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.ds-role-target-progress {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}

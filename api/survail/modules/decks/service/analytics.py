@@ -26,26 +26,27 @@ COLOR_LABELS = {
 
 
 class RoleEvaluationLike(Protocol):
-    oracle_id: str
-    roles: Sequence["RoleLike"]
+    @property
+    def oracle_id(self) -> str: ...
+
+    @property
+    def roles(self) -> Sequence["RoleLike"]: ...
 
 
 class RoleLike(Protocol):
-    role: str
+    @property
+    def role(self) -> str: ...
 
 
 def scoped_cardsets(
     deck: Deck,
     *,
     exclude_oracle_id: str | None = None,
-    core_only: bool = False,
 ) -> list[CardSet]:
     relevant = [
         cardset
         for cardset in deck.cardsets
-        if cardset.zone.value in ANALYTICS_ZONES
-        and cardset.oracle_id != exclude_oracle_id
-        and (not core_only or cardset.core)
+        if cardset.zone.value in ANALYTICS_ZONES and cardset.oracle_id != exclude_oracle_id
     ]
     return sorted(relevant, key=lambda cardset: (cardset.zone.value, cardset.card_name, cardset.id))
 
@@ -54,13 +55,10 @@ def nonland_scoped_cardsets(
     deck: Deck,
     *,
     exclude_oracle_id: str | None = None,
-    core_only: bool = False,
 ) -> list[CardSet]:
     return [
         cardset
-        for cardset in scoped_cardsets(
-            deck, exclude_oracle_id=exclude_oracle_id, core_only=core_only
-        )
+        for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id)
         if not is_land(snapshot(cardset))
     ]
 
@@ -73,25 +71,17 @@ def is_land(card: ScryfallCardSnapshot) -> bool:
     return any("Land" in type_line for type_line in type_lines(card))
 
 
-def mana_curve_counts(
-    deck: Deck, *, exclude_oracle_id: str | None = None, core_only: bool = False
-) -> dict[str, int]:
+def mana_curve_counts(deck: Deck, *, exclude_oracle_id: str | None = None) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for cardset in nonland_scoped_cardsets(
-        deck, exclude_oracle_id=exclude_oracle_id, core_only=core_only
-    ):
+    for cardset in nonland_scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id):
         cost = format_mana_value(snapshot(cardset).cmc)
         counts[cost] = counts.get(cost, 0) + cardset.quantity
     return counts
 
 
-def color_pip_counts(
-    deck: Deck, *, exclude_oracle_id: str | None = None, core_only: bool = False
-) -> dict[str, int]:
-    counts = {color: 0 for color in COLOR_LABELS}
-    for cardset in nonland_scoped_cardsets(
-        deck, exclude_oracle_id=exclude_oracle_id, core_only=core_only
-    ):
+def color_pip_counts(deck: Deck, *, exclude_oracle_id: str | None = None) -> dict[str, int]:
+    counts = dict.fromkeys(COLOR_LABELS, 0)
+    for cardset in nonland_scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id):
         for color, quantity in mana_cost_pips(snapshot(cardset)).items():
             counts[color] += quantity * cardset.quantity
     return {color: quantity for color, quantity in counts.items() if quantity > 0}
@@ -113,7 +103,9 @@ def role_distribution_counts(
 ) -> dict[str, int]:
     quantity_by_oracle: dict[str, int] = {}
     for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id):
-        quantity_by_oracle[cardset.oracle_id] = quantity_by_oracle.get(cardset.oracle_id, 0) + cardset.quantity
+        quantity_by_oracle[cardset.oracle_id] = (
+            quantity_by_oracle.get(cardset.oracle_id, 0) + cardset.quantity
+        )
     counts: dict[str, int] = {}
     for evaluation in evaluations:
         quantity = quantity_by_oracle.get(evaluation.oracle_id)
@@ -125,7 +117,12 @@ def role_distribution_counts(
 
 
 def scoped_unique_oracle_ids(deck: Deck, *, exclude_oracle_id: str | None = None) -> list[str]:
-    return list(dict.fromkeys(cardset.oracle_id for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id)))
+    return list(
+        dict.fromkeys(
+            cardset.oracle_id
+            for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id)
+        )
+    )
 
 
 def scoped_card_name_map(deck: Deck, *, exclude_oracle_id: str | None = None) -> dict[str, str]:
@@ -136,16 +133,23 @@ def scoped_card_name_map(deck: Deck, *, exclude_oracle_id: str | None = None) ->
 
 
 def total_cards(deck: Deck, *, exclude_oracle_id: str | None = None) -> int:
-    return sum(cardset.quantity for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id))
+    return sum(
+        cardset.quantity for cardset in scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id)
+    )
 
 
 def nonland_total_cards(deck: Deck, *, exclude_oracle_id: str | None = None) -> int:
-    return sum(cardset.quantity for cardset in nonland_scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id))
+    return sum(
+        cardset.quantity
+        for cardset in nonland_scoped_cardsets(deck, exclude_oracle_id=exclude_oracle_id)
+    )
 
 
 def mana_cost_pips(card: ScryfallCardSnapshot) -> dict[str, int]:
-    counts = {color: 0 for color in COLOR_LABELS}
-    mana_costs = [card.mana_cost] if card.mana_cost else [face.mana_cost for face in card.card_faces]
+    counts = dict.fromkeys(COLOR_LABELS, 0)
+    mana_costs = (
+        [card.mana_cost] if card.mana_cost else [face.mana_cost for face in card.card_faces]
+    )
     for mana_cost in mana_costs:
         if not mana_cost:
             continue
@@ -157,10 +161,7 @@ def mana_cost_pips(card: ScryfallCardSnapshot) -> dict[str, int]:
 
 def type_labels(card: ScryfallCardSnapshot) -> list[str]:
     matches = {
-        label
-        for type_line in type_lines(card)
-        for label in CARD_TYPE_LABELS
-        if label in type_line
+        label for type_line in type_lines(card) for label in CARD_TYPE_LABELS if label in type_line
     }
     return sorted(matches) if matches else ["Other"]
 

@@ -21,6 +21,7 @@ import {
 } from "./evaluationFeedback";
 import { RoleCriteriaList } from "./evaluationFeedbackCriteria";
 import { feedbackTitle, OVERALL_SCOPE } from "./evaluationFeedbackDiff";
+import { evaluationProvenanceLabel } from "./evaluationProvenance";
 
 function FactRow({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -141,11 +142,19 @@ function AnalysisContent({
             )}
           </Inline>
         </Stack>
-        <Text as="span" muted size="sm">
-          {evaluation.cached
-            ? "Loaded from current deck cache"
-            : "Generated for the current deck"}
-        </Text>
+        <Stack align="end" gap={1}>
+          <Tag
+            title={`Exact prompt: ${evaluation.prompt_version}`}
+            tone="neutral"
+          >
+            {evaluationProvenanceLabel(evaluation)}
+          </Tag>
+          <Text as="span" muted size="sm">
+            {evaluation.cached
+              ? "Loaded from current deck cache"
+              : "Generated for the current deck"}
+          </Text>
+        </Stack>
       </Inline>
       <Card>
         <Text size="md">{evaluation.overall_comment}</Text>

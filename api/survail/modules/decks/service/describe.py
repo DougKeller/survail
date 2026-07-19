@@ -23,7 +23,6 @@ class DescriptionGenerator(Protocol):
     def generate(self, context: str) -> "StructuredDeckDescription": ...
 
 
-
 def description_cache_key(deck: Deck) -> str:
     return f"deck-description:{deck.id}:{deck.revision}"
 

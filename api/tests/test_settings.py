@@ -46,6 +46,7 @@ def test_unknown_settings_are_ignored() -> None:
 
     assert configured.app_name == "Survail API"
     assert configured.openai_role_evaluation_model == "gpt-5.4-mini"
+    assert configured.openai_role_evaluation_reflection_model == "gpt-5.6-luna"
 
 
 def test_non_development_environment_requires_session_secret() -> None:

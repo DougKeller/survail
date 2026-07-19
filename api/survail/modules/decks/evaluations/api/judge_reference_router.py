@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from survail.core.dependencies import CurrentUser
-from survail.modules.decks.evaluations.api.judge_reference_schemas import JudgeReferenceRead
+from survail.modules.decks.evaluations.judge_reference_contracts import JudgeReferenceRead
 from survail.modules.decks.evaluations.service.judge_reference import (
     JudgeReferenceUnavailableError,
     load_judge_reference,

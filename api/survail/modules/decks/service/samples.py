@@ -85,9 +85,7 @@ class SampleCatalogIncompleteError(LookupError):
     pass
 
 
-def create_sample_commander_deck(
-    db: Session, user: User, payload: CloneDeckRequest
-) -> Deck:
+def create_sample_commander_deck(db: Session, user: User, payload: CloneDeckRequest) -> Deck:
     catalog = CatalogRepository(db)
     commander = catalog.exact_name(SAMPLE_COMMANDER)
     resolved = [(catalog.exact_name(name), quantity) for name, quantity in SAMPLE_CARDS.items()]

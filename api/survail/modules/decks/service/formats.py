@@ -104,6 +104,7 @@ class CommanderStrategy(FormatStrategy):
             "Start from the baseline template and adjust through play: about 38 lands, 10 to 12 "
             "mana ramp, 12 card advantage, 12 targeted disruption, 6 mass disruption, and "
             "roughly 30 plan cards split among enablers, payoffs, and enhancers. These targets "
+            "mean lands plus mana ramp should total about 50. They "
             "exceed 100 because strong cards fill several roles at once; prefer overlap such as "
             "modal double-faced lands and flexible removal.",
             "Count roles strictly: card advantage must net extra cards, so cantrips and pure "

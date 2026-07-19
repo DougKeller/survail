@@ -11,6 +11,7 @@ Usage (from api/, with the project venv):
     .venv/bin/python scripts/judge_eval.py extract   # bulk data -> snapshots
     .venv/bin/python scripts/judge_eval.py run       # evaluate (needs API key)
     .venv/bin/python scripts/judge_eval.py check     # results vs golden file
+    .venv/bin/python scripts/judge_eval.py optimize  # compile a GEPA prompt
     .venv/bin/python scripts/judge_eval.py run --only "Sol Ring" "Ponder"
 
 The OpenAI key is read from OPENAI_API_KEY, falling back to the repo root
@@ -36,8 +37,8 @@ sys.path.insert(0, str(API_DIR))
 from survail.core.models import CardSet, CardZone, Deck, DeckFormat  # noqa: E402
 from survail.integrations.scryfall.client import UpstreamCard  # noqa: E402
 from survail.modules.decks.evaluations.service.evaluator import (  # noqa: E402
+    DSPyRoleEvaluator,
     EvaluationProgress,
-    OpenAIRoleEvaluator,
     evaluate_oracle_ids,
 )
 
@@ -148,7 +149,9 @@ def extract_snapshots() -> None:
         raise SystemExit(f"Missing cards after scanning {scanned} lines: {missing}")
     SNAPSHOTS_PATH.write_text(json.dumps(found, indent=2, sort_keys=True) + "\n")
     reused = len(wanted) - len(needles)
-    print(f"Wrote {len(found)} snapshots to {SNAPSHOTS_PATH} ({reused} reused, {len(needles)} scanned)")
+    print(
+        f"Wrote {len(found)} snapshots to {SNAPSHOTS_PATH} ({reused} reused, {len(needles)} scanned)"
+    )
 
 
 def build_deck(spec: dict, snapshots: dict[str, dict]) -> Deck:
@@ -206,6 +209,14 @@ def evaluation_model() -> str:
     return get_settings().openai_role_evaluation_model
 
 
+def reflection_model() -> str:
+    if value := os.environ.get("OPENAI_ROLE_EVALUATION_REFLECTION_MODEL"):
+        return value
+    from survail.core.config import get_settings
+
+    return get_settings().openai_role_evaluation_reflection_model
+
+
 async def run_evaluations(only: list[str] | None) -> None:
     specs = load_specs()
     snapshots = json.loads(SNAPSHOTS_PATH.read_text())
@@ -225,7 +236,13 @@ async def run_evaluations(only: list[str] | None) -> None:
         raise SystemExit(f"Not in snapshots (run extract): {unknown}")
 
     model = evaluation_model()
-    evaluator = OpenAIRoleEvaluator(api_key(), model)
+    from scripts.judge_gepa import PROGRAM_PATH
+
+    evaluator = DSPyRoleEvaluator(
+        api_key(),
+        model,
+        program_path=PROGRAM_PATH if PROGRAM_PATH.exists() else None,
+    )
 
     async def progress(update: EvaluationProgress) -> None:
         print(f"  progress {update.completed}/{update.total}", flush=True)
@@ -239,7 +256,9 @@ async def run_evaluations(only: list[str] | None) -> None:
         deck = build_deck(spec, snapshots)
         oracle_ids = [snapshots[name]["oracle_id"] for name in names]
         by_oracle = {snapshots[name]["oracle_id"]: name for name in names}
-        print(f"Evaluating {len(oracle_ids)} cards from '{spec['title']}' with {model}...", flush=True)
+        print(
+            f"Evaluating {len(oracle_ids)} cards from '{spec['title']}' with {model}...", flush=True
+        )
         results = await evaluate_oracle_ids(db, deck, oracle_ids, evaluator, progress)
         deck_results = merged.setdefault(spec["title"], {})
         for result in results:
@@ -261,6 +280,13 @@ async def run_evaluations(only: list[str] | None) -> None:
 
 
 def card_failures(expectation: dict, result: dict | None) -> list[str]:
+    """Validate evaluator-produced role labels and rubric answers.
+
+    ``overall_range`` is intentionally ignored. Overall score is deterministic
+    post-processing of the role scores, so it belongs in scorer tests rather
+    than in prompt-optimization labels.
+    """
+
     if result is None:
         return ["no result recorded"]
     failures: list[str] = []
@@ -287,10 +313,6 @@ def card_failures(expectation: dict, result: dict | None) -> list[str]:
                 failures.append(
                     f"{role} criterion '{criterion}' answered '{actual}' (allowed {allowed_text})"
                 )
-    overall = result["overall_score"]
-    low, high = expectation.get("overall_range", [0, 100])
-    if not low <= overall <= high:
-        failures.append(f"overall {overall} outside [{low}, {high}]")
     return failures
 
 
@@ -311,10 +333,7 @@ def check_against_golden() -> int:
             for failure in failures:
                 print(f"  ✗ [{deck_title}] {name}: {failure}")
     rate = passed / total if total else 0.0
-    print(
-        f"Golden check: {passed}/{total} cards passed "
-        f"({rate:.0%}, minimum {min_pass_rate:.0%})."
-    )
+    print(f"Golden check: {passed}/{total} cards passed ({rate:.0%}, minimum {min_pass_rate:.0%}).")
     if rate < min_pass_rate:
         print("GOLDEN CHECK FAILED")
         return 1
@@ -323,14 +342,38 @@ def check_against_golden() -> int:
 
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["extract", "run", "check"])
+    parser.add_argument("command", choices=["extract", "run", "check", "optimize"])
     parser.add_argument("--only", nargs="*", help="card names to (re)evaluate")
+    parser.add_argument("--reflection-model", help="GEPA reflection model")
+    parser.add_argument(
+        "--max-metric-calls",
+        type=int,
+        default=150,
+        help="Approximate GEPA evaluator-rollout budget; reflection calls are additional",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume the most recently updated GEPA checkpoint instead of starting a new run",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
     if args.command == "extract":
         extract_snapshots()
         return 0
     if args.command == "run":
         asyncio.run(run_evaluations(args.only))
+        return 0
+    if args.command == "optimize":
+        from scripts.judge_gepa import optimize_evaluator
+
+        output = optimize_evaluator(
+            api_key=api_key(),
+            task_model=evaluation_model(),
+            reflection_model=args.reflection_model or reflection_model(),
+            max_metric_calls=args.max_metric_calls,
+            resume=args.resume,
+        )
+        print(f"Wrote optimized DSPy program to {output}")
         return 0
     return check_against_golden()
 

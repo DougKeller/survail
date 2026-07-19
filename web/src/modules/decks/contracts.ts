@@ -30,10 +30,16 @@ export interface CardSet {
   card_name: string;
   set_code: string;
   collector_number: string;
-  core: boolean;
   note: string;
   tags: string[];
+  tag_ids?: string[];
   scryfall: ScryfallCard;
+}
+
+export interface DeckTag {
+  id: string;
+  name: string;
+  position: number;
 }
 
 export interface Deck {
@@ -45,6 +51,7 @@ export interface Deck {
   goal: string;
   metadata: { kind: string; commander_oracle_ids?: string[] };
   cardsets: CardSet[];
+  tags?: DeckTag[];
   is_sample: boolean;
   revision: number;
   updated_at: string;

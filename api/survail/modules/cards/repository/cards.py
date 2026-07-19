@@ -1,8 +1,9 @@
 import re
 import shlex
+from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import String, and_, column, func, select, true, values
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
@@ -103,6 +104,43 @@ class CatalogRepository:
             .limit(1)
         )
         return _snapshot(card) if card is not None else None
+
+    def exact_names(self, names: Sequence[str]) -> dict[str, ScryfallCardSnapshot]:
+        """Resolve the latest English printing for every requested exact name."""
+
+        requested_names = list(dict.fromkeys(names))
+        if not requested_names:
+            return {}
+        requested = (
+            values(
+                column("requested_name", String(200)),
+                name="requested_card_names",
+            )
+            .data([(name,) for name in requested_names])
+            .cte()
+        )
+        selected_id = (
+            select(CatalogCard.id.label("card_id"))
+            .where(
+                CatalogCard.name.ilike(requested.c.requested_name),
+                CatalogCard.lang == "en",
+                CatalogCard.layout.not_in(_NON_PLAYABLE_LAYOUTS),
+            )
+            .order_by(
+                CatalogCard.released_at.desc().nullslast(),
+                CatalogCard.id,
+            )
+            .limit(1)
+            .correlate(requested)
+            .lateral("selected_catalog_card")
+        )
+        rows = self._db.execute(
+            select(requested.c.requested_name, CatalogCard)
+            .select_from(requested)
+            .join(selected_id, true())
+            .join(CatalogCard, CatalogCard.id == selected_id.c.card_id)
+        )
+        return {str(requested_name): _snapshot(card) for requested_name, card in rows}
 
     def printing_records_by_name(self, name: str) -> list[CatalogCard]:
         canonical_name = name.replace(" / ", " // ")

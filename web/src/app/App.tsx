@@ -20,6 +20,7 @@ import { API } from "../core/http/client";
 import "../designsystem/base.css";
 import { AuthLayout } from "../designsystem/layout/authLayout";
 import { FlexSpacer } from "../designsystem/layout/inline";
+import { AppShell } from "../designsystem/layout/appShell";
 import { Stack } from "../designsystem/layout/stack";
 import { Heading, Text } from "../designsystem/layout/typography";
 import { Art } from "../designsystem/primitives/artPlaceholder";
@@ -105,9 +106,13 @@ function AppChrome({
     !onDesign &&
     !onJudge &&
     (location.pathname === "/" || location.pathname.startsWith("/decks"));
+  const onDeckEditor = /^\/decks\/[^/]+$/.test(location.pathname);
+  const onCardsEditor =
+    onDeckEditor &&
+    [null, "cards"].includes(new URLSearchParams(location.search).get("tab"));
 
   return (
-    <>
+    <AppShell viewportLocked={onCardsEditor}>
       <NavBar aria-label="Primary navigation" divided>
         <NavLink href="/decks" onClick={goTo("/decks")}>
           <NavBrand>Survail</NavBrand>
@@ -148,7 +153,7 @@ function AppChrome({
           <Route path="/decks/:id" element={<EditorScreen />} />
         </Routes>
       </Suspense>
-    </>
+    </AppShell>
   );
 }
 

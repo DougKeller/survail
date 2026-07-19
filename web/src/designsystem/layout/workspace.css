@@ -8,17 +8,25 @@
   width: 100%;
 }
 
-.ds-workspace-panel-open {
-  grid-template-columns: minmax(0, 1fr) 12px var(--ds-panel-width, 400px);
+.ds-workspace-viewport-locked {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* One deep side panel at a time on constrained viewports: when the
-   workspace panel (advisor) is open and both side surfaces cannot fit,
-   the in-content stats rail yields so the board keeps its width. */
-@media (width <= 1440px) {
-  .ds-workspace-panel-open .ds-rail {
-    display: none;
-  }
+.ds-workspace-viewport-locked > .ds-stack {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ds-workspace-viewport-locked > .ds-pane-resizer,
+.ds-workspace-viewport-locked > .ds-panel {
+  height: 100%;
+}
+
+.ds-workspace-panel-open {
+  grid-template-columns: minmax(0, 1fr) 12px var(--ds-panel-width, 400px);
 }
 
 .ds-pane-resizer {

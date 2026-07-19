@@ -430,7 +430,6 @@ const cardsets = cards.map((card, index) => {
     card_name: card.name,
     set_code: card.set,
     collector_number: card.collector_number,
-    core: (spec.tags ?? []).includes("wincon"),
     note: spec.note ?? "",
     tags: spec.tags ?? [],
     scryfall: card,

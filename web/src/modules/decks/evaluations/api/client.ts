@@ -37,6 +37,15 @@ export function cachedDeckEvaluation(
   );
 }
 
+export function clearDeckEvaluationCache(deckId: string): Promise<undefined> {
+  return request<undefined>(
+    `/decks/${deckId}/card-evaluations/current/cached`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
 export async function streamCurrentDeckEvaluation(
   deckId: string,
   onProgress: (progress: CardEvaluationProgress) => void,
@@ -89,19 +98,6 @@ export function evaluateCards(
     {
       method: "POST",
       body: JSON.stringify({ oracle_ids: oracleIds }),
-    },
-  );
-}
-
-export function evaluateCard(
-  deckId: string,
-  oracleId: string,
-): Promise<CardRoleEvaluation> {
-  return request<CardRoleEvaluation>(
-    `/decks/${deckId}/card-evaluations/oracle/${oracleId}`,
-    {
-      method: "POST",
-      body: "{}",
     },
   );
 }

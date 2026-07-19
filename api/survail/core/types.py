@@ -1,7 +1,8 @@
 from typing import TypeAlias
 
+from pydantic import JsonValue
+
 JsonScalar: TypeAlias = str | int | float | bool | None
-JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 JsonObject: TypeAlias = dict[str, JsonValue]
 RedisValue: TypeAlias = str | bytes | int | float | None
 RedisArg: TypeAlias = str | bytes | int | float

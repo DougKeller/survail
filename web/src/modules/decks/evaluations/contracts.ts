@@ -13,6 +13,7 @@ export interface CardRoleEvaluation {
   oracle_id: string;
   deck_revision: number;
   evaluator_version: string;
+  prompt_version: string;
   overall_score: number;
   overall_comment: string;
   roles: CardRoleScore[];
@@ -67,6 +68,8 @@ type EvaluationFeedbackVerdict = "up" | "down";
 
 export interface EvaluationFeedbackRequest {
   oracle_id: string;
+  evaluator_version: string;
+  prompt_version: string;
   scope: string;
   verdict: EvaluationFeedbackVerdict;
   reason: string;

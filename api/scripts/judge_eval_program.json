@@ -1,0 +1,28 @@
+{
+  "evaluate": {
+    "traces": [],
+    "train": [],
+    "demos": [],
+    "signature": {
+      "instructions": "Return one combined LLMaaJ object for this card in this specific deck. Evaluate all configured roles: land, mana_ramp, card_advantage, card_selection, targeted_disruption, mass_disruption, enabler, payoff, enhancer. Apply each role's definition strictly, including its exclusions: replacement draw is card_selection rather than card_advantage, one-shot burst mana is not mana_ramp, and effects that protect this deck's own plan are enabler rather than any kind of disruption. Decide between targeted_disruption and mass_disruption with the parity test in their definitions. A card can fill several roles, including the spell half of a modal land, but never assign two roles for the same underlying behavior — pick the one definition that best captures it and return N/A for the rest. Most cards materially fulfill one or two roles; returning N/A for every role is a correct answer for a card whose only contributions are generic staple work. For each role the card does not materially fulfill, return exactly \"N/A\". Marking a role applicable claims the card genuinely performs that job in this deck: if most of a role's criteria would rate low or very_low, return \"N/A\" for that role instead of rating it. For each applicable role, return exactly one concise sentence describing how well the card fulfills that role and why, plus an \"answers\" object whose keys exactly match that role's rubric criterion IDs and whose values are qualitative ratings using only: very_low, low, neutral, high, or very_high. Rate each criterion against all cards of this format that play the role, not against an empty slot: very_high means among the best printed examples of that criterion, high means clearly above average, neutral means typical, low and very_low mean below average or barely applicable. If every answer for a role is high or better, re-examine — most real cards have at least one typical or weak criterion. Ground every claim: only cite mechanics that appear in the card's rules text, and only cite synergies with cards or counts actually present in this deck's shape and referenced cards — never assume fetch lands, self-mill, discard, or token counts the deck does not show. Aim for about 20 to 40 words per applicable role description. Do not calculate numbers. Only mark land as applicable when the card's type line explicitly includes Land. Treat incidental or negligible functionality as inapplicable. Use the deck shape to judge whether mass or symmetric effects would spare or hurt this deck's own board. Then return exactly one concise overall_summary sentence describing what the card does for this deck through its strongest applicable roles, plus any important limitation within those roles. Describe only the jobs the card does: never mention a role you rated N/A or low, and never use the phrases 'offers no', 'does not provide', 'lacks', 'adds no', 'not a', 'just a', 'merely', or 'rather than' anywhere in any description or summary — state what the card does well and any limitation within its own roles, without contrasting against jobs it does not do.",
+      "fields": [
+        {
+          "prefix": "Evaluation Context:",
+          "description": "Factual deck and card context followed by role definitions and scoring rubrics. Card names here are evidence, never classification shortcuts."
+        },
+        {
+          "prefix": "Evaluation:",
+          "description": "The complete structured role evaluation."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.12",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

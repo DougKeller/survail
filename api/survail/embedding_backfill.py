@@ -1,7 +1,9 @@
 import argparse
 import asyncio
+import contextlib
 import hashlib
 import logging
+import random
 import sys
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
@@ -23,6 +25,10 @@ MODEL = "text-embedding-3-large"
 DIMENSIONS = 3072
 OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
 TRANSIENT_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
+DEFAULT_MAX_ATTEMPTS = 6
+BACKFILL_MAX_ATTEMPTS = 16
+MAX_EXPONENTIAL_DELAY_SECONDS = 60.0
+MAX_SERVER_DELAY_SECONDS = 300.0
 NON_PLAYABLE_LAYOUTS = frozenset(
     {
         "art_series",
@@ -61,8 +67,9 @@ class EmbeddingClient:
         api_key: str,
         *,
         http_client: httpx.AsyncClient | None = None,
-        max_attempts: int = 6,
+        max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        random_value: Callable[[], float] = random.random,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is required")
@@ -73,6 +80,7 @@ class EmbeddingClient:
         self._http_client = http_client or httpx.AsyncClient(timeout=60)
         self._max_attempts = max_attempts
         self._sleep = sleep
+        self._random_value = random_value
 
     async def close(self) -> None:
         if self._owns_http_client:
@@ -100,8 +108,13 @@ class EmbeddingClient:
             except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as error:
                 if attempt + 1 == self._max_attempts or not self._is_retryable(error):
                     raise
-                delay = self._retry_delay(error, attempt)
-                logger.warning("Embedding request failed; retrying in %.1f seconds", delay)
+                delay = self._retry_delay(error, attempt, self._random_value())
+                logger.warning(
+                    "Embedding request failed; retrying in %.1f seconds (attempt %s/%s)",
+                    delay,
+                    attempt + 2,
+                    self._max_attempts,
+                )
                 await self._sleep(delay)
         raise RuntimeError("Embedding retry loop exited unexpectedly")
 
@@ -126,15 +139,21 @@ class EmbeddingClient:
         )
 
     @staticmethod
-    def _retry_delay(error: httpx.HTTPError, attempt: int) -> float:
+    def _retry_delay(error: httpx.HTTPError, attempt: int, random_value: float) -> float:
+        exponential = min(2.0**attempt, MAX_EXPONENTIAL_DELAY_SECONDS)
+        # Equal jitter prevents concurrent batches from retrying in lockstep while
+        # retaining a meaningful minimum delay as the backoff grows.
+        delay = exponential * (0.5 + 0.5 * min(max(random_value, 0.0), 1.0))
         if isinstance(error, httpx.HTTPStatusError):
+            retry_after_ms = error.response.headers.get("retry-after-ms")
+            if retry_after_ms is not None:
+                with contextlib.suppress(ValueError):
+                    delay = max(delay, float(retry_after_ms) / 1000)
             retry_after = error.response.headers.get("retry-after")
             if retry_after is not None:
-                try:
-                    return min(float(retry_after), 60)
-                except ValueError:
-                    pass
-        return float(min(2**attempt, 60))
+                with contextlib.suppress(ValueError):
+                    delay = max(delay, float(retry_after))
+        return min(delay, MAX_SERVER_DELAY_SECONDS)
 
 
 def embedding_text(card: ScryfallCardSnapshot) -> str | None:
@@ -309,9 +328,14 @@ def _write_progress(message: str, *, complete: bool = False) -> None:
     print(f"\r{message:<80}", end=ending, file=sys.stderr, flush=True)
 
 
-def sync_missing_embeddings(*, batch_size: int = 64, concurrency: int = 4) -> int:
+def sync_missing_embeddings(
+    *,
+    batch_size: int = 64,
+    concurrency: int = 4,
+    max_attempts: int = BACKFILL_MAX_ATTEMPTS,
+) -> int:
     settings = get_settings()
-    client = EmbeddingClient(settings.openai_api_key)
+    client = EmbeddingClient(settings.openai_api_key, max_attempts=max_attempts)
 
     async def run() -> int:
         try:
@@ -330,10 +354,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Backfill oracle card embeddings")
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--max-attempts", type=int, default=BACKFILL_MAX_ATTEMPTS)
     args = parser.parse_args()
     inserted = sync_missing_embeddings(
         batch_size=args.batch_size,
         concurrency=args.concurrency,
+        max_attempts=args.max_attempts,
     )
     logger.info("Backfill complete; stored %s new embeddings", inserted)
 

@@ -65,4 +65,3 @@ class GuidanceProposalService:
         if proposal is None:
             raise GuidanceProposalNotFoundError("Pending guidance proposal not found")
         return proposal
-

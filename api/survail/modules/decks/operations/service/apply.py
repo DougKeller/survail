@@ -16,6 +16,7 @@ from survail.core.models import (
     Deck,
     DeckOperation,
     DeckOperationChange,
+    DeckTag,
     User,
 )
 from survail.core.schemas import ScryfallCardSnapshot
@@ -59,6 +60,7 @@ def apply_deck_operation(
             raise DeckOperationConflictError(
                 "client_operation_id was already used for another operation"
             )
+        db.commit()
         return existing, deck
 
     if payload.expected_revision is not None and payload.expected_revision != deck.revision:
@@ -148,6 +150,9 @@ def apply_deck_operation(
             cardset.tags = tags_after
             cardset.note = note_after or None
 
+        if after > 0:
+            _sync_visual_tags(deck, cardset, tags_after, db)
+
         operation.changes.append(
             DeckOperationChange(
                 printing_id=printing_id,
@@ -169,7 +174,7 @@ def apply_deck_operation(
     deck.updated_at = datetime.now(UTC)
     strategy_for(deck.format).sync_metadata(deck)
     db.commit()
-    return operation, _locked_deck(db, deck.id, actor.id)
+    return operation, deck
 
 
 def _replace_incompatible_commanders(
@@ -217,13 +222,40 @@ def _replace_incompatible_commanders(
 def _locked_deck(db: Session, deck_id: uuid.UUID, owner_id: uuid.UUID) -> Deck:
     deck = db.scalar(
         select(Deck)
-        .options(selectinload(Deck.cardsets))
+        .options(
+            selectinload(Deck.cardsets).selectinload(CardSet.deck_tags),
+            selectinload(Deck.deck_tags),
+        )
         .where(Deck.id == deck_id, Deck.owner_id == owner_id)
         .with_for_update()
     )
     if deck is None:
         raise DeckOperationError("Deck not found")
     return deck
+
+
+def _sync_visual_tags(
+    deck: Deck,
+    cardset: CardSet,
+    names: list[str],
+    db: Session,
+) -> None:
+    tags_by_name = {tag.name.casefold(): tag for tag in deck.deck_tags}
+    selected: list[DeckTag] = []
+    for name in names:
+        tag = tags_by_name.get(name.casefold())
+        if tag is None:
+            tag = DeckTag(
+                id=uuid.uuid4(),
+                deck_id=deck.id,
+                name=name,
+                position=len(deck.deck_tags),
+            )
+            deck.deck_tags.append(tag)
+            db.add(tag)
+            tags_by_name[name.casefold()] = tag
+        selected.append(tag)
+    cardset.deck_tags = selected
 
 
 def _request_hash(payload: DeckOperationCreate) -> str:

@@ -143,27 +143,32 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
   );
 
   const {
+    clearScoreCache,
+    clearingScores,
     evaluationProgress,
-    evaluateCard,
     evaluateCurrentDeck,
     loadCachedScores,
-    refreshingOracleIds,
     scoring,
     scores,
   } = useDeckScoring({ deck, setAnnouncement, setError });
   const {
+    addTagToCard,
     addSearchResult,
     applyBulkEdit,
     changeQuantity,
+    createTag,
+    deleteTag,
     handleDelete,
     handleGenerateDescription,
     handleRevert,
     handleSaveDetails,
     handleSearch,
     markAsCommander,
+    moveAllToConsidering,
     moveCardToZone,
     openBulkEdit,
-    toggleCoreCard,
+    removeTagFromCard,
+    renameTag,
     updateCardNote,
   } = useDeckActions({
     bulkDecklist,
@@ -222,12 +227,17 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
 
   return {
     actions: {
+      addTagToCard,
       changeQuantity,
+      createTag,
+      deleteTag,
       handleDelete,
       handleRevert,
       markAsCommander,
+      moveAllToConsidering,
       moveCardToZone,
-      toggleCoreCard,
+      removeTagFromCard,
+      renameTag,
       updateCardNote,
     },
     analytics: {
@@ -280,11 +290,11 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
       showEditDeck,
     },
     scoring: {
-      evaluateCard,
+      clearScoreCache,
+      clearingScores,
       evaluateCurrentDeck,
       evaluationProgress,
       loadCachedScores,
-      refreshingOracleIds,
       scores,
       scoring,
     },

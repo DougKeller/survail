@@ -17,6 +17,7 @@ class CardRoleEvaluationRead(StrictModel):
     oracle_id: str
     deck_revision: int
     evaluator_version: str
+    prompt_version: str
     overall_score: int = Field(ge=0)
     overall_comment: str
     roles: list[CardRoleScoreRead]
@@ -37,6 +38,8 @@ class CardRoleEvaluationRequest(StrictModel):
 
 class EvaluationFeedbackRequest(StrictModel):
     oracle_id: str = Field(min_length=1, max_length=40)
+    evaluator_version: str = Field(min_length=1, max_length=40)
+    prompt_version: str = Field(min_length=1, max_length=80)
     scope: str = Field(min_length=1, max_length=40)
     verdict: Literal["up", "down"]
     reason: str = Field(default="", max_length=4000)

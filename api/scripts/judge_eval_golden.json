@@ -1,6 +1,6 @@
 {
   "description": "Golden expectations for the judge spot-check decks. Bounds are variance-tolerant: primary-role identity must be stable, egregious misassignments are forbidden, and score ranges allow for run-to-run judge noise. role_criteria entries pin individual rubric answers where user feedback flagged them. The judge runs on gpt-5.4-mini, which occasionally hedges marginal secondary roles, so the check passes at a 90% per-card pass rate across all decks rather than demanding perfection. Regenerate results with `judge_eval.py run` and verify with `judge_eval.py check`.",
-  "evaluator_version": "roles-v16",
+  "evaluator_version": "roles-v20",
   "min_pass_rate": 0.9,
   "decks": {
     "Tatyova Lands Value": {
@@ -466,8 +466,11 @@
         },
         "The Scarab God": {
           "must_roles": [
-            "mass_disruption",
+            "targeted_disruption",
             "card_advantage"
+          ],
+          "forbid_roles": [
+            "mass_disruption"
           ],
           "overall_range": [
             40,

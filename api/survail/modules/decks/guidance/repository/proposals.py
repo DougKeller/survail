@@ -32,4 +32,3 @@ class GuidanceProposalRepository:
 
     def refresh(self, value: object) -> None:
         self._db.refresh(value)
-

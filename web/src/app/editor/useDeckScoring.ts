@@ -22,9 +22,7 @@ export function useDeckScoring({
     new Map(),
   );
   const [scoring, setScoring] = useState(false);
-  const [refreshingOracleIds, setRefreshingOracleIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [clearingScores, setClearingScores] = useState(false);
   const [evaluationProgress, setEvaluationProgress] =
     useState<CardEvaluationProgress | null>(null);
   const [cachedScoresLoadedFor, setCachedScoresLoadedFor] = useState<
@@ -32,12 +30,14 @@ export function useDeckScoring({
   >(null);
 
   useEffect(() => {
-    if (deck === null) return;
     setScores(new Map());
-    setRefreshingOracleIds(new Set());
     setEvaluationProgress(null);
     setCachedScoresLoadedFor(null);
-  }, [deck]);
+  }, [deck?.id]);
+
+  useEffect(() => {
+    setCachedScoresLoadedFor(null);
+  }, [deck?.revision]);
 
   const loadCachedScores = useCallback(async (): Promise<void> => {
     if (deck === null || cachedScoresLoadedFor === deck.id) return;
@@ -89,43 +89,34 @@ export function useDeckScoring({
     }
   }, [deck, scoring, setAnnouncement, setError]);
 
-  const evaluateCard = useCallback(
-    async (oracleId: string): Promise<void> => {
-      if (deck === null || scoring || refreshingOracleIds.has(oracleId)) {
-        return;
-      }
-      if (deck.goal.trim() === "") {
-        setAnnouncement("Add a Goal / North Star before evaluating cards");
-        return;
-      }
-      setRefreshingOracleIds((current) => new Set(current).add(oracleId));
-      try {
-        const result = await api.evaluateCard(deck.id, oracleId);
-        setScores((current) => new Map(current).set(result.oracle_id, result));
-        setAnnouncement("Card score refreshed");
-      } catch (reason) {
-        setError(
-          reason instanceof Error
-            ? messageFor(reason)
-            : "Could not refresh card score",
-        );
-      } finally {
-        setRefreshingOracleIds((current) => {
-          const next = new Set(current);
-          next.delete(oracleId);
-          return next;
-        });
-      }
-    },
-    [deck, refreshingOracleIds, scoring, setAnnouncement, setError],
-  );
+  const clearScoreCache = useCallback(async (): Promise<boolean> => {
+    if (deck === null || scoring || clearingScores) return false;
+    setClearingScores(true);
+    try {
+      await api.clearDeckEvaluationCache(deck.id);
+      setScores(new Map());
+      setEvaluationProgress(null);
+      setCachedScoresLoadedFor(deck.id);
+      setAnnouncement("Deck score cache cleared");
+      return true;
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? messageFor(reason)
+          : "Could not clear deck score cache",
+      );
+      return false;
+    } finally {
+      setClearingScores(false);
+    }
+  }, [clearingScores, deck, scoring, setAnnouncement, setError]);
 
   return {
+    clearScoreCache,
+    clearingScores,
     evaluationProgress,
-    evaluateCard,
     evaluateCurrentDeck,
     loadCachedScores,
-    refreshingOracleIds,
     scoring,
     scores,
   };

@@ -42,3 +42,20 @@
   /* accent-700, not accent: accent-on-ground is only ~3:1 at text sizes. */
   color: var(--color-accent-700);
 }
+
+@media (width <= 700px) {
+  .ds-nav-compact-scroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .ds-nav-compact-scroll > * {
+    flex: none;
+  }
+
+  .ds-nav-compact-scroll > .ds-popover-anchor {
+    min-width: 220px;
+  }
+}

@@ -1,15 +1,19 @@
+import asyncio
+import logging
+import threading
 import uuid
 from collections.abc import Awaitable, Callable, Sequence
 
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from survail.core.config import get_settings
-from survail.core.models import Deck, User
+from survail.core.db import SessionLocal
+from survail.core.models import CardRoleEvaluation, Deck, User
 from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead
 from survail.modules.decks.evaluations.service.evaluator import (
+    DSPyRoleEvaluator,
     EvaluationProgress,
-    OpenAIRoleEvaluator,
-    _card_contexts,
     evaluate_oracle_ids,
     read_cached_oracle_ids,
 )
@@ -18,6 +22,8 @@ from survail.modules.decks.repository.decks import DeckRepository
 GOAL_REQUIRED_DETAIL = "Set a Goal / North Star before evaluating cards."
 ProgressCallback = Callable[[EvaluationProgress], Awaitable[None]]
 ResultCallback = Callable[[CardRoleEvaluationRead], Awaitable[None]]
+logger = logging.getLogger(__name__)
+_AUTO_SCORE_SLOTS = threading.BoundedSemaphore(value=2)
 
 
 class EvaluationDeckNotFoundError(LookupError):
@@ -43,7 +49,13 @@ class EvaluationService:
         deck = self._owned_deck(user, deck_id)
         oracle_ids = list(dict.fromkeys(cardset.oracle_id for cardset in deck.cardsets))
         return await evaluate_oracle_ids(
-            self._db, deck, oracle_ids, self._evaluator(), progress, result
+            self._db,
+            deck,
+            oracle_ids,
+            self._evaluator(),
+            progress,
+            result,
+            force=True,
         )
 
     def require_evaluable_deck(self, user: User, deck_id: uuid.UUID) -> Deck:
@@ -58,8 +70,12 @@ class EvaluationService:
     def cached_current(self, user: User, deck_id: uuid.UUID) -> list[CardRoleEvaluationRead]:
         deck = self._owned_deck_allowing_blank_goal(user, deck_id)
         oracle_ids = list(dict.fromkeys(cardset.oracle_id for cardset in deck.cardsets))
-        contexts = _card_contexts(self._db, deck, oracle_ids)
-        return read_cached_oracle_ids(self._db, deck, oracle_ids, contexts)
+        return read_cached_oracle_ids(self._db, deck, oracle_ids)
+
+    def clear(self, user: User, deck_id: uuid.UUID) -> None:
+        deck = self._owned_deck_allowing_blank_goal(user, deck_id)
+        self._db.execute(delete(CardRoleEvaluation).where(CardRoleEvaluation.deck_id == deck.id))
+        self._db.commit()
 
     async def one(self, user: User, deck_id: uuid.UUID, oracle_id: str) -> CardRoleEvaluationRead:
         return (await self.selected(user, deck_id, [oracle_id]))[0]
@@ -76,8 +92,46 @@ class EvaluationService:
             raise EvaluationDeckNotFoundError("Deck not found")
         return deck
 
-    def _evaluator(self) -> OpenAIRoleEvaluator | None:
+    def _evaluator(self) -> DSPyRoleEvaluator | None:
         settings = get_settings()
         if not settings.openai_api_key:
             return None
-        return OpenAIRoleEvaluator(settings.openai_api_key, settings.openai_role_evaluation_model)
+        return DSPyRoleEvaluator(
+            settings.openai_api_key,
+            settings.openai_role_evaluation_model,
+            program_path=settings.dspy_role_evaluation_program_path,
+        )
+
+
+def score_added_cards(deck_id: uuid.UUID, owner_id: uuid.UUID, oracle_ids: Sequence[str]) -> None:
+    """Run automatic scoring outside the API event loop with bounded concurrency."""
+
+    with _AUTO_SCORE_SLOTS:
+        asyncio.run(_score_added_cards(deck_id, owner_id, oracle_ids))
+
+
+async def _score_added_cards(
+    deck_id: uuid.UUID, owner_id: uuid.UUID, oracle_ids: Sequence[str]
+) -> None:
+    """Populate missing cache entries after an add without delaying its response."""
+
+    unique_ids = list(dict.fromkeys(oracle_ids))
+    if not unique_ids:
+        return
+    with SessionLocal() as db:
+        user = db.get(User, owner_id)
+        if user is None:
+            return
+        try:
+            await EvaluationService(db).selected(user, deck_id, unique_ids)
+        except (EvaluationDeckNotFoundError, EvaluationGoalRequiredError, ValueError):
+            logger.info(
+                "Automatic card scoring skipped",
+                extra={"deck_id": str(deck_id), "oracle_ids": unique_ids},
+                exc_info=True,
+            )
+        except Exception:
+            logger.exception(
+                "Automatic card scoring failed",
+                extra={"deck_id": str(deck_id), "oracle_ids": unique_ids},
+            )

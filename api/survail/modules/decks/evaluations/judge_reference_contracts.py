@@ -52,3 +52,13 @@ class JudgeReferenceRead(StrictModel):
     deck_goal: str
     decks: list[JudgeReferenceDeckRead]
     cards: list[JudgeReferenceCardRead]
+
+
+__all__ = [
+    "JudgeGoldenExpectationRead",
+    "JudgeReferenceCardRead",
+    "JudgeReferenceDeckRead",
+    "JudgeReferenceRead",
+    "JudgeResultRead",
+    "JudgeRoleRead",
+]

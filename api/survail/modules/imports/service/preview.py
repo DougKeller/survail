@@ -292,5 +292,7 @@ def _optional_group(match: re.Match[str], name: str, *, lower: bool = False) -> 
 
 def _issue(card: ParsedMoxfieldCard, code: str, message: str) -> MoxfieldImportIssue:
     return MoxfieldImportIssue(card.line_number, card.raw_line, code, message)
+
+
 def _normalized_name(name: str) -> str:
     return name.casefold().replace(" // ", " / ")

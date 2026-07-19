@@ -21,7 +21,6 @@ from survail.core.models import (
     DeckAgentEvent,
     DeckFormat,
     DeckGuidanceProposal,
-    DeckOperationProposal,
     User,
 )
 from survail.core.schemas import ScryfallCardSnapshot
@@ -44,7 +43,6 @@ from survail.modules.agent.service.events import AgentEventSink
 from survail.modules.decks.guidance.api import router as guidance_routes
 from survail.modules.decks.guidance.api.schemas import DeckGuidanceProposalDecision
 from survail.modules.decks.guidance.repository.proposals import GuidanceProposalRepository
-from survail.modules.decks.service.validate import deck_validation_summary
 
 
 def _snapshot(name: str, oracle_id: str, color_identity: list[str]) -> ScryfallCardSnapshot:
@@ -79,7 +77,6 @@ def _cardset(card: ScryfallCardSnapshot, zone: CardZone) -> CardSet:
         card_name=card.name,
         set_code=card.set,
         collector_number=card.collector_number,
-        core=False,
         note=None,
         tags=[],
         scryfall=card.model_dump(mode="json"),
@@ -126,7 +123,6 @@ def test_deck_agent_instructions_support_incremental_color_identity_safe_changes
     assert "never apply them without human approval" in instructions
     assert "intrinsic and strategic roles" in instructions
     assert "qualitative rubric answers" in instructions
-    assert "Cards marked as core are locked." in instructions
     assert "Use search_legal_cards for card discovery" in instructions
     assert "Scryfall search syntax" in instructions
     assert 'o:"rules text"' in instructions
@@ -376,8 +372,7 @@ def test_agent_retries_transient_openai_errors_before_succeeding(
     assert [
         message
         for event_type, payload in emitted
-        if event_type == "status"
-        and (message := payload.get("message")) is not None
+        if event_type == "status" and (message := payload.get("message")) is not None
     ] == [
         "OpenAI temporarily rate-limited this run; retrying in 2.5s.",
         "OpenAI temporarily rate-limited this run; retrying in 2.5s.",

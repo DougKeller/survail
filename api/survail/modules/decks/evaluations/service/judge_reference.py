@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from survail.modules.decks.evaluations.api.judge_reference_schemas import (
+from survail.modules.decks.evaluations.judge_reference_contracts import (
     JudgeGoldenExpectationRead,
     JudgeReferenceCardRead,
     JudgeReferenceDeckRead,
@@ -98,12 +98,14 @@ def _expectation_failures(
         return ["no result recorded"]
     failures: list[str] = []
     roles = {entry.role: entry.score for entry in result.roles}
-    for role in expectation.must_roles:
-        if role not in roles:
-            failures.append(f"expected role '{role}' missing")
-    for role in expectation.forbid_roles:
-        if role in roles:
-            failures.append(f"forbidden role '{role}' present (score {roles[role]})")
+    failures.extend(
+        f"expected role '{role}' missing" for role in expectation.must_roles if role not in roles
+    )
+    failures.extend(
+        f"forbidden role '{role}' present (score {roles[role]})"
+        for role in expectation.forbid_roles
+        if role in roles
+    )
     for role, (low, high) in expectation.role_score_ranges.items():
         if role in roles and not low <= roles[role] <= high:
             failures.append(f"{role} score {roles[role]} outside [{low}, {high}]")

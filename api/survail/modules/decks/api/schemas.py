@@ -19,10 +19,16 @@ class CardSetRead(StrictModel):
     card_name: str
     set_code: str
     collector_number: str
-    core: bool
     note: str
     tags: list[str]
+    tag_ids: list[uuid.UUID]
     scryfall: ScryfallCardSnapshot
+
+
+class DeckTagRead(StrictModel):
+    id: uuid.UUID
+    name: str
+    position: int = Field(ge=0)
 
 
 class DeckCreate(StrictModel):
@@ -98,6 +104,7 @@ class DeckRead(StrictModel):
     generated_description: GeneratedDeckDescriptionContentRead | None
     metadata: DeckMetadata
     cardsets: list[CardSetRead]
+    tags: list[DeckTagRead]
     is_sample: bool
     revision: int
     created_at: datetime

@@ -52,7 +52,6 @@ def _cardset(
         set_code="tst",
         collector_number="1",
         note=None,
-        core=False,
         tags=[],
         scryfall=snapshot.model_dump(mode="json"),
     )
@@ -97,7 +96,11 @@ def test_type_distribution_counts_multifaced_cards_in_each_matching_category() -
             quantity=1,
             type_line="Creature // Land",
             card_faces=[
-                CardFace(name="Disciple of Freyalise", mana_cost="{2}{G}", type_line="Creature — Elf Druid"),
+                CardFace(
+                    name="Disciple of Freyalise",
+                    mana_cost="{2}{G}",
+                    type_line="Creature — Elf Druid",
+                ),
                 CardFace(name="Garden of Freyalise", mana_cost="", type_line="Land"),
             ],
         )
@@ -127,6 +130,7 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
                 "oracle_id": "engine",
                 "deck_revision": 1,
                 "evaluator_version": "roles-v6",
+                "prompt_version": "gepa-test",
                 "overall_score": 120,
                 "overall_comment": "",
                 "cached": True,
@@ -142,12 +146,11 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
                 "oracle_id": "support",
                 "deck_revision": 1,
                 "evaluator_version": "roles-v6",
+                "prompt_version": "gepa-test",
                 "overall_score": 80,
                 "overall_comment": "",
                 "cached": True,
-                "roles": [
-                    {"role": "enhancer", "score": 80, "description": "", "answers": {}}
-                ],
+                "roles": [{"role": "enhancer", "score": 80, "description": "", "answers": {}}],
             },
             strict=False,
         ),
@@ -158,25 +161,3 @@ def test_role_distribution_counts_quantities_for_each_assigned_role() -> None:
         "payoff": 2,
         "enhancer": 1,
     }
-
-
-def test_core_only_analytics_scope_uses_only_starred_cards() -> None:
-    deck = Deck(
-        id=uuid.uuid4(),
-        owner_id=uuid.uuid4(),
-        title="Analytics",
-        format=DeckFormat.COMMANDER,
-        description="",
-        goal="",
-        metadata_json={"kind": "commander", "commander_oracle_ids": []},
-        revision=1,
-    )
-    starred = _cardset("starred", name="Starred Spell", quantity=2, mana_cost="{1}{W}", cmc=2)
-    starred.core = True
-    unstarred = _cardset(
-        "unstarred", name="Unstarred Spell", quantity=3, mana_cost="{2}{G}", cmc=3
-    )
-    deck.cardsets = [starred, unstarred]
-
-    assert mana_curve_counts(deck, core_only=True) == {"2": 2}
-    assert color_pip_counts(deck, core_only=True) == {"W": 2}

@@ -72,6 +72,8 @@ export function buildFeedbackRequest(
 ): EvaluationFeedbackRequest {
   const request: EvaluationFeedbackRequest = {
     oracle_id: evaluation.oracle_id,
+    evaluator_version: evaluation.evaluator_version,
+    prompt_version: evaluation.prompt_version,
     scope: form.scope,
     verdict: form.verdict,
     reason: form.reason.trim(),

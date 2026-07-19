@@ -17,6 +17,7 @@ from survail.modules.decks.evaluations.api.judge_reference_router import (
 from survail.modules.decks.evaluations.api.router import router as evaluations_router
 from survail.modules.decks.guidance.api.router import router as guidance_router
 from survail.modules.decks.operations.api.router import router as operations_router
+from survail.modules.decks.tags.api.router import router as deck_tags_router
 from survail.modules.formats.api.router import router as formats_router
 from survail.modules.imports.api.router import router as imports_router
 
@@ -34,6 +35,7 @@ app.include_router(auth_router)
 app.include_router(cards_router)
 app.include_router(decks_router)
 app.include_router(operations_router)
+app.include_router(deck_tags_router)
 app.include_router(formats_router)
 app.include_router(imports_router)
 app.include_router(agent_router)

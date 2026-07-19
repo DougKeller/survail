@@ -93,10 +93,6 @@ class DeckOperationResult(StrictModel):
     validation: DeckValidationRead
 
 
-class CardSetCoreUpdate(StrictModel):
-    core: bool
-
-
 class CardSetNoteUpdate(StrictModel):
     note: str = Field(default="", max_length=2000)
 
@@ -107,7 +103,6 @@ class CardSetNoteUpdate(StrictModel):
 
 
 __all__ = [
-    "CardSetCoreUpdate",
     "CardSetNoteUpdate",
     "DeckOperationChangeCreate",
     "DeckOperationChangeRead",

@@ -45,25 +45,44 @@ def submit_feedback(
     if card_context is None:
         raise FeedbackValidationError("Card is not part of this deck")
     references = _referenced_card_context(db, deck, request.oracle_id)
-    context_payload = _scoring_context_payload(deck, request.oracle_id, card_context, references)
-    evaluation = _latest_evaluation(db, deck.id, request.oracle_id)
+    evaluation = _evaluation_for_judge(
+        db,
+        deck.id,
+        request.oracle_id,
+        request.evaluator_version,
+        request.prompt_version,
+    )
     if evaluation is None:
         raise FeedbackEvaluationNotFoundError("No evaluation exists for this card yet")
+    context_payload = _scoring_context_payload(
+        deck,
+        request.oracle_id,
+        card_context,
+        references,
+        evaluator_version=evaluation.evaluator_version,
+        prompt_version=evaluation.prompt_version,
+    )
     actual_roles = {
         str(role["role"]) for role in evaluation.roles if isinstance(role.get("role"), str)
     }
     expected = _expected_diff(request, evaluation, actual_roles)
-    cardset = next(
-        cardset for cardset in deck.cardsets if cardset.oracle_id == request.oracle_id
-    )
+    cardset = next(cardset for cardset in deck.cardsets if cardset.oracle_id == request.oracle_id)
     feedback = CardEvaluationFeedback(
         owner_id=user.id,
         deck_id=deck.id,
         deck_revision=deck.revision,
         oracle_id=request.oracle_id,
         card_name=cardset.card_name,
-        context_key=_context_key(deck, request.oracle_id, card_context, references),
+        context_key=_context_key(
+            deck,
+            request.oracle_id,
+            card_context,
+            references,
+            evaluator_version=evaluation.evaluator_version,
+            prompt_version=evaluation.prompt_version,
+        ),
         evaluator_version=evaluation.evaluator_version,
+        prompt_version=evaluation.prompt_version,
         evaluation_model=get_settings().openai_role_evaluation_model,
         scope=request.scope,
         verdict=request.verdict,
@@ -82,14 +101,20 @@ def submit_feedback(
     return feedback
 
 
-def _latest_evaluation(
-    db: Session, deck_id: uuid.UUID, oracle_id: str
+def _evaluation_for_judge(
+    db: Session,
+    deck_id: uuid.UUID,
+    oracle_id: str,
+    evaluator_version: str,
+    prompt_version: str,
 ) -> CardRoleEvaluation | None:
     stored = db.scalars(
         select(CardRoleEvaluation)
         .where(
             CardRoleEvaluation.deck_id == deck_id,
             CardRoleEvaluation.oracle_id == oracle_id,
+            CardRoleEvaluation.evaluator_version == evaluator_version,
+            CardRoleEvaluation.prompt_version == prompt_version,
         )
         .order_by(CardRoleEvaluation.created_at.desc())
     )

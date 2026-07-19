@@ -1,16 +1,8 @@
 import { Minus, NotebookPen, Plus } from "lucide-react";
 
-import type {
-  CardSet,
-  CardZone,
-  DeckFormat,
-} from "../../modules/decks/contracts";
+import type { CardSet } from "../../modules/decks/contracts";
 import { IconButton } from "../../designsystem/primitives/button";
-import { Field } from "../../designsystem/primitives/input";
 import { Pip } from "../../designsystem/primitives/pip";
-import { Select } from "../../designsystem/primitives/select";
-import { moveZoneOptionsFor } from "./cardZones";
-import { zoneLabel } from "./text";
 
 export function QuantityStepper({
   busy,
@@ -83,42 +75,4 @@ export function CardNoteButton({
       <NotebookPen size={14} strokeWidth={2.75} />
     </IconButton>
   );
-}
-
-export function MoveZoneSelect({
-  busy,
-  card,
-  format,
-  onMove,
-  placeholder,
-  wrapWithLabel = false,
-}: {
-  busy: boolean;
-  card: CardSet;
-  format: DeckFormat;
-  onMove: (zone: CardZone) => void;
-  placeholder: string;
-  wrapWithLabel?: boolean;
-}) {
-  const moveOptions = moveZoneOptionsFor(card, format);
-  if (moveOptions.length === 0) return null;
-  const select = (
-    <Select
-      aria-label={`Move ${card.card_name} to another zone`}
-      defaultValue=""
-      disabled={busy}
-      onChange={(event) => {
-        const zone = event.target.value;
-        event.target.value = "";
-        if (zone === "") return;
-        onMove(zone as CardZone);
-      }}
-      options={[
-        { label: placeholder, value: "" },
-        ...moveOptions.map((zone) => ({ label: zoneLabel(zone), value: zone })),
-      ]}
-    />
-  );
-  if (!wrapWithLabel) return select;
-  return <Field label="Move to">{select}</Field>;
 }

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { PanelRightClose, PanelRightOpen, Search } from "lucide-react";
 
 import type { CardSet, CardZone } from "../../modules/decks/contracts";
-import { IconButton } from "../../designsystem/primitives/button";
+import { Button, IconButton } from "../../designsystem/primitives/button";
 import {
   Segmented,
   SegmentedButtons,
@@ -10,24 +10,26 @@ import {
 import { Input } from "../../designsystem/primitives/input";
 import { PopoverAnchor } from "../../designsystem/primitives/popover";
 import { Select } from "../../designsystem/primitives/select";
-import { BoardLayout } from "../../designsystem/layout/board";
+import { Dialog } from "../../designsystem/primitives/dialog";
 import { FlexSpacer, Inline } from "../../designsystem/layout/inline";
+import {
+  CardsViewBody,
+  CardsViewShell,
+} from "../../designsystem/layout/cardZoneWorkspace";
 import { NavBar } from "../../designsystem/primitives/nav";
-import { Page } from "../../designsystem/layout/page";
-import { Stack } from "../../designsystem/layout/stack";
-import { Heading, Kicker, Text } from "../../designsystem/layout/typography";
+import { Kicker } from "../../designsystem/layout/typography";
 import type { DeckView, GroupBy, SortBy } from "../deck/constants";
 import {
   searchAddZonesFor,
+  storeDeckSummaryOpen,
+  storedDeckSummaryOpen,
   titleize,
   useDismissibleSurface,
-  VisualCardGroups,
-  zoneLabel,
-  zonesFor,
 } from "../deckPrimitives";
-import { DeckBoard } from "./boardView";
-import { DeckRail } from "./deckRail";
+import { DECK_SUMMARY_ID, DeckRail } from "./deckRail";
+import { CardsZoneMatrix } from "./cardsZoneMatrixProvider";
 import { SearchDrawer } from "./searchDrawer";
+import { TagNameDialog } from "./tagControls";
 import { useDeckEditorContext } from "./deckEditorContext";
 
 const GROUP_OPTIONS: { label: string; value: GroupBy }[] = [
@@ -35,11 +37,11 @@ const GROUP_OPTIONS: { label: string; value: GroupBy }[] = [
   { label: "Color", value: "color" },
   { label: "Mana Value", value: "mana-value" },
   { label: "Role", value: "role" },
+  { label: "Tags", value: "tags" },
 ];
 
 const SORT_OPTIONS: { label: string; value: SortBy }[] = [
   { label: "Alphabetical", value: "alphabetical" },
-  { label: "Starred", value: "starred" },
   { label: "Mana Value", value: "mana-value" },
   { label: "Price", value: "price" },
   { label: "Role Score", value: "score" },
@@ -53,17 +55,10 @@ function searchAddZoneLabel(zone: CardZone): string {
 
 export function DeckCardsView() {
   const {
-    actions: {
-      changeQuantity: applyQuantityChange,
-      markAsCommander: markCommander,
-      moveCardToZone,
-      toggleCoreCard,
-    },
+    actions: { createTag },
     data: { busy },
     deck,
     display: { displayPreferences, setDisplayPreferences },
-    modals: { setActiveCardNote: editCardNote },
-    scoring: { scores },
     search: {
       addCardFromSearch,
       handleSearch: openSearch,
@@ -89,25 +84,44 @@ export function DeckCardsView() {
   );
   const [searchAddZone, setSearchAddZone] = useState<CardZone>("mainboard");
   const [previewCard, setPreviewCard] = useState<CardSet | null>(null);
+  const [compactSummary, setCompactSummary] = useState(
+    () =>
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(width <= 1100px)").matches,
+  );
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [showDeckSummary, setShowDeckSummary] = useState(() => {
+    const defaultsOpen =
+      typeof window.matchMedia !== "function" ||
+      window.matchMedia("(width > 1440px)").matches;
+    return storedDeckSummaryOpen(defaultsOpen);
+  });
 
   useEffect(() => {
     if (addZoneOptions.includes(searchAddZone)) return;
     setSearchAddZone("mainboard");
   }, [addZoneOptions, searchAddZone]);
 
-  const addToZone = (zone: CardZone): void => {
-    if (addZoneOptions.includes(zone)) setSearchAddZone(zone);
-    searchInputRef.current?.focus();
-    if (searchForm.trim() !== "") void openSearch();
-  };
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(width <= 1100px)");
+    const update = () => {
+      setCompactSummary(media.matches);
+    };
+    media.addEventListener("change", update);
+    return () => {
+      media.removeEventListener("change", update);
+    };
+  }, []);
+
   const defaultPreview =
     previewCard ??
     deck.cardsets.find((card) => card.zone === "commander") ??
     null;
 
   return (
-    <>
-      <NavBar aria-label="Card display controls" divided>
+    <CardsViewShell>
+      <NavBar aria-label="Card display controls" divided scrollOnCompact>
         <PopoverAnchor grow ref={searchContainerRef}>
           <Inline
             as="form"
@@ -156,97 +170,118 @@ export function DeckCardsView() {
             value={searchAddZone}
           />
         </Inline>
+        {groupBy === "tags" && (
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setCreatingTag(true);
+            }}
+            variant="secondary"
+          >
+            New tag
+          </Button>
+        )}
         <FlexSpacer />
-        <Select
-          aria-label="Group by"
-          onChange={(event) => {
-            setDisplayPreferences((current) => ({
-              ...current,
-              groupBy: event.target.value as GroupBy,
-            }));
+        <Inline align="center" gap={2}>
+          <Kicker>Group</Kicker>
+          <Select
+            aria-label="Group by"
+            onChange={(event) => {
+              setDisplayPreferences((current) => ({
+                ...current,
+                groupBy: event.target.value as GroupBy,
+              }));
+            }}
+            options={GROUP_OPTIONS}
+            value={groupBy}
+          />
+        </Inline>
+        <Inline align="center" gap={2}>
+          <Kicker>Sort</Kicker>
+          <Select
+            aria-label="Card sort"
+            onChange={(event) => {
+              setDisplayPreferences((current) => ({
+                ...current,
+                sortBy: event.target.value as SortBy,
+              }));
+            }}
+            options={SORT_OPTIONS}
+            value={sortBy}
+          />
+        </Inline>
+        <Inline align="center" gap={2}>
+          <Kicker>View</Kicker>
+          <SegmentedButtons
+            label="Card view"
+            onChange={(deckView) => {
+              setDisplayPreferences((current) => ({
+                ...current,
+                view: deckView as DeckView,
+              }));
+            }}
+            options={(["stacks", "grid", "text"] as const).map((deckView) => ({
+              label: titleize(deckView),
+              value: deckView,
+            }))}
+            value={view}
+          />
+        </Inline>
+        <Button
+          aria-controls={DECK_SUMMARY_ID}
+          aria-expanded={showDeckSummary}
+          aria-label={`${showDeckSummary ? "Hide" : "Show"} deck summary`}
+          onClick={() => {
+            setShowDeckSummary((current) => {
+              const next = !current;
+              storeDeckSummaryOpen(next);
+              return next;
+            });
           }}
-          options={GROUP_OPTIONS}
-          value={groupBy}
-        />
-        <Select
-          aria-label="Card sort"
-          onChange={(event) => {
-            setDisplayPreferences((current) => ({
-              ...current,
-              sortBy: event.target.value as SortBy,
-            }));
-          }}
-          options={SORT_OPTIONS}
-          value={sortBy}
-        />
-        <SegmentedButtons
-          label="Card view"
-          onChange={(deckView) => {
-            setDisplayPreferences((current) => ({
-              ...current,
-              view: deckView as DeckView,
-            }));
-          }}
-          options={(["stacks", "grid", "text"] as const).map((deckView) => ({
-            label: titleize(deckView),
-            value: deckView,
-          }))}
-          value={view}
-        />
+          title={`${showDeckSummary ? "Hide" : "Show"} deck summary`}
+          variant="ghost"
+        >
+          {showDeckSummary ? (
+            <PanelRightClose size={16} strokeWidth={2.75} />
+          ) : (
+            <PanelRightOpen size={16} strokeWidth={2.75} />
+          )}
+          Summary
+        </Button>
       </NavBar>
-      {view === "text" ? (
-        <BoardLayout>
-          <DeckBoard onAddToZone={addToZone} onPreview={setPreviewCard} />
+      <CardsViewBody>
+        <CardsZoneMatrix onPreview={setPreviewCard} />
+        {showDeckSummary && !compactSummary && (
           <DeckRail previewCard={defaultPreview} />
-        </BoardLayout>
-      ) : (
-        <BoardLayout>
-          <Page as="div">
-            <Stack gap={6}>
-              {zonesFor(deck.format).map((zone) => {
-                const cards = deck.cardsets.filter(
-                  (card) => card.zone === zone,
-                );
-                if (cards.length === 0 && zone !== "mainboard") return null;
-                const total = cards.reduce(
-                  (sum, card) => sum + card.quantity,
-                  0,
-                );
-                return (
-                  <Stack as="section" gap={2} key={zone}>
-                    <Heading level={2} size="xl">
-                      {zoneLabel(zone)}{" "}
-                      <Text as="span" muted size="base">
-                        {total}
-                      </Text>
-                    </Heading>
-                    <VisualCardGroups
-                      addCard={(card) => {
-                        applyQuantityChange(card, 1);
-                      }}
-                      busy={busy}
-                      cards={cards}
-                      editCardNote={editCardNote}
-                      format={deck.format}
-                      groupBy={groupBy}
-                      markCommander={markCommander}
-                      moveCardToZone={moveCardToZone}
-                      removeCard={(card) => {
-                        applyQuantityChange(card, -1);
-                      }}
-                      scores={scores}
-                      sortBy={sortBy}
-                      toggleCoreCard={toggleCoreCard}
-                      view={view}
-                    />
-                  </Stack>
-                );
-              })}
-            </Stack>
-          </Page>
-          <DeckRail previewCard={defaultPreview} />
-        </BoardLayout>
-      )}
-    </>
+        )}
+      </CardsViewBody>
+      <Dialog
+        closeLabel="Close deck summary"
+        onClose={() => {
+          setShowDeckSummary(false);
+          storeDeckSummaryOpen(false);
+        }}
+        open={showDeckSummary && compactSummary}
+        size="wide"
+        title="Deck summary"
+      >
+        <DeckRail contained previewCard={defaultPreview} />
+      </Dialog>
+      <TagNameDialog
+        busy={busy}
+        initialName=""
+        onCancel={() => {
+          if (!busy) setCreatingTag(false);
+        }}
+        onSubmit={(name) => {
+          void createTag(name).then((created) => {
+            if (created) setCreatingTag(false);
+            return undefined;
+          });
+        }}
+        open={creatingTag}
+        title="New tag"
+      />
+    </CardsViewShell>
   );
 }

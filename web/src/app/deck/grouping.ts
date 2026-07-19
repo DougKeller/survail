@@ -2,6 +2,7 @@ import type { ScryfallCard } from "../../modules/cards/contracts";
 import type {
   CardFinish,
   CardSet,
+  DeckTag,
   PriceProvider,
 } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
@@ -14,6 +15,7 @@ export interface CardGroup {
   label: string;
   cards: CardSet[];
   quantity: number;
+  tagId?: string | null;
 }
 
 function compareCards(
@@ -40,12 +42,6 @@ function compareCards(
     return (
       (scores.get(right.oracle_id)?.overall_score ?? -1) -
         (scores.get(left.oracle_id)?.overall_score ?? -1) ||
-      left.card_name.localeCompare(right.card_name)
-    );
-  }
-  if (sortBy === "starred") {
-    return (
-      Number(right.core) - Number(left.core) ||
       left.card_name.localeCompare(right.card_name)
     );
   }
@@ -135,13 +131,62 @@ function groupLabels(
   return typeLabels(card.scryfall);
 }
 
+function cardHasTag(card: CardSet, tag: DeckTag): boolean {
+  return card.tag_ids === undefined
+    ? card.tags.includes(tag.name)
+    : card.tag_ids.includes(tag.id);
+}
+
+function cardHasNoTags(card: CardSet): boolean {
+  return card.tag_ids === undefined
+    ? card.tags.length === 0
+    : card.tag_ids.length === 0;
+}
+
 export function groupedCards(
   cards: CardSet[],
   groupBy: GroupBy,
   sortBy: SortBy,
   provider: PriceProvider,
   scores: ReadonlyMap<string, CardRoleEvaluation>,
+  deckTags: readonly DeckTag[] = [],
 ): CardGroup[] {
+  if (groupBy === "tags") {
+    const orderedTags = [...deckTags].sort(
+      (left, right) =>
+        left.position - right.position || left.name.localeCompare(right.name),
+    );
+    const taggedGroups = orderedTags.map((tag) => ({
+      tag,
+      cards: cards.filter((card) => cardHasTag(card, tag)),
+    }));
+    const untaggedCards = cards.filter(cardHasNoTags);
+    return [
+      ...(untaggedCards.length > 0
+        ? [
+            {
+              label: "Untagged",
+              cards: [...untaggedCards].sort((left, right) =>
+                compareCards(left, right, sortBy, provider, scores),
+              ),
+              quantity: untaggedCards.reduce(
+                (total, card) => total + card.quantity,
+                0,
+              ),
+              tagId: null,
+            },
+          ]
+        : []),
+      ...taggedGroups.map(({ cards: tagCards, tag }) => ({
+        label: tag.name,
+        cards: [...tagCards].sort((left, right) =>
+          compareCards(left, right, sortBy, provider, scores),
+        ),
+        quantity: tagCards.reduce((total, card) => total + card.quantity, 0),
+        tagId: tag.id,
+      })),
+    ];
+  }
   const groups = new Map<string, CardSet[]>();
   cards.forEach((card) => {
     groupLabels(card, groupBy, scores).forEach((label) => {
@@ -157,16 +202,6 @@ export function groupedCards(
       quantity: groupCards.reduce((total, card) => total + card.quantity, 0),
     }))
     .sort((left, right) => {
-      if (sortBy === "starred") {
-        const firstLeft = left.cards[0];
-        const firstRight = right.cards[0];
-        if (firstLeft !== undefined && firstRight !== undefined) {
-          return (
-            compareCards(firstLeft, firstRight, sortBy, provider, scores) ||
-            left.label.localeCompare(right.label)
-          );
-        }
-      }
       if (groupBy === "mana-value") {
         return (
           Number.parseFloat(left.label.replace("Mana Value ", "")) -

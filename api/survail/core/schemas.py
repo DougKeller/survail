@@ -343,6 +343,7 @@ class CardRoleEvaluationRead(StrictModel):
     oracle_id: str
     deck_revision: int
     evaluator_version: str
+    prompt_version: str
     overall_score: int = Field(ge=0)
     overall_comment: str
     roles: list[CardRoleScoreRead]

@@ -4,7 +4,7 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 from openai import APIConnectionError, APIStatusError, APITimeoutError
 
@@ -15,12 +15,12 @@ from survail.modules.decks.evaluations.api.schemas import (
     EvaluationFeedbackRead,
     EvaluationFeedbackRequest,
 )
+from survail.modules.decks.evaluations.service.evaluator import EvaluationProgress
 from survail.modules.decks.evaluations.service.feedback import (
     FeedbackEvaluationNotFoundError,
     FeedbackValidationError,
     submit_feedback,
 )
-from survail.modules.decks.evaluations.service.evaluator import EvaluationProgress
 from survail.modules.decks.evaluations.service.run import (
     GOAL_REQUIRED_DETAIL as EVALUATION_GOAL_REQUIRED_DETAIL,
 )
@@ -70,6 +70,17 @@ async def cached_current_deck_evaluations(
         return EvaluationService(db).cached_current(user, deck_id)
     except EvaluationDeckNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.delete("/current/cached", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_deck_evaluation_cache(
+    deck_id: uuid.UUID, db: DbSession, user: CurrentUser
+) -> Response:
+    try:
+        EvaluationService(db).clear(user, deck_id)
+    except EvaluationDeckNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/current/stream")

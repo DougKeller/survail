@@ -52,17 +52,6 @@ export function revertOperation(
   );
 }
 
-export function setCardCore(
-  deckId: string,
-  cardsetId: string,
-  core: boolean,
-): Promise<Deck> {
-  return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/core`, {
-    method: "PATCH",
-    body: JSON.stringify({ core }),
-  });
-}
-
 export function setCardNote(
   deckId: string,
   cardsetId: string,
@@ -71,6 +60,50 @@ export function setCardNote(
   return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/note`, {
     method: "PATCH",
     body: JSON.stringify({ note }),
+  });
+}
+
+export function createDeckTag(deckId: string, name: string): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/tags`, {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function renameDeckTag(
+  deckId: string,
+  tagId: string,
+  name: string,
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/tags/${tagId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteDeckTag(deckId: string, tagId: string): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/tags/${tagId}`, {
+    method: "DELETE",
+  });
+}
+
+export function addCardsetTag(
+  deckId: string,
+  cardsetId: string,
+  tagId: string,
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/tags/${tagId}`, {
+    method: "PUT",
+  });
+}
+
+export function removeCardsetTag(
+  deckId: string,
+  cardsetId: string,
+  tagId: string,
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/cardsets/${cardsetId}/tags/${tagId}`, {
+    method: "DELETE",
   });
 }
 

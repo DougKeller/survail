@@ -51,13 +51,8 @@ export const PriceProviderContext = createContext<PriceProvider>("tcgplayer");
 
 export type DeckView = "stacks" | "grid" | "text";
 export type EditorView = "cards" | "scores" | "charts" | "info";
-export type GroupBy = "type" | "color" | "mana-value" | "role";
-export type SortBy =
-  | "alphabetical"
-  | "mana-value"
-  | "price"
-  | "score"
-  | "starred";
+export type GroupBy = "type" | "color" | "mana-value" | "role" | "tags";
+export type SortBy = "alphabetical" | "mana-value" | "price" | "score";
 
 export interface DeckDisplayPreferences {
   view: DeckView;

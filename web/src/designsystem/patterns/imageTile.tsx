@@ -2,7 +2,10 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import "./imageTile.css";
 
-interface ImageTileProps {
+interface ImageTileProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "children" | "className"
+> {
   children?: ReactNode;
   /** Fixed small-width variant for a thumbnail beside text content. */
   thumbnail?: boolean;
@@ -13,11 +16,16 @@ interface ImageTileProps {
 export function ImageTile({
   children,
   thumbnail = false,
+  ...rest
 }: ImageTileProps): ReactNode {
   const className = thumbnail
     ? "ds-image-tile ds-image-tile-thumbnail"
     : "ds-image-tile";
-  return <div className={className}>{children}</div>;
+  return (
+    <div className={className} {...rest}>
+      {children}
+    </div>
+  );
 }
 
 interface ImageTileActionsProps {

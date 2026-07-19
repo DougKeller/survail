@@ -52,7 +52,8 @@ def _size_rule(rules: FormatRules) -> str:
 
 def _cardset_context(cardset: CardSet) -> str:
     snapshot = snapshot_from_cardsets([cardset])
-    header = f"\n[{cardset.zone.value.title()}] {cardset.quantity}x {snapshot.name if snapshot else cardset.card_name}"
+    card_name = snapshot.name if snapshot else cardset.card_name
+    header = f"\n[{cardset.zone.value.title()}] {cardset.quantity}x {card_name}"
     details = format_cardset_group_for_llm([cardset]).splitlines()[2:]
     return "\n".join([header, *details])
 
@@ -65,7 +66,7 @@ def format_cardset_group_for_llm(cardsets: Sequence[CardSet]) -> str:
                 "Name: Unknown",
                 "Quantity: 0",
                 "Zone Summary: None",
-                "Cost: None",
+                "Mana cost: None",
                 "Type: Unknown",
                 "Power/Toughness: None",
                 "Oracle Text: None",
@@ -87,7 +88,7 @@ def format_cardset_group_for_llm(cardsets: Sequence[CardSet]) -> str:
             f"Quantity: {sum(cardset.quantity for cardset in cardsets)}",
             "Zone Summary:",
             *(placements or ["- None"]),
-            f"Cost: {snapshot.mana_cost or 'None'}",
+            f"Mana cost: {snapshot.mana_cost or 'None'}",
             f"Type: {snapshot.type_line}",
             f"Power/Toughness: {power_toughness_for_llm(snapshot)}",
             f"Oracle Text: {oracle_text_for_llm(snapshot)}",
@@ -130,14 +131,8 @@ def oracle_text_for_llm(snapshot: ScryfallCardSnapshot) -> str:
 
 
 def _cardset_placement_line(cardset: CardSet) -> str:
-    qualifiers: list[str] = []
-    if cardset.core:
-        qualifiers.append("core")
-    if cardset.tags:
-        qualifiers.append(f"tags: {', '.join(cardset.tags)}")
-    suffix = f" ({'; '.join(qualifiers)})" if qualifiers else ""
-    return f"- {cardset.zone.value.title()}: {cardset.quantity}x{suffix}"
+    return f"- {cardset.zone.value.title()}: {cardset.quantity}x"
 
 
 def _cardset_note_line(cardset: CardSet) -> str:
-    return f"- {cardset.zone.value.title()}: {cardset.note.strip()}"
+    return f"- {cardset.zone.value.title()}: {(cardset.note or '').strip()}"

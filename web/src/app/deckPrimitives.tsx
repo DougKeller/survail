@@ -4,8 +4,8 @@ export {
   searchAddZonesFor,
   zonesFor,
 } from "./deck/constants";
+export { buildCardZoneMatrix } from "./deck/cardZoneMatrix";
 export { preferredFinish } from "./deck/grouping";
-export { CoreCardToggle } from "./deck/coreCardToggle";
 export { useDismissibleSurface } from "./deck/hooks";
 export { DeckInfoView } from "./deck/infoView";
 export { DeckScoresView } from "./deck/scoresView";
@@ -15,11 +15,13 @@ export {
   isPriceProvider,
   storeAdvisorOpen,
   storeAdvisorWidth,
+  storeDeckSummaryOpen,
   storeDeckDisplayPreferences,
   storeImportPreferences,
   storePriceProvider,
   storedAdvisorOpen,
   storedAdvisorWidth,
+  storedDeckSummaryOpen,
   storedDeckDisplayPreferences,
   storedImportPreferences,
   storedPriceProvider,
@@ -44,4 +46,8 @@ export {
   streamedAgentText,
   visibleStreamingText,
 } from "./deck/transforms";
-export { VisualCardGroups } from "./deck/visualCards";
+export { VisualCardColumn } from "./deck/visualCards";
+export {
+  storeCardRowCollapsed,
+  storedCardRowCollapsed,
+} from "./deck/rowCollapseStorage";

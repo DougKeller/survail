@@ -62,12 +62,12 @@ export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
       (groupBy !== "type" &&
         groupBy !== "color" &&
         groupBy !== "mana-value" &&
-        groupBy !== "role") ||
+        groupBy !== "role" &&
+        groupBy !== "tags") ||
       (sortBy !== "alphabetical" &&
         sortBy !== "mana-value" &&
         sortBy !== "price" &&
-        sortBy !== "score" &&
-        sortBy !== "starred")
+        sortBy !== "score")
     ) {
       return defaultDeckDisplayPreferences();
     }
@@ -90,9 +90,9 @@ function defaultDeckDisplayPreferences(): DeckDisplayPreferences {
   return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
 }
 
-export function storedAdvisorOpen(): boolean {
+export function storedAdvisorOpen(defaultValue = true): boolean {
   const stored = localStorage.getItem("survail.advisor-open");
-  return stored === null ? true : stored === "true";
+  return stored === null ? defaultValue : stored === "true";
 }
 
 export function storeAdvisorOpen(open: boolean): void {
@@ -109,6 +109,15 @@ export function storedAdvisorWidth(): number {
 
 export function storeAdvisorWidth(width: number): void {
   localStorage.setItem("survail.advisor-width", String(width));
+}
+
+export function storedDeckSummaryOpen(defaultOpen = true): boolean {
+  const stored = localStorage.getItem("survail.deck-summary-open");
+  return stored === null ? defaultOpen : stored === "true";
+}
+
+export function storeDeckSummaryOpen(open: boolean): void {
+  localStorage.setItem("survail.deck-summary-open", String(open));
 }
 
 function isEditorView(value: string): value is EditorView {
@@ -129,7 +138,8 @@ function isGroupBy(value: string): value is GroupBy {
     value === "type" ||
     value === "color" ||
     value === "mana-value" ||
-    value === "role"
+    value === "role" ||
+    value === "tags"
   );
 }
 
@@ -138,8 +148,7 @@ function isSortBy(value: string): value is SortBy {
     value === "alphabetical" ||
     value === "mana-value" ||
     value === "price" ||
-    value === "score" ||
-    value === "starred"
+    value === "score"
   );
 }
 

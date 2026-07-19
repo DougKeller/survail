@@ -34,8 +34,7 @@ export function EditorScreen() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const editor = useDeckEditor(id, navigate);
-  const { actions, analytics, data, details, display, modals, scoring } =
-    editor;
+  const { analytics, data, details, display, modals, scoring } = editor;
   const advisor = useDeckAdvisor({
     busy: data.busy,
     deckId: id,
@@ -60,9 +59,8 @@ export function EditorScreen() {
   ]);
 
   useEffect(() => {
-    if (display.editorView !== "scores") return;
     void scoring.loadCachedScores();
-  }, [display.editorView, scoring.loadCachedScores]);
+  }, [scoring.loadCachedScores]);
 
   const deck = data.deck;
   if (deck === null) {
@@ -89,6 +87,7 @@ export function EditorScreen() {
         <Workspace
           aria-busy={data.busy}
           panelOpen={advisor.showAgent}
+          viewportLocked={display.editorView === "cards"}
           style={
             {
               "--ds-panel-width": `${String(advisor.advisorWidth)}px`,
@@ -134,24 +133,16 @@ export function EditorScreen() {
             )}
             {display.editorView === "scores" && (
               <DeckScoresView
+                clearScores={scoring.clearScoreCache}
+                clearing={scoring.clearingScores}
                 deck={deck}
                 editGoal={() => {
                   modals.setShowEditDeck(true);
                 }}
                 progress={scoring.evaluationProgress}
-                refreshCardScore={(oracleId) =>
-                  void scoring.evaluateCard(oracleId)
-                }
-                refreshingOracleIds={scoring.refreshingOracleIds}
                 scoreCards={() => void scoring.evaluateCurrentDeck()}
                 scores={scoring.scores}
                 scoring={scoring.scoring}
-                toggleCoreCard={(oracleId) => {
-                  const card = deck.cardsets.find(
-                    (item) => item.oracle_id === oracleId,
-                  );
-                  if (card !== undefined) actions.toggleCoreCard(card);
-                }}
               />
             )}
           </Stack>

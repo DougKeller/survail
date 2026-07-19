@@ -1,6 +1,3 @@
-import type { GroupBy } from "./constants";
-import { titleize } from "./text";
-
 export const COLOR_SWATCHES: Record<string, string> = {
   W: "#f4ead2",
   U: "#7bc5ff",
@@ -42,31 +39,10 @@ const ROLE_SWATCHES: Record<string, string> = {
   unscored: "#8f95b2",
 };
 
-function manaValueSwatch(label: string): string {
-  const value = Number.parseFloat(label.replace("Mana Value ", ""));
-  if (!Number.isFinite(value)) return "#8f95b2";
-  const hue = 210 - Math.min(value, 10) * 14;
-  return `hsl(${String(hue)} 68% 62%)`;
-}
-
-export function groupSwatch(groupBy: GroupBy, label: string): string {
-  if (groupBy === "color") return COLOR_SWATCHES[label] ?? "#8ca1b3";
-  if (groupBy === "type") return TYPE_SWATCHES[label] ?? "#8f95b2";
-  if (groupBy === "role")
-    return (
-      ROLE_SWATCHES[label.toLocaleLowerCase().replaceAll(" ", "_")] ?? "#8f95b2"
-    );
-  return manaValueSwatch(label);
-}
-
 export function chartRoleSwatch(key: string, label: string): string {
   return (
     ROLE_SWATCHES[key] ??
     ROLE_SWATCHES[label.toLocaleLowerCase().replaceAll(" ", "_")] ??
     "#8f95b2"
   );
-}
-
-export function groupPlaceholderLabel(groupBy: GroupBy, label: string): string {
-  return groupBy === "role" ? titleize(label) : label;
 }

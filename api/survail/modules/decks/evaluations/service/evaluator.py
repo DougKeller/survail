@@ -4,15 +4,15 @@ import hashlib
 import json
 import logging
 import math
-import random
 import re
 import time
 from collections.abc import Awaitable, Callable, Sequence
 from enum import StrEnum
-from typing import Literal, Protocol, TypedDict, TypeVar, cast
+from pathlib import Path
+from typing import Annotated, Literal, Protocol, TypedDict, cast
 
-from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, RateLimitError
-from pydantic import BaseModel, ConfigDict, Field, create_model
+import dspy  # type: ignore[import-untyped]
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, create_model
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -20,37 +20,33 @@ from survail.core.models import CardRoleEvaluation, CardSet, Deck
 from survail.core.schemas import ScryfallCardSnapshot
 from survail.core.types import JsonObject, json_object
 from survail.modules.cards.repository.cards import CatalogRepository
+from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead, CardRoleScoreRead
+from survail.modules.decks.evaluations.service.dspy_program import (
+    RoleEvaluationProgram,
+    configure_lm,
+)
+from survail.modules.decks.evaluations.service.role_rubrics import (
+    ROLE_DEFINITIONS,
+    ROLE_NAMES,
+    ROLE_RUBRICS,
+)
 from survail.modules.decks.service.context import (
     oracle_text_for_llm,
     power_toughness_for_llm,
     snapshot_from_cardsets,
 )
-from survail.modules.decks.evaluations.api.schemas import CardRoleEvaluationRead, CardRoleScoreRead
-from survail.modules.decks.evaluations.service.role_rubrics import (
-    ROLE_DEFINITIONS,
-    ROLE_GATE_CRITERIA,
-    ROLE_NAMES,
-    ROLE_RUBRICS,
-)
 
 MAX_CONCURRENT_EVALUATIONS = 2
-EVALUATOR_VERSION = "roles-v16"
+EVALUATOR_VERSION = "roles-v20"
 MAX_ATTEMPTS = 8
-MAX_RETRY_DELAY_SECONDS = 60.0
 ROLE_JUDGE_TARGET_WORDS = "20 to 40 words"
 ROLE_JUDGE_MAX_TEXT_LENGTH = 600
 MAX_ROLE_JUDGE_OUTPUT_TOKENS = 1000
 OVERALL_SCORE_WEIGHTING_EXPONENT = 2.5
-SECONDARY_ROLE_BASELINE = 50
 logger = logging.getLogger(__name__)
 ProgressCallback = Callable[["EvaluationProgress"], Awaitable[None]]
 ResultCallback = Callable[[CardRoleEvaluationRead], Awaitable[None]]
-_RETRY_AFTER_MESSAGE = re.compile(
-    r"(?:try again in|retry after) ([0-9.]+)\s*(ms|s(?:ec(?:ond)?s?)?)\b",
-    re.IGNORECASE,
-)
 _CARD_MENTION = re.compile(r"\[\[([^\[\]]+)\]\]")
-ModelT = TypeVar("ModelT", bound=BaseModel)
 
 
 class ReferencedCardNotFoundError(ValueError):
@@ -81,6 +77,18 @@ class QualitativeRating(StrEnum):
     VERY_HIGH = "very_high"
 
 
+def _coerce_qualitative_rating(value: object) -> object:
+    """Accept the JSON string representation before strict Python validation."""
+
+    return QualitativeRating(value) if isinstance(value, str) else value
+
+
+QualitativeRatingInput = Annotated[
+    QualitativeRating,
+    BeforeValidator(_coerce_qualitative_rating),
+]
+
+
 RATING_SCORES: dict[QualitativeRating, int] = {
     QualitativeRating.VERY_LOW: 0,
     QualitativeRating.LOW: 25,
@@ -95,7 +103,7 @@ StructuredRoleAnswers = {
     role: _create_structured_model(
         f"{role.title().replace('_', '')}RoleAnswers",
         __config__=ConfigDict(extra="forbid", strict=True),
-        **{criterion_id: (QualitativeRating, ...) for criterion_id in rubric},
+        **dict.fromkeys(rubric, (QualitativeRatingInput, ...)),
     )
     for role, rubric in ROLE_RUBRICS.items()
 }
@@ -130,119 +138,56 @@ StructuredLLMaaJ = cast(
     _create_structured_model(
         "StructuredLLMaaJ",
         __base__=StructuredLLMaaJBase,
-        **{
-            role: (StructuredApplicableRoles[role] | NotApplicableRole, ...)
-            for role in ROLE_NAMES
-        },
+        **{role: (StructuredApplicableRoles[role] | NotApplicableRole, ...) for role in ROLE_NAMES},
     ),
 )
 
 
 class RoleEvaluator(Protocol):
+    prompt_version: str
+
     async def evaluate(
         self, deck: Deck, oracle_id: str, card_context: str, references: str
     ) -> StructuredLLMaaJBase: ...
 
 
-class OpenAIRoleEvaluator:
+class DSPyRoleEvaluator:
     def __init__(
         self,
         api_key: str,
         model: str,
         *,
-        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-        random_value: Callable[[], float] = random.random,
+        program_path: str | Path | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is required")
-        self._client = AsyncOpenAI(api_key=api_key, max_retries=0)
-        self._model = model
-        self._sleep = sleep
-        self._random_value = random_value
+        self._lm = configure_lm(
+            model,
+            api_key,
+            max_tokens=MAX_ROLE_JUDGE_OUTPUT_TOKENS,
+            num_retries=MAX_ATTEMPTS,
+        )
+        self._program = RoleEvaluationProgram(StructuredLLMaaJ, _evaluation_instructions())
+        self.prompt_version = _prompt_version(program_path)
+        if program_path:
+            self._program.load(str(program_path))
 
     async def evaluate(
         self, deck: Deck, oracle_id: str, card_context: str, references: str
     ) -> StructuredLLMaaJBase:
-        result = await self._parse_with_retry(
-            model=self._model,
-            instructions=_evaluation_instructions(),
-            input_text=_evaluation_input_with_rubrics(deck, oracle_id, card_context, references),
-            text_format=StructuredLLMaaJ,
-            max_output_tokens=MAX_ROLE_JUDGE_OUTPUT_TOKENS,
-        )
+        with dspy.context(lm=self._lm):
+            prediction = await self._program.acall(
+                evaluation_context=_evaluation_input_with_rubrics(
+                    deck, oracle_id, card_context, references
+                )
+            )
+        result = StructuredLLMaaJ.model_validate(prediction.evaluation)
         _validate_llmaaj(result)
         return result
 
-    async def _parse_with_retry(
-        self,
-        *,
-        model: str,
-        instructions: str,
-        input_text: str,
-        text_format: type[ModelT],
-        max_output_tokens: int,
-    ) -> ModelT:
-        for attempt in range(MAX_ATTEMPTS):
-            try:
-                response = await self._client.responses.parse(
-                    model=model,
-                    instructions=instructions,
-                    input=input_text,
-                    text_format=text_format,
-                    max_output_tokens=max_output_tokens,
-                )
-                if response.output_parsed is None:
-                    raise ValueError("OpenAI returned no structured role evaluation")
-                return response.output_parsed
-            except (RateLimitError, APITimeoutError, APIConnectionError, APIStatusError) as error:
-                if attempt + 1 == MAX_ATTEMPTS or not _retryable(error):
-                    raise
-                delay = _retry_delay(error, attempt, self._random_value())
-                logger.warning(
-                    "Role evaluation request failed (%s); retrying in %.1f seconds (attempt %s/%s)",
-                    _error_status_label(error),
-                    delay,
-                    attempt + 2,
-                    MAX_ATTEMPTS,
-                )
-                await self._sleep(delay)
-        raise RuntimeError("Role evaluation retry loop exited unexpectedly")
 
-
-def _error_status_label(error: Exception) -> str:
-    if isinstance(error, APIStatusError):
-        return f"HTTP {error.status_code}"
-    return error.__class__.__name__
-
-
-def _retryable(error: Exception) -> bool:
-    return not isinstance(error, APIStatusError) or error.status_code in {
-        408,
-        409,
-        429,
-        500,
-        502,
-        503,
-        504,
-    }
-
-
-def _retry_delay(error: Exception, attempt: int, random_value: float) -> float:
-    exponential = min(2.0**attempt, MAX_RETRY_DELAY_SECONDS)
-    retry_after = 0.0
-    if isinstance(error, APIStatusError):
-        header = error.response.headers.get("retry-after")
-        if header is not None:
-            with contextlib.suppress(ValueError):
-                retry_after = float(header)
-    match = _RETRY_AFTER_MESSAGE.search(str(error))
-    if match is not None:
-        message_delay = float(match.group(1))
-        if match.group(2).lower() == "ms":
-            message_delay /= 1000
-        retry_after = max(retry_after, message_delay)
-    jitter = min(exponential * 0.25 * random_value, 5.0)
-    return min(max(exponential, retry_after) + jitter, MAX_RETRY_DELAY_SECONDS)
+# Transitional import compatibility for integrations that used the provider-specific name.
+OpenAIRoleEvaluator = DSPyRoleEvaluator
 
 
 def _evaluation_input(deck: Deck, oracle_id: str, card_context: str, references: str) -> str:
@@ -250,12 +195,6 @@ def _evaluation_input(deck: Deck, oracle_id: str, card_context: str, references:
     sections = [
         "North Star:",
         payload["goal"],
-        "",
-        "Commander:",
-        payload["commander"],
-        "",
-        "Deck shape (rough shares in coarse bands):",
-        payload["deck_shape"],
         "",
         "Cards referenced by the North Star or card notes:",
         payload["referenced_cards"],
@@ -294,14 +233,12 @@ def _evaluation_instructions() -> str:
         "average or barely applicable. If every answer for a role is high or better, "
         "re-examine — most real cards have at least one typical or weak criterion. "
         "Ground every claim: only cite mechanics that appear in the card's rules text, "
-        "and only cite synergies with cards or counts actually present in this deck's "
-        "shape and referenced cards — never assume fetch lands, self-mill, discard, or "
-        "token counts the deck does not show. Aim for about "
+        "and only cite synergies explicitly established by the North Star or its referenced "
+        "cards. Never assume unmentioned cards, counts, or mechanics. Aim for about "
         f"{ROLE_JUDGE_TARGET_WORDS} per applicable role description. Do not calculate "
         "numbers. Only mark land as applicable when the card's type line explicitly "
         "includes Land. Treat incidental or negligible functionality as inapplicable. "
-        "Use the deck shape to judge whether mass or symmetric effects would spare or "
-        "hurt this deck's own board. Then return exactly one concise overall_summary "
+        "Then return exactly one concise overall_summary "
         "sentence describing what the card does for this deck through its strongest "
         "applicable roles, plus any important limitation within those roles. Describe "
         "only the jobs the card does: never mention a role you rated N/A or low, and "
@@ -310,6 +247,26 @@ def _evaluation_instructions() -> str:
         "summary — state what the card does well and any limitation within its own "
         "roles, without contrasting against jobs it does not do."
     )
+
+
+def _prompt_version(program_path: str | Path | None) -> str:
+    """Return an immutable identity for the exact prompt program being used."""
+
+    if program_path:
+        payload = Path(program_path).read_bytes()
+        source = "gepa"
+    else:
+        payload = _evaluation_instructions().encode()
+        source = "seed"
+    return f"{source}-{hashlib.sha256(payload).hexdigest()}"
+
+
+def current_prompt_version() -> str:
+    """Resolve the currently promoted prompt without caching across artifact writes."""
+
+    from survail.core.config import get_settings
+
+    return _prompt_version(get_settings().dspy_role_evaluation_program_path)
 
 
 def _evaluation_input_with_rubrics(
@@ -328,32 +285,52 @@ def _evaluation_input_with_rubrics(
 
 class _ScoringContextPayload(TypedDict):
     goal: str
-    commander: str
-    deck_shape: str
     referenced_cards: str
     card_under_evaluation: str
     role_definitions: dict[str, str]
     role_rubrics: dict[str, dict[str, str]]
     evaluator_version: str
+    prompt_version: str
 
 
 def _scoring_context_payload(
-    deck: Deck, oracle_id: str, card_context: str, references: str
+    deck: Deck,
+    oracle_id: str,
+    card_context: str,
+    references: str,
+    *,
+    evaluator_version: str = EVALUATOR_VERSION,
+    prompt_version: str | None = None,
 ) -> _ScoringContextPayload:
+    del oracle_id
     return {
         "goal": deck.goal,
-        "commander": _card_group_section(_commander_cardsets(deck, oracle_id)),
-        "deck_shape": _deck_shape(deck),
         "referenced_cards": references,
         "card_under_evaluation": card_context,
         "role_definitions": ROLE_DEFINITIONS,
         "role_rubrics": ROLE_RUBRICS,
-        "evaluator_version": EVALUATOR_VERSION,
+        "evaluator_version": evaluator_version,
+        "prompt_version": prompt_version or current_prompt_version(),
     }
 
 
-def _context_key(deck: Deck, oracle_id: str, card_context: str, references: str) -> str:
-    payload = _scoring_context_payload(deck, oracle_id, card_context, references)
+def _context_key(
+    deck: Deck,
+    oracle_id: str,
+    card_context: str,
+    references: str,
+    *,
+    evaluator_version: str = EVALUATOR_VERSION,
+    prompt_version: str | None = None,
+) -> str:
+    payload = _scoring_context_payload(
+        deck,
+        oracle_id,
+        card_context,
+        references,
+        evaluator_version=evaluator_version,
+        prompt_version=prompt_version,
+    )
     payload["goal"] = " ".join(payload["goal"].split())
     return hashlib.sha256(
         json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
@@ -361,24 +338,44 @@ def _context_key(deck: Deck, oracle_id: str, card_context: str, references: str)
 
 
 def _referenced_card_context(db: Session, deck: Deck, oracle_id: str) -> str:
-    texts = [deck.goal]
-    texts.extend(
-        cardset.note or "" for cardset in deck.cardsets if cardset.oracle_id == oracle_id
+    return _referenced_card_contexts(db, deck, [oracle_id])[oracle_id]
+
+
+def _referenced_card_contexts(db: Session, deck: Deck, oracle_ids: Sequence[str]) -> dict[str, str]:
+    """Resolve each distinct mention once for an entire Scores load."""
+
+    goal_names = _mentioned_card_names(deck.goal)
+    note_names: dict[str, list[str]] = {oracle_id: [] for oracle_id in oracle_ids}
+    for cardset in deck.cardsets:
+        if cardset.oracle_id in note_names and cardset.note:
+            note_names[cardset.oracle_id].extend(_mentioned_card_names(cardset.note))
+
+    names_by_oracle = {
+        oracle_id: list(dict.fromkeys([*goal_names, *note_names[oracle_id]]))
+        for oracle_id in oracle_ids
+    }
+    distinct_names = list(
+        dict.fromkeys(name for names in names_by_oracle.values() for name in names)
     )
-    names = list(
-        dict.fromkeys(
-            match.group(1).strip() for text in texts for match in _CARD_MENTION.finditer(text)
-        )
-    )
-    briefs: list[str] = []
-    for name in names:
-        if not name:
-            continue
-        snapshot = _snapshot_for_name(db, name)
+    snapshots = CatalogRepository(db).exact_names(distinct_names)
+    briefs: dict[str, str] = {}
+    for name in distinct_names:
+        snapshot = snapshots.get(name)
         if snapshot is None:
             raise ReferencedCardNotFoundError(name)
-        briefs.append(_snapshot_brief(snapshot))
-    return "\n\n".join(briefs) if briefs else "None"
+        briefs[name] = _snapshot_brief(snapshot)
+    return {
+        oracle_id: "\n\n".join(briefs[name] for name in names) if names else "None"
+        for oracle_id, names in names_by_oracle.items()
+    }
+
+
+def _mentioned_card_names(text: str) -> list[str]:
+    return list(
+        dict.fromkeys(
+            name for match in _CARD_MENTION.finditer(text) if (name := match.group(1).strip())
+        )
+    )
 
 
 _SHAPE_TYPE_LABELS = {
@@ -480,12 +477,6 @@ def _shape_band(share: float) -> str:
     return "few"
 
 
-def _snapshot_for_name(db: Session, name: str) -> ScryfallCardSnapshot | None:
-    # Resolve referenced cards from the full card catalog, not the deck list, so a
-    # [[reference]] is only accepted when the card is a known, available printing.
-    return CatalogRepository(db).exact_name(name)
-
-
 def _commander_cardsets(deck: Deck, oracle_id: str) -> list[CardSet]:
     relevant = [
         cardset
@@ -496,11 +487,14 @@ def _commander_cardsets(deck: Deck, oracle_id: str) -> list[CardSet]:
 
 
 def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluationRead:
-    role_scores = [CardRoleScoreRead.model_validate(item, strict=False) for item in evaluation.roles]
+    role_scores = [
+        CardRoleScoreRead.model_validate(item, strict=False) for item in evaluation.roles
+    ]
     return CardRoleEvaluationRead(
         oracle_id=evaluation.oracle_id,
         deck_revision=evaluation.deck_revision,
         evaluator_version=evaluation.evaluator_version,
+        prompt_version=evaluation.prompt_version,
         overall_score=_calculate_overall_score(role_scores),
         overall_comment=evaluation.overall_comment,
         roles=role_scores,
@@ -509,30 +503,25 @@ def _read(evaluation: CardRoleEvaluation, *, cached: bool) -> CardRoleEvaluation
 
 
 def read_cached_oracle_ids(
-    db: Session, deck: Deck, oracle_ids: Sequence[str], contexts: dict[str, str]
+    db: Session,
+    deck: Deck,
+    oracle_ids: Sequence[str],
+    contexts: dict[str, str] | None = None,
+    *,
+    prompt_version: str | None = None,
+    references: dict[str, str] | None = None,
 ) -> list[CardRoleEvaluationRead]:
+    del contexts, prompt_version, references
     unique_ids = list(dict.fromkeys(oracle_ids))
-    if not deck.goal.strip():
+    if not unique_ids:
         return []
-    context_keys = {
-        oracle_id: _context_key(
-            deck, oracle_id, contexts[oracle_id], _referenced_card_context(db, deck, oracle_id)
-        )
-        for oracle_id in unique_ids
-        if oracle_id in contexts
-    }
     stored = db.scalars(
         select(CardRoleEvaluation).where(
             CardRoleEvaluation.deck_id == deck.id,
-            CardRoleEvaluation.context_key.in_(context_keys.values()),
-            CardRoleEvaluation.evaluator_version == EVALUATOR_VERSION,
+            CardRoleEvaluation.oracle_id.in_(unique_ids),
         )
     )
-    cached = {
-        item.oracle_id: _read(item, cached=True)
-        for item in stored
-        if context_keys.get(item.oracle_id) == item.context_key
-    }
+    cached = {item.oracle_id: _read(item, cached=True) for item in stored}
     return [cached[oracle_id] for oracle_id in unique_ids if oracle_id in cached]
 
 
@@ -608,27 +597,14 @@ def _is_land_card_context(card_context: str) -> bool:
 
 
 def _role_json(result: StructuredRoleScore) -> JsonObject:
-    # The gate criterion defines the role, so it must not be cancelled out by a
-    # single off-axis rating (e.g. Sol Ring's colorless "fixing" dragging down
-    # otherwise-perfect ramp): weight it double in the mean.
-    gate = ROLE_GATE_CRITERIA.get(result.role)
-    weights = {
-        criterion_id: 2 if criterion_id == gate else 1 for criterion_id in result.answers
-    }
-    weighted_total = sum(
-        RATING_SCORES[rating] * weights[criterion_id]
-        for criterion_id, rating in result.answers.items()
-    )
+    numeric_scores = [RATING_SCORES[rating] for rating in result.answers.values()]
     return json_object(
         {
             "role": result.role,
-            "score": round(weighted_total / sum(weights.values())),
+            "score": round(sum(numeric_scores) / len(numeric_scores)),
             "description": result.description,
             "answers": json_object(
-                {
-                    criterion_id: rating.value
-                    for criterion_id, rating in result.answers.items()
-                }
+                {criterion_id: rating.value for criterion_id, rating in result.answers.items()}
             ),
         }
     )
@@ -643,20 +619,11 @@ def _role_score_from_llmaaj(
     if role_value == "N/A":
         return None
     answers: dict[str, QualitativeRating] = role_value.answers.model_dump()
-    if _fails_role_gate(role, answers):
-        return None
     return StructuredRoleScore(
         role=role,
         description=role_value.description,
         answers=answers,
     )
-
-
-def _fails_role_gate(role: str, answers: dict[str, QualitativeRating]) -> bool:
-    gate = ROLE_GATE_CRITERIA.get(role)
-    if gate is None:
-        return False
-    return answers[gate] in {QualitativeRating.VERY_LOW, QualitativeRating.LOW}
 
 
 def _validate_llmaaj(evaluation: StructuredLLMaaJBase) -> None:
@@ -667,25 +634,19 @@ def _validate_llmaaj(evaluation: StructuredLLMaaJBase) -> None:
         expected = list(ROLE_RUBRICS[role])
         actual = list(role_value.answers.model_dump())
         if actual != expected:
-            raise ValueError(f"OpenAI returned answers that do not match the {role} rubric")
+            raise ValueError(f"DSPy returned answers that do not match the {role} rubric")
+
 
 def _calculate_overall_score(role_scores: list[CardRoleScoreRead]) -> int:
     if not role_scores:
         return 0
 
-    # The best role sets the base; secondary roles only fill a rank-tapered
-    # fraction of the remaining headroom to 100, counted above the neutral
-    # baseline. This keeps the overall bounded at 100 and stops marginal
-    # secondary roles from outweighing primary-role quality.
-    scores = sorted((float(item.score) for item in role_scores), reverse=True)
-    best = scores[0]
-    bonus_fraction = sum(
-        max(0.0, score - SECONDARY_ROLE_BASELINE)
-        / (100.0 - SECONDARY_ROLE_BASELINE)
-        / math.pow(rank, OVERALL_SCORE_WEIGHTING_EXPONENT)
-        for rank, score in enumerate(scores[1:], start=2)
+    sorted_scores = sorted(role_scores, key=lambda item: item.score, reverse=True)
+    final_score = sum(
+        float(role_score.score) / math.pow(rank, OVERALL_SCORE_WEIGHTING_EXPONENT)
+        for rank, role_score in enumerate(sorted_scores, start=1)
     )
-    return round(best + (100.0 - best) * bonus_fraction)
+    return round(final_score)
 
 
 def _assign_role_centralities(
@@ -707,6 +668,7 @@ def _assign_role_centralities(
 
     return updated
 
+
 async def evaluate_oracle_ids(
     db: Session,
     deck: Deck,
@@ -714,27 +676,48 @@ async def evaluate_oracle_ids(
     evaluator: RoleEvaluator | None,
     progress: ProgressCallback | None = None,
     result_callback: ResultCallback | None = None,
+    *,
+    force: bool = False,
 ) -> list[CardRoleEvaluationRead]:
     if not deck.goal.strip():
         raise ValueError("Deck must have a Goal / North Star before cards can be evaluated")
     unique_ids = list(dict.fromkeys(oracle_ids))
-    contexts = _card_contexts(db, deck, unique_ids)
-    unresolved = [oracle_id for oracle_id in unique_ids if oracle_id not in contexts]
-    if unresolved:
-        raise ValueError(f"Oracle IDs not found: {', '.join(unresolved)}")
-    references = {
-        oracle_id: _referenced_card_context(db, deck, oracle_id) for oracle_id in unique_ids
+    stored_evaluations = {
+        item.oracle_id: item
+        for item in db.scalars(
+            select(CardRoleEvaluation).where(
+                CardRoleEvaluation.deck_id == deck.id,
+                CardRoleEvaluation.oracle_id.in_(unique_ids),
+            )
+        )
     }
-    context_keys = {
-        oracle_id: _context_key(deck, oracle_id, contexts[oracle_id], references[oracle_id])
-        for oracle_id in unique_ids
-    }
-    cached = {
-        item.oracle_id: item for item in read_cached_oracle_ids(db, deck, unique_ids, contexts)
-    }
+    cached = (
+        {}
+        if force
+        else {
+            oracle_id: _read(evaluation, cached=True)
+            for oracle_id, evaluation in stored_evaluations.items()
+        }
+    )
     missing = [oracle_id for oracle_id in unique_ids if oracle_id not in cached]
     if missing and evaluator is None:
         raise ValueError("OPENAI_API_KEY is required")
+    contexts = _card_contexts(db, deck, missing)
+    unresolved = [oracle_id for oracle_id in missing if oracle_id not in contexts]
+    if unresolved:
+        raise ValueError(f"Oracle IDs not found: {', '.join(unresolved)}")
+    references = _referenced_card_contexts(db, deck, missing)
+    prompt_version = evaluator.prompt_version if evaluator is not None else current_prompt_version()
+    context_keys = {
+        oracle_id: _context_key(
+            deck,
+            oracle_id,
+            contexts[oracle_id],
+            references[oracle_id],
+            prompt_version=prompt_version,
+        )
+        for oracle_id in missing
+    }
     started_at = time.monotonic()
     completed = len(cached)
     initial_cached_count = completed
@@ -783,42 +766,33 @@ async def evaluate_oracle_ids(
         raw_scores = [
             score
             for role in ROLE_NAMES
-            if (score := _role_score_from_llmaaj(role, llmaaj, is_land=is_land))
-            is not None
+            if (score := _role_score_from_llmaaj(role, llmaaj, is_land=is_land)) is not None
         ]
 
         raw_roles = [_role_json(score) for score in raw_scores]
 
-        role_scores = [
-            CardRoleScoreRead.model_validate(role, strict=False)
-            for role in raw_roles
-        ]
+        role_scores = [CardRoleScoreRead.model_validate(role, strict=False) for role in raw_roles]
 
         ranked_role_scores = _assign_role_centralities(role_scores)
 
-        roles = [
-            role_score.model_dump(mode="json")
-            for role_score in ranked_role_scores
-        ]
+        roles = [role_score.model_dump(mode="json") for role_score in ranked_role_scores]
 
         overall_comment = (
-            llmaaj.overall_summary
-            if ranked_role_scores
-            else "No material role identified."
+            llmaaj.overall_summary if ranked_role_scores else "No material role identified."
         )
 
-        evaluation = CardRoleEvaluation(
-            deck_id=deck.id,
-            deck_revision=deck.revision,
-            context_key=context_keys[oracle_id],
-            evaluator_version=EVALUATOR_VERSION,
-            oracle_id=oracle_id,
-            overall_comment=overall_comment,
-            roles=roles,
-        )
+        evaluation = stored_evaluations.get(oracle_id)
+        if evaluation is None:
+            evaluation = CardRoleEvaluation(deck_id=deck.id, oracle_id=oracle_id)
+            db.add(evaluation)
+        evaluation.deck_revision = deck.revision
+        evaluation.context_key = context_keys[oracle_id]
+        evaluation.evaluator_version = EVALUATOR_VERSION
+        evaluation.prompt_version = prompt_version
+        evaluation.overall_comment = overall_comment
+        evaluation.roles = roles
 
         async with persist_lock:
-            db.add(evaluation)
             db.commit()
             result = _read(evaluation, cached=False)
             cached[oracle_id] = result
@@ -830,6 +804,7 @@ async def evaluate_oracle_ids(
         await report_progress()
 
         return result
+
     heartbeat = (
         asyncio.create_task(progress_heartbeat()) if progress is not None and missing else None
     )

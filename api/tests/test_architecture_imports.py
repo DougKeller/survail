@@ -34,8 +34,7 @@ def _is_import(statement: ast.stmt) -> bool:
 def _is_all_assignment(statement: ast.stmt) -> bool:
     if isinstance(statement, ast.Assign):
         return any(
-            isinstance(target, ast.Name) and target.id == "__all__"
-            for target in statement.targets
+            isinstance(target, ast.Name) and target.id == "__all__" for target in statement.targets
         )
     if isinstance(statement, ast.AnnAssign):
         return isinstance(statement.target, ast.Name) and statement.target.id == "__all__"
@@ -88,9 +87,9 @@ def test_contracts_modules_export_explicit_public_surfaces() -> None:
     for path in MODULES.rglob("contracts.py"):
         tree = ast.parse(path.read_text())
         body = [statement for statement in tree.body if not _is_docstring(statement)]
-        assert any(
-            _is_all_assignment(statement) for statement in body
-        ), f"{path} must define __all__"
+        assert any(_is_all_assignment(statement) for statement in body), (
+            f"{path} must define __all__"
+        )
         invalid = [
             statement
             for statement in body
@@ -107,28 +106,27 @@ def test_non_contract_modules_are_not_passthrough_reexport_files() -> None:
         body = [statement for statement in tree.body if not _is_docstring(statement)]
         imports_present = any(_is_import(statement) for statement in body)
         has_real_module_behavior = any(
-            not _is_import(statement) and not _is_all_assignment(statement)
-            for statement in body
+            not _is_import(statement) and not _is_all_assignment(statement) for statement in body
         )
-        assert (
-            not imports_present or has_real_module_behavior
-        ), f"{path} is a passthrough module; move the implementation here instead"
+        assert not imports_present or has_real_module_behavior, (
+            f"{path} is a passthrough module; move the implementation here instead"
+        )
 
 
 def test_core_does_not_depend_on_modules() -> None:
     for path in CORE.rglob("*.py"):
         imports = _module_imports(path)
-        assert not [
-            imported for imported in imports if imported.startswith("survail.modules.")
-        ], f"{path} imports module-layer code"
+        assert not [imported for imported in imports if imported.startswith("survail.modules.")], (
+            f"{path} imports module-layer code"
+        )
 
 
 def test_integrations_do_not_depend_on_modules() -> None:
     for path in INTEGRATIONS.rglob("*.py"):
         imports = _module_imports(path)
-        assert not [
-            imported for imported in imports if imported.startswith("survail.modules.")
-        ], f"{path} imports module-layer code"
+        assert not [imported for imported in imports if imported.startswith("survail.modules.")], (
+            f"{path} imports module-layer code"
+        )
 
 
 def test_layered_modules_respect_api_service_repository_boundaries() -> None:
@@ -150,7 +148,8 @@ def test_layered_modules_respect_api_service_repository_boundaries() -> None:
             disallowed = [
                 imported
                 for imported in imports
-                if imported.startswith("survail.modules.") and ".api." in imported
+                if imported.startswith("survail.modules.")
+                and ".api." in imported
                 and not imported.endswith(".api.schemas")
             ]
             assert not disallowed, f"{path} imports api-layer code: {disallowed}"

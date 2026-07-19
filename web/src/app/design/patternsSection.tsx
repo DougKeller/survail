@@ -20,7 +20,6 @@ import {
 import { MeterPanel } from "../../designsystem/patterns/statPanel";
 import { TimelineItem } from "../../designsystem/patterns/timeline";
 import { ValidationItem } from "../../designsystem/patterns/validationItem";
-import { StarToggle } from "../../designsystem/primitives/starToggle";
 
 function CardRowsCard() {
   return (
@@ -38,9 +37,7 @@ function CardRowsCard() {
           <CardRow emphasis interactive name="Three Visits" qty={1}>
             <ManaCost cost="{1}{G}" />
           </CardRow>
-          <CardRow name="Smothering Tithe" qty={1} tone="accent">
-            <StarToggle active label="Core card" />
-          </CardRow>
+          <CardRow name="Smothering Tithe" qty={1} tone="accent" />
           <CardRow name="Nature's Lore" qty={1} tone="accent-2">
             <ManaCost cost="{1}{G}" />
           </CardRow>
@@ -132,9 +129,7 @@ function TilesCard() {
         <CardKicker>ImageTile, GroupTile, GhostTile</CardKicker>
         <Grid columns={3} gap={3}>
           <ImageTile>
-            <ImageTileActions>
-              <StarToggle label="Mark as core card" />
-            </ImageTileActions>
+            <ImageTileActions />
             <ImageTileBadge>2x</ImageTileBadge>
             <ImageTileBadge corner="bottom-right" tone="accent">
               9
