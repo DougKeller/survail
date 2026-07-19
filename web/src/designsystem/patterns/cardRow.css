@@ -43,6 +43,11 @@
   flex: none;
 }
 
+.ds-card-row-leading-action {
+  display: flex;
+  flex: none;
+}
+
 .ds-card-row-leading img,
 .ds-card-row-leading button {
   border: 0;

@@ -223,7 +223,7 @@ function MatrixRows({ onPreview }: { onPreview: (card: CardSet) => void }) {
                     <Text muted>No cards in this workspace.</Text>
                   </CardZoneEmpty>
                 ) : (
-                  <CardZoneColumns>
+                  <CardZoneColumns size={displayPreferences.columnSize}>
                     {row.columns.map((column) => (
                       <CardsZoneColumn
                         cards={column.cards}

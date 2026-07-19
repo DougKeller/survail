@@ -87,8 +87,18 @@ export function CardZoneRowScroll({
   );
 }
 
-export function CardZoneColumns({ children }: { children: ReactNode }) {
-  return <div className="ds-cards-zone-columns">{children}</div>;
+export function CardZoneColumns({
+  children,
+  size,
+}: {
+  children: ReactNode;
+  size: "large" | "medium" | "small";
+}) {
+  return (
+    <div className={`ds-cards-zone-columns ds-cards-zone-columns-${size}`}>
+      {children}
+    </div>
+  );
 }
 
 export function CardZoneColumn({

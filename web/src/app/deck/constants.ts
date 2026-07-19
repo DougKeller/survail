@@ -54,8 +54,10 @@ export type DeckView = "stacks" | "grid" | "text";
 export type EditorView = "cards" | "scores" | "charts" | "info";
 export type GroupBy = "type" | "color" | "mana-value" | "role" | "tags";
 export type SortBy = "alphabetical" | "mana-value" | "price" | "score";
+export type ColumnSize = "large" | "medium" | "small";
 
 export interface DeckDisplayPreferences {
+  columnSize: ColumnSize;
   view: DeckView;
   groupBy: GroupBy;
   sortBy: SortBy;

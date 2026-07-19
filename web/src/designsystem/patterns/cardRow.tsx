@@ -24,6 +24,8 @@ interface CardRowProps extends Omit<
   href?: string;
   /** Render as a button when no href is given. */
   interactive?: boolean;
+  /** Leading interactive control, such as a move handle. */
+  leadingAction?: ReactNode;
   /** Leading slot: art thumb, status pip. */
   leading?: ReactNode;
   /** Card name; accepts rich nodes (e.g. inline card references). */
@@ -56,6 +58,7 @@ export function CardRow({
   href,
   interactive = false,
   leading,
+  leadingAction,
   name,
   onClick,
   qty,
@@ -71,6 +74,9 @@ export function CardRow({
     .join(" ");
   const content = (
     <>
+      {leadingAction === undefined ? null : (
+        <span className="ds-card-row-leading-action">{leadingAction}</span>
+      )}
       {grip ? <GripIcon /> : null}
       {leading === undefined ? null : (
         <span className="ds-card-row-leading">{leading}</span>

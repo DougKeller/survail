@@ -27,6 +27,7 @@ type DeckCardsValue = Pick<DeckEditorValue, "deck"> & {
     | "moveAllToConsidering"
     | "moveCardToZone"
     | "removeTagFromCard"
+    | "reorderTags"
     | "setTagWeight"
     | "updateTag"
   >;
@@ -60,6 +61,7 @@ export function DeckEditorProvider({
         moveAllToConsidering: editor.actions.moveAllToConsidering,
         moveCardToZone: editor.actions.moveCardToZone,
         removeTagFromCard: editor.actions.removeTagFromCard,
+        reorderTags: editor.actions.reorderTags,
         setTagWeight: editor.actions.setTagWeight,
         updateTag: editor.actions.updateTag,
       },
@@ -67,6 +69,7 @@ export function DeckEditorProvider({
       deck: editor.deck,
       display: {
         displayPreferences: {
+          columnSize: editor.display.displayPreferences.columnSize,
           groupBy: editor.display.displayPreferences.groupBy,
           sortBy: editor.display.displayPreferences.sortBy,
           view: editor.display.displayPreferences.view,
@@ -83,10 +86,12 @@ export function DeckEditorProvider({
       editor.actions.moveAllToConsidering,
       editor.actions.moveCardToZone,
       editor.actions.removeTagFromCard,
+      editor.actions.reorderTags,
       editor.actions.setTagWeight,
       editor.actions.updateTag,
       editor.data.busy,
       editor.deck,
+      editor.display.displayPreferences.columnSize,
       editor.display.displayPreferences.groupBy,
       editor.display.displayPreferences.sortBy,
       editor.display.displayPreferences.view,

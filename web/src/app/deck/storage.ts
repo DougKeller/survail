@@ -5,6 +5,7 @@ import {
   DEFAULT_IMPORT_PREFERENCES,
   type DeckDisplayPreferences,
   type DeckView,
+  type ColumnSize,
   type EditorView,
   type GroupBy,
   type SortBy,
@@ -52,11 +53,12 @@ export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
   }
   try {
     const parsed = JSON.parse(stored) as {
+      columnSize?: string;
       view?: string;
       groupBy?: string;
       sortBy?: string;
     };
-    const { view, groupBy, sortBy } = parsed;
+    const { columnSize, view, groupBy, sortBy } = parsed;
     if (
       (view !== "stacks" && view !== "grid" && view !== "text") ||
       (groupBy !== "type" &&
@@ -71,7 +73,12 @@ export function storedDeckDisplayPreferences(): DeckDisplayPreferences {
     ) {
       return defaultDeckDisplayPreferences();
     }
-    return { view, groupBy, sortBy };
+    return {
+      columnSize: isColumnSize(columnSize) ? columnSize : "medium",
+      view,
+      groupBy,
+      sortBy,
+    };
   } catch {
     return defaultDeckDisplayPreferences();
   }
@@ -87,7 +94,12 @@ export function storeDeckDisplayPreferences(
 }
 
 function defaultDeckDisplayPreferences(): DeckDisplayPreferences {
-  return { view: "stacks", groupBy: "mana-value", sortBy: "alphabetical" };
+  return {
+    columnSize: "medium",
+    view: "stacks",
+    groupBy: "mana-value",
+    sortBy: "alphabetical",
+  };
 }
 
 export function storedAdvisorOpen(defaultValue = true): boolean {
@@ -152,6 +164,10 @@ function isSortBy(value: string): value is SortBy {
   );
 }
 
+function isColumnSize(value: string | null | undefined): value is ColumnSize {
+  return value === "small" || value === "medium" || value === "large";
+}
+
 export function editorViewFromSearchParams(
   searchParams: URLSearchParams,
 ): EditorView {
@@ -187,7 +203,9 @@ export function deckDisplayPreferencesFromSearchParams(
   const view = searchParams.get("view");
   const groupBy = searchParams.get("group");
   const sortBy = searchParams.get("sort");
+  const columnSize = searchParams.get("columns");
   return {
+    columnSize: isColumnSize(columnSize) ? columnSize : fallback.columnSize,
     view: view !== null && isDeckView(view) ? view : fallback.view,
     groupBy:
       groupBy !== null && isGroupBy(groupBy) ? groupBy : fallback.groupBy,

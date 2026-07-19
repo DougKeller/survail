@@ -18,6 +18,7 @@ import { RoleTargetForColumn } from "./roleTargetColumn";
 import { useCardZoneDrag } from "./cardZoneDrag";
 import { TagColumnActions, TagTargetProgress } from "./tagControls";
 import { CardTagPicker } from "./cardTagPicker";
+import { useTagColumnOrder } from "./tagColumnOrder";
 
 export function CardsZoneColumn({
   cards,
@@ -59,6 +60,7 @@ export function CardsZoneColumn({
   } = useDeckCardsContext();
   const drag = useCardZoneDrag();
   const tag = deck.tags?.find((item) => item.id === tagId) ?? null;
+  const tagOrder = useTagColumnOrder(tag);
   const tagDropProps =
     tagId === null || tagId === undefined ? {} : drag.tagColumnProps(tagId);
   return (
@@ -68,20 +70,25 @@ export function CardsZoneColumn({
       aria-label={`${label}, ${String(quantity)} cards`}
     >
       <ColumnHeader
+        {...tagOrder.dropProps}
         level={3}
+        tone={tagOrder.active ? "accent" : "default"}
         title={`${label} · ${String(quantity)} ${quantity === 1 ? "card" : "cards"}`}
       >
         {tag !== null && (
-          <TagColumnActions
-            busy={busy}
-            onDelete={(target) => {
-              return deleteTag(target.id, target.name);
-            }}
-            onUpdate={(target, name, nextTarget) => {
-              return updateTag(target.id, name, nextTarget);
-            }}
-            tag={tag}
-          />
+          <>
+            {tagOrder.handle}
+            <TagColumnActions
+              busy={busy}
+              onDelete={(target) => {
+                return deleteTag(target.id, target.name);
+              }}
+              onUpdate={(target, name, nextTarget) => {
+                return updateTag(target.id, name, nextTarget);
+              }}
+              tag={tag}
+            />
+          </>
         )}
       </ColumnHeader>
       {tag !== null && zone === "mainboard" && (

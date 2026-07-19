@@ -18,7 +18,7 @@ import {
 } from "../../designsystem/layout/cardZoneWorkspace";
 import { NavBar } from "../../designsystem/primitives/nav";
 import { Kicker } from "../../designsystem/layout/typography";
-import type { DeckView, GroupBy, SortBy } from "../deck/constants";
+import type { ColumnSize, DeckView, GroupBy, SortBy } from "../deck/constants";
 import {
   searchAddZonesFor,
   storeDeckSummaryOpen,
@@ -47,12 +47,6 @@ const SORT_OPTIONS: { label: string; value: SortBy }[] = [
   { label: "Role Score", value: "score" },
 ];
 
-function searchAddZoneLabel(zone: CardZone): string {
-  return zone === "commander"
-    ? "Commander"
-    : zone.charAt(0).toUpperCase() + zone.slice(1);
-}
-
 export function DeckCardsView() {
   const {
     actions: { createTag },
@@ -70,7 +64,7 @@ export function DeckCardsView() {
       showSearchResults,
     },
   } = useDeckEditorContext();
-  const { groupBy, sortBy, view } = displayPreferences;
+  const { columnSize, groupBy, sortBy, view } = displayPreferences;
   const searchContainerRef = useDismissibleSurface<HTMLDivElement>(
     showSearchResults,
     () => {
@@ -164,7 +158,7 @@ export function DeckCardsView() {
               setSearchAddZone(zone as CardZone);
             }}
             options={addZoneOptions.map((zone) => ({
-              label: searchAddZoneLabel(zone),
+              label: titleize(zone),
               value: zone,
             }))}
             value={searchAddZone}
@@ -212,6 +206,25 @@ export function DeckCardsView() {
               (option) => scoringEnabled || option.value !== "score",
             )}
             value={sortBy}
+          />
+        </Inline>
+        <Inline align="center" gap={2}>
+          <Kicker>Columns</Kicker>
+          <Segmented
+            label="Column size"
+            name="column-size"
+            onChange={(size) => {
+              setDisplayPreferences((current) => ({
+                ...current,
+                columnSize: size as ColumnSize,
+              }));
+            }}
+            options={[
+              { label: "S", value: "small" },
+              { label: "M", value: "medium" },
+              { label: "L", value: "large" },
+            ]}
+            value={columnSize}
           />
         </Inline>
         <Inline align="center" gap={2}>

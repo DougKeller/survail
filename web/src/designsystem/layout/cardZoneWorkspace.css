@@ -108,6 +108,18 @@
   min-width: max-content;
 }
 
+.ds-cards-zone-columns-small {
+  --size-board-col: clamp(176px, 10vw, 240px);
+}
+
+.ds-cards-zone-columns-medium {
+  --size-board-col: clamp(214px, 16.667vw, 360px);
+}
+
+.ds-cards-zone-columns-large {
+  --size-board-col: clamp(260px, 25vw, 520px);
+}
+
 .ds-cards-zone-column {
   border-right: 1px solid var(--color-divider);
   contain-intrinsic-inline-size: var(--size-board-col);

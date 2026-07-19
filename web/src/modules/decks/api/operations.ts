@@ -81,6 +81,16 @@ export function updateDeckTag(
   });
 }
 
+export function reorderDeckTags(
+  deckId: string,
+  tagIds: readonly string[],
+): Promise<Deck> {
+  return request<Deck>(`/decks/${deckId}/tags/order`, {
+    method: "PUT",
+    body: JSON.stringify({ tag_ids: tagIds }),
+  });
+}
+
 export function deleteDeckTag(deckId: string, tagId: string): Promise<Deck> {
   return request<Deck>(`/decks/${deckId}/tags/${tagId}`, {
     method: "DELETE",

@@ -33,6 +33,22 @@ describe("CardRow", () => {
     ).not.toBeNull();
   });
 
+  it("places an interactive move control at the far left", () => {
+    const { container } = render(
+      <CardRow
+        leadingAction={<button type="button">Move</button>}
+        name="Counterspell"
+        qty={2}
+      />,
+    );
+    const row = container.querySelector(".ds-card-row");
+
+    expect(row?.firstElementChild?.className).toBe(
+      "ds-card-row-leading-action",
+    );
+    expect(row?.firstElementChild?.textContent).toBe("Move");
+  });
+
   it("renders a button when interactive and fires onClick", () => {
     const onClick = vi.fn();
     render(<CardRow interactive name="Cultivate" onClick={onClick} />);

@@ -18,7 +18,15 @@ import { useDismissibleSurface } from "../deckPrimitives";
 import { useDeckEditorContext } from "./deckEditorContext";
 import { useOptionalCardZoneDrag } from "./cardZoneDrag";
 
-function CardQuickActions({ card }: { card: CardSet }) {
+function CardQuickActions({
+  card,
+  removeContextTag,
+  tagAction,
+}: {
+  card: CardSet;
+  removeContextTag?: { name: string; remove: () => void } | undefined;
+  tagAction?: ReactNode;
+}) {
   const {
     actions: { changeQuantity },
     data: { busy },
@@ -83,6 +91,18 @@ function CardQuickActions({ card }: { card: CardSet }) {
                 }}
                 withTitle
               />
+              {tagAction}
+              {removeContextTag !== undefined && (
+                <IconButton
+                  label={`Remove ${removeContextTag.name} tag from ${card.card_name}`}
+                  onClick={removeContextTag.remove}
+                  size="sm"
+                  title={`Remove ${removeContextTag.name} tag`}
+                  variant="ghost"
+                >
+                  <TagX size={14} strokeWidth={2.75} />
+                </IconButton>
+              )}
             </Inline>
           </Stack>
         </Popover>
@@ -119,6 +139,26 @@ function BoardCardRow({
         data-zone={card.zone}
         emphasis={commander}
         grip={false}
+        leadingAction={
+          handleProps === undefined ? undefined : (
+            <IconButton
+              aria-pressed={handleProps["aria-pressed"]}
+              dragHandle
+              label={handleProps["aria-label"]}
+              onLostPointerCapture={handleProps.onLostPointerCapture}
+              onKeyDown={handleProps.onKeyDown}
+              onPointerCancel={handleProps.onPointerCancel}
+              onPointerDown={handleProps.onPointerDown}
+              onPointerMove={handleProps.onPointerMove}
+              onPointerUp={handleProps.onPointerUp}
+              size="sm"
+              title="Move one card"
+              variant="ghost"
+            >
+              <GripVertical size={14} strokeWidth={2.75} />
+            </IconButton>
+          )
+        }
         leading={commander ? <ClickableCardImage card={card} /> : undefined}
         name={<InlineCardText cards={[card]} text={`[[${card.card_name}]]`} />}
         onFocus={() => {
@@ -131,37 +171,11 @@ function BoardCardRow({
         tone={commander ? "accent-2" : "default"}
       >
         <ManaCost cost={card.scryfall.mana_cost} />
-        {tagAction}
-        {removeContextTag !== undefined && (
-          <IconButton
-            label={`Remove ${removeContextTag.name} tag from ${card.card_name}`}
-            onClick={removeContextTag.remove}
-            size="sm"
-            title={`Remove ${removeContextTag.name} tag`}
-            variant="ghost"
-          >
-            <TagX size={14} strokeWidth={2.75} />
-          </IconButton>
-        )}
-        {handleProps !== undefined && (
-          <IconButton
-            aria-pressed={handleProps["aria-pressed"]}
-            dragHandle
-            label={handleProps["aria-label"]}
-            onLostPointerCapture={handleProps.onLostPointerCapture}
-            onKeyDown={handleProps.onKeyDown}
-            onPointerCancel={handleProps.onPointerCancel}
-            onPointerDown={handleProps.onPointerDown}
-            onPointerMove={handleProps.onPointerMove}
-            onPointerUp={handleProps.onPointerUp}
-            size="sm"
-            title="Move one card"
-            variant="ghost"
-          >
-            <GripVertical size={14} strokeWidth={2.75} />
-          </IconButton>
-        )}
-        <CardQuickActions card={card} />
+        <CardQuickActions
+          card={card}
+          removeContextTag={removeContextTag}
+          tagAction={tagAction}
+        />
       </CardRow>
       {note !== "" && (
         <Text muted size="2xs">

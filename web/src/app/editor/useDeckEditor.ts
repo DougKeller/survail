@@ -135,6 +135,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
       nextSearchParams.set("view", next.view);
       nextSearchParams.set("group", next.groupBy);
       nextSearchParams.set("sort", next.sortBy);
+      nextSearchParams.set("columns", next.columnSize);
       setSearchParams(nextSearchParams, { replace: true });
     },
     [scoringEnabled, setSearchParams],
@@ -175,6 +176,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
     moveCardToZone,
     openBulkEdit,
     removeTagFromCard,
+    reorderTags,
     setTagWeight,
     updateTag,
     updateCardNote,
@@ -243,6 +245,7 @@ export function useDeckEditor(id: string, navigate: NavigateFunction) {
       moveAllToConsidering,
       moveCardToZone,
       removeTagFromCard,
+      reorderTags,
       setTagWeight,
       updateTag,
       updateCardNote,

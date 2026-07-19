@@ -1,11 +1,14 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import "./columnHeader.css";
 
 type ColumnHeaderTone = "accent" | "default";
 type ColumnHeaderLevel = 2 | 3 | 4 | 5 | 6;
 
-interface ColumnHeaderProps {
+interface ColumnHeaderProps extends Omit<
+  ComponentProps<"div">,
+  "children" | "title"
+> {
   /** Trailing slot: column menu, drag handle. */
   children?: ReactNode;
   count?: number;
@@ -23,6 +26,7 @@ export function ColumnHeader({
   level = 5,
   title,
   tone = "default",
+  ...rest
 }: ColumnHeaderProps): ReactNode {
   const className =
     tone === "accent"
@@ -30,7 +34,7 @@ export function ColumnHeader({
       : "ds-column-header";
   const TitleTag = `h${String(level)}` as "h2" | "h3" | "h4" | "h5" | "h6";
   return (
-    <div className={className}>
+    <div {...rest} className={className}>
       <TitleTag className="ds-column-header-title">{title}</TitleTag>
       {count === undefined ? null : (
         <span className="ds-column-header-count">{count}</span>

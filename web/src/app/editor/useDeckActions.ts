@@ -280,6 +280,15 @@ export function useDeckActions({
     [runMutationAsync, setAnnouncement, setDeck],
   );
 
+  const reorderTags = useCallback(
+    (tagIds: readonly string[]): Promise<boolean> =>
+      runMutationAsync(async (currentDeck) => {
+        setDeck(await api.reorderDeckTags(currentDeck.id, tagIds));
+        setAnnouncement("Reordered tag columns");
+      }),
+    [runMutationAsync, setAnnouncement, setDeck],
+  );
+
   const deleteTag = useCallback(
     (tagId: string, name: string): Promise<boolean> =>
       runMutationAsync(async (currentDeck) => {
@@ -387,6 +396,7 @@ export function useDeckActions({
     moveCardToZone,
     openBulkEdit,
     removeTagFromCard,
+    reorderTags,
     setTagWeight,
     updateTag,
     updateCardNote,

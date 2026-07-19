@@ -10,6 +10,7 @@ const apiMocks = vi.hoisted(() => ({
   createDeckTag: vi.fn(),
   deleteDeckTag: vi.fn(),
   operations: vi.fn(),
+  reorderDeckTags: vi.fn(),
   removeCardsetTag: vi.fn(),
   setCardsetTagWeight: vi.fn(),
   updateDeckTag: vi.fn(),
@@ -220,6 +221,31 @@ describe("deck tag actions", () => {
         0.5,
       );
     });
+  });
+
+  it("persists the shared tag order returned by the API", async () => {
+    const currentDeck = deck();
+    const reordered = {
+      ...currentDeck,
+      tags: [
+        { id: "draw", name: "Draw", position: 0, target: 0 },
+        { id: "ramp", name: "Ramp", position: 1, target: 0 },
+      ],
+    };
+    apiMocks.reorderDeckTags.mockResolvedValue(reordered);
+    const options = props(currentDeck);
+    const { result } = renderHook(() => useDeckActions(options));
+
+    await result.current.reorderTags(["draw", "ramp"]);
+
+    expect(apiMocks.reorderDeckTags).toHaveBeenCalledWith("deck-1", [
+      "draw",
+      "ramp",
+    ]);
+    expect(options.setDeck).toHaveBeenCalledWith(reordered);
+    expect(options.setAnnouncement).toHaveBeenCalledWith(
+      "Reordered tag columns",
+    );
   });
 
   it("adds and removes one contextual tag from the whole cardset", async () => {

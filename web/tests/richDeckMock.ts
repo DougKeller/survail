@@ -544,6 +544,24 @@ export async function mockRichApi(
       await fulfillJson(route, scores);
     } else if (url.pathname === "/decks/deck-1/operations") {
       await fulfillJson(route, []);
+    } else if (
+      route.request().method() === "PUT" &&
+      url.pathname === "/decks/deck-1/tags/order"
+    ) {
+      const payload = route.request().postDataJSON() as { tag_ids: string[] };
+      const positions = new Map(
+        payload.tag_ids.map((tagId, position) => [tagId, position]),
+      );
+      activeDeck = {
+        ...activeDeck,
+        tags: [...activeDeck.tags]
+          .map((tag) => ({
+            ...tag,
+            position: positions.get(tag.id) ?? tag.position,
+          }))
+          .sort((left, right) => left.position - right.position),
+      };
+      await fulfillJson(route, activeDeck);
     } else if (url.pathname === "/decks/deck-1/conversations") {
       await fulfillJson(route, {
         id: "conversation-1",
