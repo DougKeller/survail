@@ -1,17 +1,26 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
-import type { CardSet, Deck, DeckTag } from "../../modules/decks/contracts";
+import type {
+  CardSet,
+  CardZone,
+  Deck,
+  DeckTag,
+} from "../../modules/decks/contracts";
 import { Chip } from "../../designsystem/primitives/chip";
 import { SortableHeader, Table, TableScroll } from "../../designsystem/primitives/table";
-import { ToggleChip } from "../../designsystem/primitives/toggleChip";
 import { Inline } from "../../designsystem/layout/inline";
 import { PageHeader } from "../../designsystem/layout/page";
 import { Stack } from "../../designsystem/layout/stack";
 import { Heading, Kicker, Text } from "../../designsystem/layout/typography";
-import { FilterMenu } from "./filterMenu";
+import {
+  cardZoneFilterOptions,
+  FilterMenu,
+  InlineFilterGroup,
+} from "./filterMenu";
 import { tagSwatches } from "./groupColors";
+import { CardNoteButton, QuantityStepper } from "./cardRowActions";
 import { zoneLabel } from "./text";
 
 type TagSortDirection = "asc" | "desc";
@@ -22,7 +31,9 @@ interface TagDeckRow {
   tags: DeckTag[];
 }
 
-function toggled(current: readonly string[], item: string): string[] {
+export const UNTAGGED_FILTER_ID = "__untagged__";
+
+function toggled<T>(current: readonly T[], item: T): T[] {
   return current.includes(item)
     ? current.filter((entry) => entry !== item)
     : [...current, item];
@@ -40,19 +51,26 @@ export function tagDeckRows(
   deck: Deck,
   shownTagIds: readonly string[],
   selectedTagIds: readonly string[],
+  selectedZones: readonly CardZone[],
   sort: { direction: TagSortDirection; key: TagSortKey },
 ): TagDeckRow[] {
   const shown = new Set(shownTagIds);
   const selected = new Set(selectedTagIds);
+  const zones = new Set(selectedZones);
   const rows = deck.cardsets
-    .filter((card) => card.quantity > 0)
-    .map((card) => ({
-      card,
-      tags: assignedTags(card, deck.tags ?? []).filter((tag) => shown.has(tag.id)),
-    }))
-    .filter(
-      (row) =>
-        selected.size === 0 || row.tags.some((tag) => selected.has(tag.id)),
+    .filter((card) => card.quantity > 0 && zones.has(card.zone))
+    .map((card) => {
+      const allTags = assignedTags(card, deck.tags ?? []);
+      return {
+        allTags,
+        card,
+        tags: allTags.filter((tag) => shown.has(tag.id)),
+      };
+    })
+    .filter((row) =>
+      row.allTags.length === 0
+        ? selected.has(UNTAGGED_FILTER_ID)
+        : row.allTags.some((tag) => selected.has(tag.id)),
     );
   const direction = sort.direction === "asc" ? 1 : -1;
   return rows.sort((left, right) => {
@@ -85,10 +103,24 @@ function tagSortFromSearchParams(searchParams: URLSearchParams): {
   };
 }
 
-export function DeckTagsView({ deck }: { deck: Deck }) {
+export function DeckTagsView({
+  busy,
+  changeQuantity,
+  deck,
+  editCardNote,
+  tagAction,
+}: {
+  busy: boolean;
+  changeQuantity: (card: CardSet, delta: number) => void;
+  deck: Deck;
+  editCardNote: (card: CardSet) => void;
+  tagAction: (card: CardSet) => ReactNode;
+}) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [excludedFilterIds, setExcludedFilterIds] = useState<string[]>([]);
+  const [excludedZones, setExcludedZones] = useState<CardZone[]>([]);
   const [hiddenTagIds, setHiddenTagIds] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [visibilityOpen, setVisibilityOpen] = useState(false);
   const tags = [...(deck.tags ?? [])].sort((left, right) =>
     left.name.localeCompare(right.name),
@@ -97,9 +129,32 @@ export function DeckTagsView({ deck }: { deck: Deck }) {
   const activeHiddenIds = hiddenTagIds.filter((id) => validIds.has(id));
   const shownTags = tags.filter((tag) => !activeHiddenIds.includes(tag.id));
   const shownIds = shownTags.map((tag) => tag.id);
-  const activeSelectedIds = selectedTagIds.filter((id) => shownIds.includes(id));
+  const filterOptions = [
+    ...tags.map((tag) => ({ label: tag.name, value: tag.id })),
+    { label: "Untagged", value: UNTAGGED_FILTER_ID },
+  ];
+  const validFilterIds = new Set(filterOptions.map((option) => option.value));
+  const activeExcludedFilterIds = excludedFilterIds.filter((id) =>
+    validFilterIds.has(id),
+  );
+  const selectedFilterIds = filterOptions
+    .filter((option) => !activeExcludedFilterIds.includes(option.value))
+    .map((option) => option.value);
+  const zoneOptions = cardZoneFilterOptions(deck.cardsets);
+  const activeExcludedZones = excludedZones.filter((zone) =>
+    zoneOptions.some((option) => option.value === zone),
+  );
+  const selectedZones = zoneOptions
+    .filter((option) => !activeExcludedZones.includes(option.value))
+    .map((option) => option.value);
   const sort = tagSortFromSearchParams(searchParams);
-  const rows = tagDeckRows(deck, shownIds, activeSelectedIds, sort);
+  const rows = tagDeckRows(
+    deck,
+    shownIds,
+    selectedFilterIds,
+    selectedZones,
+    sort,
+  );
   const colors = tagSwatches(tags.map((tag) => tag.id));
 
   function setSort(key: TagSortKey): void {
@@ -130,39 +185,54 @@ export function DeckTagsView({ deck }: { deck: Deck }) {
       <Stack gap={3}>
         <Inline align="end" gap={3} justify="between" wrap>
           <Inline align="end" gap={3} wrap>
-            <Stack gap={1}>
-              <Kicker as="span">Filter cards · match any</Kicker>
-              <Inline gap={1} wrap>
-                {shownTags.map((tag) => (
-                  <ToggleChip
-                    aria-label={`Filter cards by ${tag.name}`}
-                    key={tag.id}
-                    onClick={() => {
-                      setSelectedTagIds((current) => toggled(current, tag.id));
-                    }}
-                    pressed={activeSelectedIds.includes(tag.id)}
-                  >
-                    {tag.name}
-                  </ToggleChip>
-                ))}
-              </Inline>
-            </Stack>
+            <FilterMenu
+              excluded={activeExcludedFilterIds}
+              label="Filter cards · match any"
+              onOpenChange={(open) => {
+                setFilterOpen(open);
+                if (open) setVisibilityOpen(false);
+              }}
+              onSelectAll={() => {
+                setExcludedFilterIds([]);
+              }}
+              onSelectNone={() => {
+                setExcludedFilterIds(filterOptions.map((option) => option.value));
+              }}
+              onToggle={(tagId) => {
+                setExcludedFilterIds((current) => toggled(current, tagId));
+              }}
+              open={filterOpen}
+              options={filterOptions}
+            />
+            <InlineFilterGroup
+              excluded={activeExcludedZones}
+              label="Zones"
+              onSelectAll={() => {
+                setExcludedZones([]);
+              }}
+              onSelectNone={() => {
+                setExcludedZones(zoneOptions.map((option) => option.value));
+              }}
+              onToggle={(zone) => {
+                setExcludedZones((current) => toggled(current, zone));
+              }}
+              options={zoneOptions}
+            />
             <FilterMenu
               excluded={activeHiddenIds}
               label="Shown tags"
-              onOpenChange={setVisibilityOpen}
+              onOpenChange={(open) => {
+                setVisibilityOpen(open);
+                if (open) setFilterOpen(false);
+              }}
               onSelectAll={() => {
                 setHiddenTagIds([]);
               }}
               onSelectNone={() => {
                 setHiddenTagIds(tags.map((tag) => tag.id));
-                setSelectedTagIds([]);
               }}
               onToggle={(tagId) => {
                 setHiddenTagIds((current) => toggled(current, tagId));
-                setSelectedTagIds((current) =>
-                  current.filter((selected) => selected !== tagId),
-                );
               }}
               open={visibilityOpen}
               options={tags.map((tag) => ({ label: tag.name, value: tag.id }))}
@@ -198,6 +268,7 @@ export function DeckTagsView({ deck }: { deck: Deck }) {
                     Tags
                   </SortableHeader>
                 </th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -231,6 +302,31 @@ export function DeckTagsView({ deck }: { deck: Deck }) {
                         ))}
                       </Inline>
                     )}
+                  </td>
+                  <td>
+                    <Inline align="center" gap={1} wrap={false}>
+                      {tagAction(row.card)}
+                      <CardNoteButton
+                        busy={busy}
+                        card={row.card}
+                        onClick={() => {
+                          editCardNote(row.card);
+                        }}
+                        withTitle
+                      />
+                      <QuantityStepper
+                        busy={busy}
+                        card={row.card}
+                        onAdd={() => {
+                          changeQuantity(row.card, 1);
+                        }}
+                        onRemove={() => {
+                          changeQuantity(row.card, -1);
+                        }}
+                        showCount
+                        withTitles
+                      />
+                    </Inline>
                   </td>
                 </tr>
               ))}

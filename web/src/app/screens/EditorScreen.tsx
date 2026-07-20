@@ -14,6 +14,7 @@ import { PREFERRED_CARD_ROLE_ORDER } from "../deck/constants";
 import { AgentDrawer } from "../editor/agentDrawer";
 import { BulkEditModal } from "../editor/bulkEditModal";
 import { CardNoteModal } from "../editor/cardNoteModal";
+import { CardTagPicker } from "../editor/cardTagPicker";
 import { DeckCardsView } from "../editor/cardsView";
 import { DeckEditorProvider } from "../editor/deckEditorContext";
 import { DeckHeader } from "../editor/deckHeader";
@@ -111,7 +112,15 @@ export function EditorScreen() {
             )}
             <DeckHeader />
             {display.editorView === "cards" && <DeckCardsView />}
-            {display.editorView === "tags" && <DeckTagsView deck={deck} />}
+            {display.editorView === "tags" && (
+              <DeckTagsView
+                busy={data.busy}
+                changeQuantity={editor.actions.changeQuantity}
+                deck={deck}
+                editCardNote={modals.setActiveCardNote}
+                tagAction={(card) => <CardTagPicker card={card} />}
+              />
+            )}
             {display.editorView === "info" && (
               <DeckInfoView
                 busy={data.busy}

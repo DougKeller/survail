@@ -5,7 +5,7 @@ import { Fieldset } from "../../designsystem/primitives/fieldset";
 import { Inline } from "../../designsystem/layout/inline";
 import { Stack } from "../../designsystem/layout/stack";
 
-import type { CardZone } from "../../modules/decks/contracts";
+import type { CardSet, CardZone } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
 import { useDismissibleSurface } from "./hooks";
 import type { ScoreRow } from "./scoreHelpers";
@@ -101,8 +101,16 @@ export function typeFilterOptions(
 export function zoneFilterOptions(
   scoreRows: readonly ScoreRow[],
 ): FilterOption<CardZone>[] {
+  return cardZoneFilterOptions(
+    scoreRows.flatMap((row) => (row.card === undefined ? [] : [row.card])),
+  );
+}
+
+export function cardZoneFilterOptions(
+  cards: readonly CardSet[],
+): FilterOption<CardZone>[] {
   return SCORE_ZONE_ORDER.filter((zone) =>
-    scoreRows.some((row) => row.card?.zone === zone),
+    cards.some((card) => card.zone === zone),
   ).map((zone) => ({ value: zone, label: zoneLabel(zone) }));
 }
 
