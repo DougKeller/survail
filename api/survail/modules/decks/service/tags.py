@@ -102,11 +102,7 @@ def reorder_deck_tags(
     if ordered == deck.deck_tags:
         return deck
 
-    # Avoid transient collisions with the per-deck unique position constraint.
-    offset = len(ordered) + 1
-    for tag in ordered:
-        tag.position += offset
-    db.flush()
+    _stage_tag_positions(db, ordered)
     for position, tag in enumerate(ordered):
         tag.position = position
     deck.deck_tags = ordered
@@ -128,8 +124,11 @@ def delete_deck_tag(
     deck.deck_tags.remove(tag)
     db.delete(tag)
     db.flush()
-    for position, remaining in enumerate(deck.deck_tags):
+    remaining_tags = sorted(deck.deck_tags, key=lambda candidate: candidate.position)
+    _stage_tag_positions(db, remaining_tags)
+    for position, remaining in enumerate(remaining_tags):
         remaining.position = position
+    deck.deck_tags = remaining_tags
     _commit(db, deck)
     return deck
 
@@ -231,6 +230,16 @@ def _ensure_unique_name(
     folded = name.casefold()
     if any(tag.id != except_id and tag.name.casefold() == folded for tag in deck.deck_tags):
         raise DeckTagConflictError(f'A tag named "{name}" already exists')
+
+
+def _stage_tag_positions(db: Session, tags: list[DeckTag]) -> None:
+    """Move tags above the current range before assigning their final order."""
+    if not tags:
+        return
+    temporary_start = max(tag.position for tag in tags) + 1
+    for offset, tag in enumerate(tags):
+        tag.position = temporary_start + offset
+    db.flush()
 
 
 def _commit(db: Session, deck: Deck) -> None:

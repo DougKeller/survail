@@ -41,6 +41,7 @@ class FakeTagSession:
         self.deck = deck
         self.deleted: list[object] = []
         self.commits = 0
+        self.flushed_positions: list[list[int]] = []
 
     def scalar(self, statement: object) -> Deck:
         del statement
@@ -53,7 +54,7 @@ class FakeTagSession:
         self.deleted.append(instance)
 
     def flush(self) -> None:
-        pass
+        self.flushed_positions.append([tag.position for tag in self.deck.deck_tags])
 
     def commit(self) -> None:
         self.commits += 1
@@ -156,9 +157,7 @@ def test_reorder_requires_every_deck_tag_exactly_once() -> None:
 def test_reorder_payload_accepts_uuid_strings_from_json() -> None:
     tag_ids = [uuid.uuid4(), uuid.uuid4()]
 
-    payload = DeckTagReorder.model_validate(
-        {"tag_ids": [str(tag_id) for tag_id in tag_ids]}
-    )
+    payload = DeckTagReorder.model_validate({"tag_ids": [str(tag_id) for tag_id in tag_ids]})
 
     assert payload.tag_ids == tag_ids
 
@@ -219,6 +218,26 @@ def test_deleting_tag_removes_it_from_every_cardset() -> None:
     assert deck.deck_tags == []
     assert cardset.deck_tags == []
     assert cast("FakeTagSession", db).deleted == [tag]
+
+
+def test_deleting_tag_stages_remaining_positions_before_compacting() -> None:
+    deck, owner, _cardset = _deck()
+    db = _session(deck)
+    tags = [
+        create_deck_tag(db, deck.id, owner, name=name)
+        for name in ("First", "Second", "Third", "Fourth")
+    ]
+    fake_db = cast("FakeTagSession", db)
+    fake_db.flushed_positions.clear()
+
+    delete_deck_tag(db, deck.id, tags[1].id, owner)
+
+    assert fake_db.flushed_positions == [[0, 2, 3], [4, 5, 6]]
+    assert [(tag.name, tag.position) for tag in deck.deck_tags] == [
+        ("First", 0),
+        ("Third", 1),
+        ("Fourth", 2),
+    ]
 
 
 def test_cardset_cannot_receive_tag_owned_by_another_deck() -> None:
