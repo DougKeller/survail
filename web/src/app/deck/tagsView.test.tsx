@@ -134,27 +134,27 @@ describe("DeckTagsView", () => {
     const filterMenu = screen
       .getByText("Filter cards · match any")
       .closest("details");
-    expect(filterMenu).not.toBeNull();
-    expect(within(filterMenu!).getByText("4/4")).toBeTruthy();
-    fireEvent.click(within(filterMenu!).getByText("Filter cards · match any"));
+    if (filterMenu === null) throw new Error("Tag filter menu was not rendered");
+    expect(within(filterMenu).getByText("4/4")).toBeTruthy();
+    fireEvent.click(within(filterMenu).getByText("Filter cards · match any"));
     fireEvent.click(
-      within(filterMenu!).getByRole("button", { name: "Select none" }),
+      within(filterMenu).getByRole("button", { name: "Select none" }),
     );
     expect(screen.getAllByRole("row")).toHaveLength(1);
     fireEvent.click(
-      within(filterMenu!).getByRole("checkbox", { name: "Alpha" }),
+      within(filterMenu).getByRole("checkbox", { name: "Alpha" }),
     );
     expect(screen.getAllByRole("row")).toHaveLength(2);
     fireEvent.click(
-      within(filterMenu!).getByRole("checkbox", { name: "Beta" }),
+      within(filterMenu).getByRole("checkbox", { name: "Beta" }),
     );
     expect(screen.getAllByRole("row")).toHaveLength(3);
     fireEvent.click(
-      within(filterMenu!).getByRole("checkbox", { name: "Untagged" }),
+      within(filterMenu).getByRole("checkbox", { name: "Untagged" }),
     );
     expect(screen.getAllByRole("row")).toHaveLength(4);
     fireEvent.click(
-      within(filterMenu!).getByRole("button", { name: "Select all" }),
+      within(filterMenu).getByRole("button", { name: "Select all" }),
     );
     expect(screen.getAllByRole("row")).toHaveLength(5);
 
@@ -169,10 +169,11 @@ describe("DeckTagsView", () => {
     fireEvent.click(within(zones).getByRole("button", { name: "Select all" }));
 
     const shownTagsMenu = screen.getByText("Shown tags").closest("details");
-    expect(shownTagsMenu).not.toBeNull();
+    if (shownTagsMenu === null)
+      throw new Error("Shown tags menu was not rendered");
     fireEvent.click(screen.getByText("Shown tags"));
     fireEvent.click(
-      within(shownTagsMenu!).getByRole("checkbox", { name: "Alpha" }),
+      within(shownTagsMenu).getByRole("checkbox", { name: "Alpha" }),
     );
     expect(
       within(screen.getByRole("row", { name: /One Card/ })).queryByText(

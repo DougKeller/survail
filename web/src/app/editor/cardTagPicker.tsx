@@ -7,10 +7,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, MoveRight } from "lucide-react";
 
-import type { CardSet } from "../../modules/decks/contracts";
-import { IconButton } from "../../designsystem/primitives/button";
+import type {
+  CardSet,
+  CardZone,
+  DeckFormat,
+} from "../../modules/decks/contracts";
+import { Button, IconButton } from "../../designsystem/primitives/button";
 import { Segmented } from "../../designsystem/primitives/choice";
 import { Popover } from "../../designsystem/primitives/popover";
 import { ToggleChip } from "../../designsystem/primitives/toggleChip";
@@ -22,6 +26,9 @@ import {
   formattedTagWeight,
   TAG_WEIGHT_OPTIONS,
 } from "../deck/tagTargets";
+import { canMoveToCommanderZone } from "../deck/cardZones";
+import { searchAddZonesFor } from "../deck/constants";
+import { zoneLabel } from "../deck/text";
 import { useDismissibleSurface } from "../deckPrimitives";
 import { useDeckCardsContext } from "./deckEditorContext";
 
@@ -29,9 +36,25 @@ export function CardTagPickerProvider({ children }: { children: ReactNode }) {
   return children;
 }
 
+export function moveZoneOptions(
+  card: CardSet,
+  format: DeckFormat,
+): CardZone[] {
+  return searchAddZonesFor(format).filter(
+    (zone) =>
+      zone !== card.zone &&
+      (zone !== "commander" || canMoveToCommanderZone(card.scryfall, format)),
+  );
+}
+
 export function CardTagPicker({ card }: { card: CardSet }) {
   const {
-    actions: { addTagToCard, removeTagFromCard, setTagWeight },
+    actions: {
+      addTagToCard,
+      moveCardToZone,
+      removeTagFromCard,
+      setTagWeight,
+    },
     data: { busy },
     deck,
   } = useDeckCardsContext();
@@ -68,6 +91,7 @@ export function CardTagPicker({ card }: { card: CardSet }) {
   const assignedTags = tags.filter(
     (tag) => card.tag_ids?.includes(tag.id) === true,
   );
+  const destinationZones = moveZoneOptions(card, deck.format);
   useEffect(() => {
     if (!open) return undefined;
     updatePosition();
@@ -85,13 +109,13 @@ export function CardTagPicker({ card }: { card: CardSet }) {
           aria-controls={menuId}
           aria-expanded={open}
           aria-haspopup="dialog"
-          disabled={busy || tags.length === 0}
-          label={`Tag options for ${card.card_name}`}
+          disabled={busy}
+          label={`Card options for ${card.card_name}`}
           onClick={() => {
             setOpen((current) => !current);
           }}
           size="sm"
-          title="Tag options"
+          title="Card options"
           variant="ghost"
         >
           <Ellipsis size={14} strokeWidth={2.75} />
@@ -102,14 +126,14 @@ export function CardTagPicker({ card }: { card: CardSet }) {
           <Popover
             fixed
             id={menuId}
-            label={`Tag options for ${card.card_name}`}
+            label={`Card options for ${card.card_name}`}
             layered
             ref={surfaceRef}
             style={position}
           >
           <Stack gap={4}>
             <Stack gap={1}>
-              <Kicker as="span">Tag options</Kicker>
+              <Kicker as="span">Card options</Kicker>
               <Text muted size="sm">
                 {card.card_name}
               </Text>
@@ -171,6 +195,28 @@ export function CardTagPicker({ card }: { card: CardSet }) {
                     </Inline>
                   );
                 })}
+              </Stack>
+            )}
+            {destinationZones.length > 0 && (
+              <Stack as="section" gap={2} aria-label="Move card">
+                <Kicker as="span">Move one card</Kicker>
+                <Inline gap={2} wrap>
+                  {destinationZones.map((zone) => (
+                    <Button
+                      aria-label={`Move ${card.card_name} to ${zoneLabel(zone)}`}
+                      disabled={busy || pending}
+                      icon={<MoveRight size={14} strokeWidth={2.75} />}
+                      key={zone}
+                      onClick={() => {
+                        setOpen(false);
+                        moveCardToZone(card, zone);
+                      }}
+                      variant="secondary"
+                    >
+                      {zoneLabel(zone)}
+                    </Button>
+                  ))}
+                </Inline>
               </Stack>
             )}
           </Stack>

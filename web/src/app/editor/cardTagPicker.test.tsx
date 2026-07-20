@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CardSet, Deck } from "../../modules/decks/contracts";
 import { CardTagPicker } from "./cardTagPicker";
@@ -12,12 +12,18 @@ import {
 const card = {
   id: "card-1",
   card_name: "Sol Ring",
+  quantity: 1,
+  zone: "mainboard",
   tag_ids: ["ramp"],
   tag_weights: { ramp: 1 },
   tags: ["Ramp"],
+  scryfall: { type_line: "Artifact" },
 } as unknown as CardSet;
 
-function editor(setTagWeight: ReturnType<typeof vi.fn>): DeckEditorValue {
+function editor(
+  setTagWeight: ReturnType<typeof vi.fn>,
+  moveCardToZone = vi.fn(),
+): DeckEditorValue {
   const action = vi.fn();
   return {
     actions: {
@@ -26,7 +32,7 @@ function editor(setTagWeight: ReturnType<typeof vi.fn>): DeckEditorValue {
       deleteTag: action,
       markAsCommander: action,
       moveAllToConsidering: action,
-      moveCardToZone: action,
+      moveCardToZone,
       removeTagFromCard: action,
       setTagWeight,
       updateTag: action,
@@ -34,6 +40,7 @@ function editor(setTagWeight: ReturnType<typeof vi.fn>): DeckEditorValue {
     data: { busy: false },
     deck: {
       cardsets: [card],
+      format: "modern",
       id: "deck-1",
       tags: [{ id: "ramp", name: "Ramp", position: 0, target: 8 }],
     } as Deck,
@@ -49,6 +56,8 @@ function editor(setTagWeight: ReturnType<typeof vi.fn>): DeckEditorValue {
   } as unknown as DeckEditorValue;
 }
 
+afterEach(cleanup);
+
 describe("CardTagPicker", () => {
   it("offers only preset weights from the card action popover", () => {
     const setTagWeight = vi.fn().mockResolvedValue(true);
@@ -63,7 +72,7 @@ describe("CardTagPicker", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Tag options for Sol Ring",
+        name: "Card options for Sol Ring",
       }),
     );
     expect(
@@ -74,5 +83,34 @@ describe("CardTagPicker", () => {
     fireEvent.click(screen.getByRole("radio", { name: "½" }));
 
     expect(setTagWeight).toHaveBeenCalledWith(card, "ramp", "Ramp", 0.5);
+  });
+
+  it("moves one card to another eligible zone from the options menu", () => {
+    const moveCardToZone = vi.fn();
+    render(
+      <DeckEditorProvider
+        advisor={{} as DeckAdvisorValue}
+        editor={editor(vi.fn().mockResolvedValue(true), moveCardToZone)}
+      >
+        <CardTagPicker card={card} />
+      </DeckEditorProvider>,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Card options for Sol Ring" }),
+    );
+    expect(screen.getByRole("region", { name: "Move card" })).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Move Sol Ring to Mainboard" }),
+    ).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Move Sol Ring to Considering" }),
+    );
+
+    expect(moveCardToZone).toHaveBeenCalledWith(card, "considering");
+    expect(
+      screen.queryByRole("dialog", { name: "Card options for Sol Ring" }),
+    ).toBeNull();
   });
 });

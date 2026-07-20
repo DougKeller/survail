@@ -23,7 +23,7 @@ test("Tags tab filters with OR semantics, hides tags, and shares chart colors", 
   const solemnRow = table.getByRole("row", { name: /Solemn Simulacrum/ });
   await expect(
     solemnRow.getByRole("button", {
-      name: "Tag options for Solemn Simulacrum",
+      name: "Card options for Solemn Simulacrum",
     }),
   ).toBeVisible();
   await expect(
@@ -33,10 +33,10 @@ test("Tags tab filters with OR semantics, hides tags, and shares chart colors", 
     solemnRow.getByRole("button", { name: "Add one Solemn Simulacrum" }),
   ).toBeVisible();
   await solemnRow
-    .getByRole("button", { name: "Tag options for Solemn Simulacrum" })
+    .getByRole("button", { name: "Card options for Solemn Simulacrum" })
     .click();
   await expect(
-    page.getByRole("dialog", { name: "Tag options for Solemn Simulacrum" }),
+    page.getByRole("dialog", { name: "Card options for Solemn Simulacrum" }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await solemnRow

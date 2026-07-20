@@ -249,7 +249,7 @@ test("text tag actions stay in the quick menu and the move handle leads", async 
   });
   await expect(
     menu.getByRole("button", {
-      name: "Tag options for Solemn Simulacrum",
+      name: "Card options for Solemn Simulacrum",
     }),
   ).toBeVisible();
   await expect(

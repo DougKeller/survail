@@ -16,11 +16,11 @@ async function openSolemnTagDialog(page: Page) {
   await tile.hover();
   await tile
     .getByRole("button", {
-      name: "Tag options for Solemn Simulacrum",
+      name: "Card options for Solemn Simulacrum",
     })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Tag options for Solemn Simulacrum",
+    name: "Card options for Solemn Simulacrum",
   });
   await expect(dialog).toBeVisible();
   return { dialog, tile };
@@ -48,17 +48,17 @@ test("sidebar special-zone cards expose tag assignment and weight options", asyn
 
   const summary = page.getByRole("complementary", { name: "Deck summary" });
   const commanderOptions = summary.getByRole("button", {
-    name: "Tag options for Aurelia, the Warleader",
+    name: "Card options for Aurelia, the Warleader",
   });
   const companionOptions = summary.getByRole("button", {
-    name: "Tag options for Lurrus of the Dream-Den",
+    name: "Card options for Lurrus of the Dream-Den",
   });
   await expect(commanderOptions).toBeVisible();
   await expect(companionOptions).toBeVisible();
 
   await commanderOptions.click();
   const commanderMenu = page.getByRole("dialog", {
-    name: "Tag options for Aurelia, the Warleader",
+    name: "Card options for Aurelia, the Warleader",
   });
   const weightRequest = page.waitForRequest(
     (request) =>
@@ -79,7 +79,7 @@ test("sidebar special-zone cards expose tag assignment and weight options", asyn
   await companionOptions.click();
   await expect(
     page.getByRole("dialog", {
-      name: "Tag options for Lurrus of the Dream-Den",
+      name: "Card options for Lurrus of the Dream-Den",
     }),
   ).toContainText("Weight per copy");
 });
@@ -91,6 +91,22 @@ test("hover tag editing escapes the card scrollport and remains compact", async 
   await page.goto("/decks/deck-1?tab=cards&view=grid&group=tags");
 
   const { dialog, tile } = await openSolemnTagDialog(page);
+  const moveCard = dialog.getByRole("region", { name: "Move card" });
+  await expect(
+    moveCard.getByRole("button", {
+      name: "Move Solemn Simulacrum to Considering",
+    }),
+  ).toBeVisible();
+  await expect(
+    moveCard.getByRole("button", {
+      name: "Move Solemn Simulacrum to Mainboard",
+    }),
+  ).toHaveCount(0);
+  await expect(
+    moveCard.getByRole("button", {
+      name: "Move Solemn Simulacrum to Command zone",
+    }),
+  ).toHaveCount(0);
   expect(await tile.getAttribute("draggable")).toBe("true");
   await expect(
     tile.getByRole("button", {
@@ -166,13 +182,13 @@ test("tag dialog has keyboard focus, layered Escape, and focus restoration", asy
     name: "Solemn Simulacrum quick actions",
   });
   const tagTrigger = quickMenu.getByRole("button", {
-    name: "Tag options for Solemn Simulacrum",
+    name: "Card options for Solemn Simulacrum",
   });
   await tagTrigger.focus();
   await tagTrigger.press("Enter");
 
   const dialog = page.getByRole("dialog", {
-    name: "Tag options for Solemn Simulacrum",
+    name: "Card options for Solemn Simulacrum",
   });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Weight per copy");

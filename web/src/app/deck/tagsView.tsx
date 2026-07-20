@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Tag filtering, sorting, and row actions form one cohesive table view. */
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 
