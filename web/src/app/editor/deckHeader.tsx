@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   CircleCheck,
   CircleAlert,
+  Download,
   History,
   ListPlus,
   MessageSquare,
@@ -28,15 +29,18 @@ import {
   useDeckAdvisorContext,
   useDeckEditorContext,
 } from "./deckEditorContext";
+import { ExportDeckDialog } from "./exportDeckDialog";
 
 const ICON = { size: 15, strokeWidth: 2.75 } as const;
 
 function DeckActionsMenu() {
   const {
     actions: { handleDelete },
+    deck,
     modals: { openBulkEdit, setShowEditDeck },
   } = useDeckEditorContext();
   const [open, setOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const menuRef = useDismissibleSurface<HTMLDivElement>(
     open,
     () => {
@@ -49,53 +53,74 @@ function DeckActionsMenu() {
     action();
   };
   return (
-    <PopoverAnchor ref={menuRef}>
-      <IconButton
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        label="More deck actions"
-        onClick={() => {
-          setOpen((current) => !current);
-        }}
-      >
-        <MoreVertical {...ICON} />
-      </IconButton>
-      {open && (
-        <Popover align="end" label="Deck actions">
-          <Stack gap={1}>
-            <Button
-              alignStart
-              block
-              icon={<SquarePen {...ICON} />}
-              onClick={closeThen(() => {
-                setShowEditDeck(true);
-              })}
-              variant="ghost"
-            >
-              Edit
-            </Button>
-            <Button
-              alignStart
-              block
-              icon={<ListPlus {...ICON} />}
-              onClick={closeThen(openBulkEdit)}
-              variant="ghost"
-            >
-              Bulk edit decklist
-            </Button>
-            <Button
-              alignStart
-              block
-              icon={<Trash2 {...ICON} />}
-              onClick={closeThen(() => void handleDelete())}
-              variant="ghost"
-            >
-              Delete deck
-            </Button>
-          </Stack>
-        </Popover>
+    <>
+      <PopoverAnchor ref={menuRef}>
+        <IconButton
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          label="More deck actions"
+          onClick={() => {
+            setOpen((current) => !current);
+          }}
+        >
+          <MoreVertical {...ICON} />
+        </IconButton>
+        {open && (
+          <Popover align="end" label="Deck actions">
+            <Stack gap={1}>
+              <Button
+                alignStart
+                block
+                icon={<SquarePen {...ICON} />}
+                onClick={closeThen(() => {
+                  setShowEditDeck(true);
+                })}
+                variant="ghost"
+              >
+                Edit
+              </Button>
+              <Button
+                alignStart
+                block
+                icon={<ListPlus {...ICON} />}
+                onClick={closeThen(openBulkEdit)}
+                variant="ghost"
+              >
+                Bulk edit decklist
+              </Button>
+              <Button
+                alignStart
+                block
+                icon={<Download {...ICON} />}
+                onClick={closeThen(() => {
+                  setExportOpen(true);
+                })}
+                variant="ghost"
+              >
+                Export
+              </Button>
+              <Button
+                alignStart
+                block
+                icon={<Trash2 {...ICON} />}
+                onClick={closeThen(() => void handleDelete())}
+                variant="ghost"
+              >
+                Delete deck
+              </Button>
+            </Stack>
+          </Popover>
+        )}
+      </PopoverAnchor>
+      {exportOpen && (
+        <ExportDeckDialog
+          deck={deck}
+          onClose={() => {
+            setExportOpen(false);
+          }}
+        />
       )}
-    </PopoverAnchor>
+    </>
   );
 }
 
