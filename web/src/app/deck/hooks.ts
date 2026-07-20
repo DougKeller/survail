@@ -33,6 +33,11 @@ export function useDismissibleSurface<T extends HTMLElement>(
       : null;
     function handleKeyDown(event: globalThis.KeyboardEvent): void {
       if (document.querySelector('[aria-modal="true"]') !== null) return;
+      const layers = document.querySelectorAll<HTMLElement>(
+        "[data-dismissible-layer]",
+      );
+      const topLayer = layers[layers.length - 1];
+      if (topLayer !== undefined && surfaceRef.current !== topLayer) return;
       if (event.key === "Escape") closeRef.current();
     }
     function handlePointerDown(event: PointerEvent): void {
@@ -40,6 +45,11 @@ export function useDismissibleSurface<T extends HTMLElement>(
       if (!(target instanceof Node)) return;
       if (surfaceRef.current?.contains(target) === true) return;
       if (triggerRef?.current?.contains(target) === true) return;
+      if (
+        target instanceof Element &&
+        target.closest("[data-dismissible-layer]") !== null
+      )
+        return;
       if (
         target instanceof Element &&
         target.closest('[aria-modal="true"]') !== null

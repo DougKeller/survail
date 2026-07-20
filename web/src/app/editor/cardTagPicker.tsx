@@ -1,19 +1,28 @@
-import { useId, useState, type ReactNode } from "react";
-import { Tag } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { Ellipsis } from "lucide-react";
 
 import type { CardSet } from "../../modules/decks/contracts";
-import { Button, IconButton } from "../../designsystem/primitives/button";
+import { IconButton } from "../../designsystem/primitives/button";
 import { Segmented } from "../../designsystem/primitives/choice";
-import { Dialog } from "../../designsystem/primitives/dialog";
+import { Popover } from "../../designsystem/primitives/popover";
 import { ToggleChip } from "../../designsystem/primitives/toggleChip";
 import { Inline } from "../../designsystem/layout/inline";
 import { Stack } from "../../designsystem/layout/stack";
-import { Kicker } from "../../designsystem/layout/typography";
+import { Kicker, Text } from "../../designsystem/layout/typography";
 import {
   cardTagWeight,
   formattedTagWeight,
   TAG_WEIGHT_OPTIONS,
 } from "../deck/tagTargets";
+import { useDismissibleSurface } from "../deckPrimitives";
 import { useDeckCardsContext } from "./deckEditorContext";
 
 export function CardTagPickerProvider({ children }: { children: ReactNode }) {
@@ -28,51 +37,83 @@ export function CardTagPicker({ card }: { card: CardSet }) {
   } = useDeckCardsContext();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const dialogId = useId();
+  const menuId = useId();
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const [position, setPosition] = useState({ left: 8, top: 8, width: 320 });
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (trigger === null) return;
+    const rect = trigger.getBoundingClientRect();
+    const margin = 8;
+    const width = Math.min(360, window.innerWidth - margin * 2);
+    const left = Math.max(
+      margin,
+      Math.min(rect.right - width, window.innerWidth - width - margin),
+    );
+    const preferredTop = rect.bottom + 4;
+    const top = Math.max(
+      margin,
+      Math.min(preferredTop, window.innerHeight - 360),
+    );
+    setPosition({ left, top, width });
+  }, []);
+  const surfaceRef = useDismissibleSurface<HTMLDivElement>(
+    open,
+    () => {
+      setOpen(false);
+    },
+    { triggerRef },
+  );
   const tags = deck.tags ?? [];
   const assignedTags = tags.filter(
     (tag) => card.tag_ids?.includes(tag.id) === true,
   );
+  useEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition]);
   return (
     <>
-      <IconButton
-        aria-controls={dialogId}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        disabled={busy || tags.length === 0}
-        label={`Edit tags and weights for ${card.card_name}`}
-        onClick={() => {
-          setOpen((current) => !current);
-        }}
-        size="sm"
-        title="Edit tags and weights"
-        variant="ghost"
-      >
-        <Tag size={14} strokeWidth={2.75} />
-      </IconButton>
-      {open && (
-        <Dialog
-          actions={
-            <Button
-              onClick={() => {
-                setOpen(false);
-              }}
-              variant="secondary"
-            >
-              Done
-            </Button>
-          }
-          busy={busy || pending}
-          closeLabel={`Close tags for ${card.card_name}`}
-          description="Select tags, then choose how much each copy contributes to its tag target."
-          id={dialogId}
-          onClose={() => {
-            setOpen(false);
+      <span ref={triggerRef}>
+        <IconButton
+          aria-controls={menuId}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          disabled={busy || tags.length === 0}
+          label={`Tag options for ${card.card_name}`}
+          onClick={() => {
+            setOpen((current) => !current);
           }}
-          open
-          title={`Tags for ${card.card_name}`}
+          size="sm"
+          title="Tag options"
+          variant="ghost"
         >
+          <Ellipsis size={14} strokeWidth={2.75} />
+        </IconButton>
+      </span>
+      {open &&
+        createPortal(
+          <Popover
+            fixed
+            id={menuId}
+            label={`Tag options for ${card.card_name}`}
+            layered
+            ref={surfaceRef}
+            style={position}
+          >
           <Stack gap={4}>
+            <Stack gap={1}>
+              <Kicker as="span">Tag options</Kicker>
+              <Text muted size="sm">
+                {card.card_name}
+              </Text>
+            </Stack>
             <Stack as="section" gap={2} aria-label="Assigned tags">
               <Kicker as="span">Tags</Kicker>
               <Inline gap={2} wrap>
@@ -100,7 +141,7 @@ export function CardTagPicker({ card }: { card: CardSet }) {
             </Stack>
             {assignedTags.length > 0 && (
               <Stack as="section" gap={2} aria-label="Tag weights">
-                <Kicker as="span">Target contribution</Kicker>
+                <Kicker as="span">Weight per copy</Kicker>
                 {assignedTags.map((tag) => {
                   const weight = cardTagWeight(card, tag.id);
                   return (
@@ -133,8 +174,9 @@ export function CardTagPicker({ card }: { card: CardSet }) {
               </Stack>
             )}
           </Stack>
-        </Dialog>
-      )}
+          </Popover>,
+          document.body,
+        )}
     </>
   );
 }

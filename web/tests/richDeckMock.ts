@@ -510,18 +510,27 @@ export async function mockRichApi(
 ): Promise<void> {
   const multiplier = Math.max(1, options.cardsetMultiplier ?? 1);
   const deckTags = [...new Set(cardsets.flatMap((cardset) => cardset.tags))]
-    .map((name, position) => ({ id: name, name, position, target: 0 }))
+    .map((name, position) => ({
+      id: `00000000-0000-4000-8000-${String(position + 1).padStart(12, "0")}`,
+      name,
+      position,
+      target: 0,
+    }))
     .slice(0, options.deckTagLimit);
-  const availableTags = new Set(deckTags.map((tag) => tag.id));
+  const tagIdsByName = new Map(deckTags.map((tag) => [tag.name, tag.id]));
   let activeCardsets = Array.from({ length: multiplier }, (_, copyIndex) =>
     cardsets.map((cardset) => ({
       ...cardset,
       id: `${cardset.id}-fixture-${String(copyIndex)}`,
-      tag_ids: cardset.tags.filter((tag) => availableTags.has(tag)),
+      tag_ids: cardset.tags.flatMap((tag) => {
+        const tagId = tagIdsByName.get(tag);
+        return tagId === undefined ? [] : [tagId];
+      }),
       tag_weights: Object.fromEntries(
-        cardset.tags
-          .filter((tag) => availableTags.has(tag))
-          .map((tag) => [tag, 1]),
+        cardset.tags.flatMap((tag) => {
+          const tagId = tagIdsByName.get(tag);
+          return tagId === undefined ? [] : [[tagId, 1]];
+        }),
       ),
     })),
   ).flat();

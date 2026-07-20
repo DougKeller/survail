@@ -63,7 +63,7 @@ describe("CardTagPicker", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Edit tags and weights for Sol Ring",
+        name: "Tag options for Sol Ring",
       }),
     );
     expect(

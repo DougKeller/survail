@@ -31,6 +31,7 @@ from survail.modules.decks.tags.api.router import router
 from survail.modules.decks.tags.api.schemas import (
     CardsetTagUpdate,
     DeckTagCreate,
+    DeckTagReorder,
     DeckTagUpdate,
 )
 
@@ -150,6 +151,16 @@ def test_reorder_requires_every_deck_tag_exactly_once() -> None:
 
     with pytest.raises(DeckTagConflictError, match="exactly once"):
         reorder_deck_tags(db, deck.id, owner, tag_ids=[deck.deck_tags[0].id])
+
+
+def test_reorder_payload_accepts_uuid_strings_from_json() -> None:
+    tag_ids = [uuid.uuid4(), uuid.uuid4()]
+
+    payload = DeckTagReorder.model_validate(
+        {"tag_ids": [str(tag_id) for tag_id in tag_ids]}
+    )
+
+    assert payload.tag_ids == tag_ids
 
 
 def test_cardset_tag_is_idempotent_and_applies_to_the_whole_stack() -> None:

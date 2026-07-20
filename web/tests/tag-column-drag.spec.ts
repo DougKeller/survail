@@ -15,11 +15,20 @@ test("dragging between tag columns adds the destination tag", async ({
   await expect(source).toBeVisible();
   await expect(destination).toBeVisible();
   const cardsetId = await source.getAttribute("data-cardset-id");
+  const destinationTagId = await destination.getAttribute(
+    "data-reorder-tag-id",
+  );
   expect(cardsetId).not.toBeNull();
-  if (cardsetId === null) throw new Error("Dragged cardset id is missing");
+  expect(destinationTagId).toMatch(/^[0-9a-f-]{36}$/);
+  if (cardsetId === null || destinationTagId === null)
+    throw new Error("Dragged cardset or destination tag id is missing");
 
   const mutation = page.waitForRequest((request) =>
-    request.url().endsWith(`/decks/deck-1/cardsets/${cardsetId}/tags/blocker`),
+    request
+      .url()
+      .endsWith(
+        `/decks/deck-1/cardsets/${cardsetId}/tags/${destinationTagId}`,
+      ),
   );
   await source.dragTo(destination);
   await mutation;
@@ -45,8 +54,17 @@ test("dragging tag headers reorders that column in every zone", async ({
   });
   const sourceBox = await blockerHandle.boundingBox();
   const targetBox = await rampColumn.boundingBox();
+  const rampId = await rampColumn.getAttribute("data-reorder-tag-id");
+  const blockerId = await blockerHandle.evaluate(
+    (handle) =>
+      handle.closest<HTMLElement>("[data-reorder-tag-id]")?.dataset[
+        "reorderTagId"
+      ] ?? null,
+  );
   expect(sourceBox).not.toBeNull();
   expect(targetBox).not.toBeNull();
+  expect(rampId).toMatch(/^[0-9a-f-]{36}$/);
+  expect(blockerId).toMatch(/^[0-9a-f-]{36}$/);
   if (sourceBox === null || targetBox === null)
     throw new Error("Tag reorder controls are missing");
   const targetPoint = {
@@ -63,7 +81,7 @@ test("dragging tag headers reorders that column in every zone", async ({
         ],
       targetPoint,
     ),
-  ).toBe("ramp");
+  ).toBe(rampId);
   const mutation = page.waitForRequest(
     (request) =>
       request.method() === "PUT" &&
@@ -79,8 +97,8 @@ test("dragging tag headers reorders that column in every zone", async ({
   await page.mouse.up();
   const request = await mutation;
   const payload = request.postDataJSON() as { tag_ids: string[] };
-  expect(payload.tag_ids.indexOf("ramp")).toBeLessThan(
-    payload.tag_ids.indexOf("blocker"),
+  expect(payload.tag_ids.indexOf(rampId ?? "")).toBeLessThan(
+    payload.tag_ids.indexOf(blockerId ?? ""),
   );
 
   for (const zone of [
@@ -225,7 +243,7 @@ test("text tag actions stay in the quick menu and the move handle leads", async 
   });
   await expect(
     menu.getByRole("button", {
-      name: "Edit tags and weights for Solemn Simulacrum",
+      name: "Tag options for Solemn Simulacrum",
     }),
   ).toBeVisible();
   await expect(

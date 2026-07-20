@@ -1,4 +1,5 @@
 import uuid
+from typing import Annotated
 
 from pydantic import Field, field_validator, model_validator
 
@@ -50,8 +51,13 @@ class CardsetTagUpdate(StrictModel):
         return value
 
 
+UuidInput = Annotated[uuid.UUID, Field(strict=False)]
+
+
 class DeckTagReorder(StrictModel):
-    tag_ids: list[uuid.UUID]
+    # JSON has no native UUID type, so valid UUID strings must be coerced at
+    # this request boundary even though the rest of the schema stays strict.
+    tag_ids: list[UuidInput]
 
 
 __all__ = ["CardsetTagUpdate", "DeckTagCreate", "DeckTagReorder", "DeckTagUpdate"]

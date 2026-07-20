@@ -37,6 +37,9 @@ export interface PopoverProps {
   align?: PopoverAlign;
   children?: ReactNode;
   fixed?: boolean;
+  /** Mark a portaled surface that should dismiss before its parent surface. */
+  layered?: boolean;
+  id?: string;
   /** Accessible name; when given the surface exposes role="dialog". */
   label?: string;
   ref?: Ref<HTMLDivElement>;
@@ -48,6 +51,8 @@ export function Popover({
   align = "start",
   children,
   fixed = false,
+  id,
+  layered = false,
   label,
   ref,
   style,
@@ -56,9 +61,12 @@ export function Popover({
     <div
       aria-label={label}
       className={`ds-popover ${ALIGN_CLASS[align]}${fixed ? " ds-popover-fixed" : ""}`}
+      data-dismissible-layer={layered || undefined}
+      id={id}
       ref={ref}
       role={label === undefined ? undefined : "dialog"}
       style={style}
+      tabIndex={label === undefined ? undefined : -1}
     >
       {children}
     </div>

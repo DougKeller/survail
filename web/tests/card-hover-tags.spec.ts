@@ -16,11 +16,11 @@ async function openSolemnTagDialog(page: Page) {
   await tile.hover();
   await tile
     .getByRole("button", {
-      name: "Edit tags and weights for Solemn Simulacrum",
+      name: "Tag options for Solemn Simulacrum",
     })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Tags for Solemn Simulacrum",
+    name: "Tag options for Solemn Simulacrum",
   });
   await expect(dialog).toBeVisible();
   return { dialog, tile };
@@ -56,9 +56,9 @@ test("hover tag editing escapes the card scrollport and remains compact", async 
   expect(bounds.y).toBeGreaterThanOrEqual(0);
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(1280);
   expect(bounds.y + bounds.height).toBeLessThanOrEqual(720);
-  const bodyScroll = await dialog
-    .locator(".ds-dialog-body")
-    .evaluate((body) => body.scrollHeight - body.clientHeight);
+  const bodyScroll = await dialog.evaluate(
+    (body) => body.scrollHeight - body.clientHeight,
+  );
   expect(bodyScroll).toBeLessThanOrEqual(1);
 
   const addCombo = dialog.getByRole("button", {
@@ -66,7 +66,8 @@ test("hover tag editing escapes the card scrollport and remains compact", async 
   });
   const tagRequest = page.waitForRequest(
     (request) =>
-      request.method() === "PUT" && request.url().endsWith("/tags/combo"),
+      request.method() === "PUT" &&
+      /\/tags\/[0-9a-f-]{36}$/.test(request.url()),
   );
   await addCombo.click();
   await tagRequest;
@@ -79,7 +80,7 @@ test("hover tag editing escapes the card scrollport and remains compact", async 
   const weightRequest = page.waitForRequest(
     (request) =>
       request.method() === "PUT" &&
-      request.url().endsWith("/tags/ramp") &&
+      /\/tags\/[0-9a-f-]{36}$/.test(request.url()) &&
       request.postDataJSON().weight === 0.5,
   );
   await dialog
@@ -92,7 +93,7 @@ test("hover tag editing escapes the card scrollport and remains compact", async 
   await expect(dialog).toBeVisible();
 
   const results = await new AxeBuilder({ page })
-    .include(".ds-dialog")
+    .include(".ds-popover-fixed")
     .analyze();
   expect(results.violations).toEqual([]);
 });
@@ -111,16 +112,16 @@ test("tag dialog has keyboard focus, layered Escape, and focus restoration", asy
     name: "Solemn Simulacrum quick actions",
   });
   const tagTrigger = quickMenu.getByRole("button", {
-    name: "Edit tags and weights for Solemn Simulacrum",
+    name: "Tag options for Solemn Simulacrum",
   });
   await tagTrigger.focus();
   await tagTrigger.press("Enter");
 
   const dialog = page.getByRole("dialog", {
-    name: "Tags for Solemn Simulacrum",
+    name: "Tag options for Solemn Simulacrum",
   });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Target contribution");
+  await expect(dialog).toContainText("Weight per copy");
   expect(
     await dialog.evaluate((element) =>
       element.contains(document.activeElement),
