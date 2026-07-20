@@ -269,6 +269,7 @@ export default tseslint.config(
     files: [
       "src/designsystem/primitives/progress.tsx",
       "src/designsystem/primitives/popover.tsx",
+      "src/designsystem/primitives/chip.tsx",
       "src/designsystem/patterns/cardDragPreview.tsx",
     ],
     rules: {

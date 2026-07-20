@@ -172,7 +172,7 @@ export function DeckHeader() {
         <DeckActionsMenu />
       </NavBar>
       <TabNav label="Deck views">
-        {(["cards", "scores", "charts", "info"] as const)
+        {(["cards", "tags", "scores", "charts", "info"] as const)
           .filter((view) => scoringEnabled || view !== "scores")
           .map((view) => (
             <TabButton

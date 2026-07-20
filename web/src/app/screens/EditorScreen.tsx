@@ -24,6 +24,7 @@ import { ValidationDialog } from "../editor/validationDialog";
 import { useDeckAdvisor } from "../editor/useDeckAdvisor";
 import { useDeckEditor } from "../editor/useDeckEditor";
 import { DeckInfoView, DeckScoresView } from "../deckPrimitives";
+import { DeckTagsView } from "../deck/tagsView";
 
 const DeckChartsView = lazy(async () => {
   const module = await import("../deck/chartsView");
@@ -110,6 +111,7 @@ export function EditorScreen() {
             )}
             <DeckHeader />
             {display.editorView === "cards" && <DeckCardsView />}
+            {display.editorView === "tags" && <DeckTagsView deck={deck} />}
             {display.editorView === "info" && (
               <DeckInfoView
                 busy={data.busy}
@@ -135,6 +137,7 @@ export function EditorScreen() {
                   }}
                   scores={scoring.scores}
                   scoringEnabled={display.scoringEnabled}
+                  tags={deck.tags ?? []}
                 />
               </Suspense>
             )}

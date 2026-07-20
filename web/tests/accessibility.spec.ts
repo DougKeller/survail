@@ -582,6 +582,9 @@ test("editor opens with primary views, contextual card controls, and integrated 
   ).toContainText("Cards");
   await expect(
     page.getByRole("navigation", { name: "Deck views" }),
+  ).toContainText("Tags");
+  await expect(
+    page.getByRole("navigation", { name: "Deck views" }),
   ).toContainText("Scores");
   await expect(
     page.getByRole("navigation", { name: "Deck views" }),

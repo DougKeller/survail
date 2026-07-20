@@ -1,4 +1,9 @@
-import type { HTMLAttributes, MouseEventHandler, ReactNode } from "react";
+import type {
+  CSSProperties,
+  HTMLAttributes,
+  MouseEventHandler,
+  ReactNode,
+} from "react";
 
 import "./chip.css";
 
@@ -7,6 +12,8 @@ export interface ChipProps extends Omit<
   "children" | "className" | "onClick" | "title"
 > {
   children?: ReactNode;
+  /** Consumer-provided categorical color, surfaced as a quiet tinted chip. */
+  accent?: string;
   className?: string;
   /** Trailing bold slot, e.g. a count (wireframe: Mainboard <b>99</b>). */
   count?: ReactNode;
@@ -19,17 +26,23 @@ export interface ChipProps extends Omit<
 
 /** Surface pill with optional icon and trailing count (wireframe .chip). */
 export function Chip({
+  accent,
   children,
   className,
   count,
   icon,
   onClick,
+  style,
   title,
   ...rest
 }: ChipProps) {
-  const classes = ["ds-chip", className]
+  const classes = ["ds-chip", accent === undefined ? undefined : "ds-chip-accent", className]
     .filter((part) => typeof part === "string" && part !== "")
     .join(" ");
+  const chipStyle =
+    accent === undefined
+      ? style
+      : ({ ...style, "--ds-chip-accent": accent } as CSSProperties);
   const content = (
     <>
       {icon !== undefined && (
@@ -46,6 +59,7 @@ export function Chip({
       <button
         className={classes}
         onClick={onClick}
+        style={chipStyle}
         title={title}
         type="button"
         {...rest}
@@ -55,7 +69,7 @@ export function Chip({
     );
   }
   return (
-    <span className={classes} title={title} {...rest}>
+    <span className={classes} style={chipStyle} title={title} {...rest}>
       {content}
     </span>
   );

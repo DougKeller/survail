@@ -135,6 +135,7 @@ export function storeDeckSummaryOpen(open: boolean): void {
 function isEditorView(value: string): value is EditorView {
   return (
     value === "cards" ||
+    value === "tags" ||
     value === "scores" ||
     value === "charts" ||
     value === "info"

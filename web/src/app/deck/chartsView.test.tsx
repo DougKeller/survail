@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Chart template, color, gap, and drill-down coverage share fixtures. */
 import type { ReactNode } from "react";
 import {
   cleanup,
@@ -11,7 +12,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
 import type { CardSet } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
-import { cardsForAnalyticsBucket, DeckChartsView } from "./chartsView";
+import {
+  cardsForAnalyticsBucket,
+  completeManaCurve,
+  DeckChartsView,
+  manaValueSwatches,
+} from "./chartsView";
+import { tagSwatches } from "./groupColors";
 
 vi.mock("recharts", async () => {
   const React = await import("react");
@@ -164,6 +171,69 @@ const scores = new Map<string, CardRoleEvaluation>([
 afterEach(cleanup);
 
 describe("DeckChartsView", () => {
+  it("fills mana-value gaps with zero buckets and a gradual color scale", () => {
+    const curve = completeManaCurve([
+      bucket("6", "6", 5),
+      bucket("8", "8", 1),
+    ]);
+
+    expect(curve).toEqual([
+      bucket("6", "6", 5),
+      { key: "7", label: "7", percentage: 0, quantity: 0 },
+      bucket("8", "8", 1),
+    ]);
+    const colors = manaValueSwatches(curve);
+    expect(new Set(colors.values())).toHaveLength(3);
+    expect(colors.get("6")).toBe("#4da3ff");
+    expect(colors.get("8")).toBe("#ff6f91");
+  });
+
+  it("assigns every tag a unique deterministic color", () => {
+    const tags = Array.from({ length: 12 }, (_, index) =>
+      bucket(`tag-${String(index)}`, `Tag ${String(index)}`),
+    );
+    const first = tagSwatches(tags.map((tag) => tag.key));
+    const second = tagSwatches([...tags].reverse().map((tag) => tag.key));
+
+    expect(new Set(first.values())).toHaveLength(tags.length);
+    for (const tag of tags) expect(second.get(tag.key)).toBe(first.get(tag.key));
+  });
+
+  it("renders and drills into an empty in-between mana-value slot", () => {
+    render(
+      <DeckChartsView
+        analytics={{
+          ...analytics,
+          mana_curve: [bucket("6", "6", 5), bucket("8", "8", 1)],
+        }}
+        cards={[engineCard]}
+        error={null}
+        loading={false}
+        refresh={vi.fn()}
+        scores={scores}
+        scoringEnabled
+        tags={[{ id: "tag-id", name: "Engine", position: 0, target: 0 }]}
+      />,
+    );
+
+    const gap = screen.getByRole("button", {
+      name: "Show cards for Mana value 7",
+    });
+    expect(gap.getAttribute("fill")).not.toBe(
+      screen
+        .getByRole("button", { name: "Show cards for Mana value 6" })
+        .getAttribute("fill"),
+    );
+    fireEvent.click(gap);
+    expect(
+      within(
+        screen.getByRole("dialog", {
+          name: "Mana value 7 mana value cards",
+        }),
+      ).getByText("No cards match this bucket."),
+    ).toBeTruthy();
+  });
+
   it("uses the same distribution template for every dimension", () => {
     render(
       <DeckChartsView
@@ -174,6 +244,7 @@ describe("DeckChartsView", () => {
         refresh={vi.fn()}
         scores={scores}
         scoringEnabled
+        tags={[{ id: "tag-id", name: "Engine", position: 0, target: 0 }]}
       />,
     );
 
@@ -199,6 +270,7 @@ describe("DeckChartsView", () => {
         refresh={vi.fn()}
         scores={scores}
         scoringEnabled={false}
+        tags={[{ id: "tag-id", name: "Engine", position: 0, target: 0 }]}
       />,
     );
 
@@ -216,6 +288,7 @@ describe("DeckChartsView", () => {
         refresh={vi.fn()}
         scores={scores}
         scoringEnabled
+        tags={[{ id: "tag-id", name: "Engine", position: 0, target: 0 }]}
       />,
     );
 

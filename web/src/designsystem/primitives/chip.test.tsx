@@ -41,4 +41,11 @@ describe("Chip", () => {
     const { container } = render(<Chip className="extra">x</Chip>);
     expect(container.firstElementChild?.className).toBe("ds-chip extra");
   });
+
+  it("surfaces a consumer-provided categorical accent", () => {
+    const { container } = render(<Chip accent="#123456">Ramp</Chip>);
+    const chip = container.firstElementChild as HTMLElement;
+    expect(chip.classList.contains("ds-chip-accent")).toBe(true);
+    expect(chip.style.getPropertyValue("--ds-chip-accent")).toBe("#123456");
+  });
 });

@@ -46,3 +46,24 @@ export function chartRoleSwatch(key: string, label: string): string {
     "#8f95b2"
   );
 }
+
+export function tagSwatches(
+  keys: readonly string[],
+): ReadonlyMap<string, string> {
+  const uniqueKeys = [...new Set(keys)].sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const colors = new Map<string, string>();
+  uniqueKeys.forEach((key, index) => {
+    if (key === "untagged") {
+      colors.set(key, "#8f95b2");
+      return;
+    }
+    const assignedBefore = uniqueKeys
+      .slice(0, index)
+      .filter((candidate) => candidate !== "untagged").length;
+    const hue = (assignedBefore * 137.508 + 18) % 360;
+    colors.set(key, `hsl(${hue.toFixed(3)} 68% 52%)`);
+  });
+  return colors;
+}

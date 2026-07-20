@@ -106,16 +106,22 @@ test("dragging tag headers reorders that column in every zone", async ({
     "Sideboard cards",
     "Considering cards",
   ]) {
-    const labels = await page
-      .locator(`[role="region"][aria-label="${zone}"]`)
-      .locator(".ds-cards-zone-columns > section")
-      .evaluateAll((columns) =>
-        columns.map((column) => column.getAttribute("aria-label")),
-      );
-    expect(labels[0]).toMatch(/^Untagged,/);
-    expect(
-      labels.findIndex((label) => label?.startsWith("ramp,")),
-    ).toBeLessThan(labels.findIndex((label) => label?.startsWith("blocker,")));
+    await expect
+      .poll(async () => {
+        const labels = await page
+          .locator(`[role="region"][aria-label="${zone}"]`)
+          .locator(".ds-cards-zone-columns > section")
+          .evaluateAll((columns) =>
+            columns.map((column) => column.getAttribute("aria-label")),
+          );
+        return {
+          rampBeforeBlocker:
+            labels.findIndex((label) => label?.startsWith("ramp,")) <
+            labels.findIndex((label) => label?.startsWith("blocker,")),
+          untaggedFirst: labels[0]?.startsWith("Untagged,") === true,
+        };
+      })
+      .toEqual({ rampBeforeBlocker: true, untaggedFirst: true });
   }
 });
 

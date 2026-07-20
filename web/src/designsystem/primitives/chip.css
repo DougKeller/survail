@@ -33,3 +33,17 @@ button.ds-chip:hover {
   font-weight: 700;
   margin-left: calc(var(--space-1) * 0.5);
 }
+
+.ds-chip-accent {
+  background: color-mix(
+    in srgb,
+    var(--ds-chip-accent, var(--color-surface)) 18%,
+    var(--color-surface)
+  );
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--ds-chip-accent, var(--color-divider)) 48%,
+      var(--color-divider)
+    );
+}

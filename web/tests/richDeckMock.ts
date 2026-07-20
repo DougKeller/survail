@@ -502,6 +502,8 @@ export interface RichDeckMockOptions {
   deckTagLimit?: number;
   /** Override format to expose sideboard rows in interaction tests. */
   format?: "commander" | "modern";
+  /** Add a Companion card to exercise special-zone sidebar controls. */
+  includeCompanion?: boolean;
 }
 
 export async function mockRichApi(
@@ -534,6 +536,21 @@ export async function mockRichApi(
       ),
     })),
   ).flat();
+  if (options.includeCompanion === true) {
+    const companionSource = activeCardsets.find(
+      (cardset) => cardset.zone === "commander",
+    );
+    if (companionSource !== undefined)
+      activeCardsets = [
+        ...activeCardsets,
+        {
+          ...companionSource,
+          card_name: "Lurrus of the Dream-Den",
+          id: "companion-fixture",
+          zone: "companion",
+        },
+      ];
+  }
   let activeDeck = {
     ...deck,
     cardsets: activeCardsets,
@@ -586,7 +603,13 @@ export async function mockRichApi(
           total_cards: 49,
           unevaluated_cards: 0,
         },
-        tag_distribution: [analyticsBucket("ramp", "ramp", 9)],
+        tag_distribution: [
+          analyticsBucket(
+            tagIdsByName.get("ramp") ?? "missing-ramp-tag",
+            "ramp",
+            9,
+          ),
+        ],
         total_cards: 70,
         type_distribution: [analyticsBucket("Creature", "Creature", 32)],
         unique_cards: 49,

@@ -26,8 +26,62 @@ async function openSolemnTagDialog(page: Page) {
   return { dialog, tile };
 }
 
-test.beforeEach(async ({ page }) => {
-  await mockRichApi(page);
+test.beforeEach(async ({ page }, testInfo) => {
+  await mockRichApi(
+    page,
+    testInfo.title.includes("sidebar special-zone")
+      ? { format: "modern", includeCompanion: true }
+      : {},
+  );
+});
+
+test("sidebar special-zone cards expose tag assignment and weight options", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto("/decks/deck-1?tab=cards&view=grid&group=tags");
+
+  const closeAdvisor = page.getByRole("button", { name: "Close deck advisor" });
+  if (await closeAdvisor.isVisible()) await closeAdvisor.click();
+  const showSummary = page.getByRole("button", { name: "Show deck summary" });
+  if (await showSummary.isVisible()) await showSummary.click();
+
+  const summary = page.getByRole("complementary", { name: "Deck summary" });
+  const commanderOptions = summary.getByRole("button", {
+    name: "Tag options for Aurelia, the Warleader",
+  });
+  const companionOptions = summary.getByRole("button", {
+    name: "Tag options for Lurrus of the Dream-Den",
+  });
+  await expect(commanderOptions).toBeVisible();
+  await expect(companionOptions).toBeVisible();
+
+  await commanderOptions.click();
+  const commanderMenu = page.getByRole("dialog", {
+    name: "Tag options for Aurelia, the Warleader",
+  });
+  const weightRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "PUT" &&
+      /\/tags\/[0-9a-f-]{36}$/.test(request.url()) &&
+      request.postDataJSON().weight === 0.75,
+  );
+  await commanderMenu
+    .getByRole("group", {
+      name: "Weight for Aurelia, the Warleader in wincon",
+    })
+    .getByRole("radio", { name: "¾" })
+    .click();
+  await weightRequest;
+  await page.keyboard.press("Escape");
+  await expect(commanderMenu).toHaveCount(0);
+
+  await companionOptions.click();
+  await expect(
+    page.getByRole("dialog", {
+      name: "Tag options for Lurrus of the Dream-Den",
+    }),
+  ).toContainText("Weight per copy");
 });
 
 test("hover tag editing escapes the card scrollport and remains compact", async ({

@@ -30,9 +30,14 @@ import { CardRow } from "../../designsystem/patterns/cardRow";
 
 import { ClickableCardImage } from "../../modules/cards/ui/cardPresentation";
 import type { DeckAnalytics } from "../../modules/decks/analytics/contracts";
-import type { CardSet } from "../../modules/decks/contracts";
+import type { CardSet, DeckTag } from "../../modules/decks/contracts";
 import type { CardRoleEvaluation } from "../../modules/decks/evaluations/contracts";
-import { chartRoleSwatch, COLOR_SWATCHES, TYPE_SWATCHES } from "./groupColors";
+import {
+  chartRoleSwatch,
+  COLOR_SWATCHES,
+  tagSwatches,
+  TYPE_SWATCHES,
+} from "./groupColors";
 import { titleize, zoneLabel } from "./text";
 
 type Bucket = DeckAnalytics["mana_curve"][number];
@@ -217,23 +222,58 @@ function DetailChip({
   );
 }
 
-const TAG_SWATCHES = [
-  "#d78bff",
-  "#7ee0d4",
-  "#ffd166",
-  "#ff8a5b",
-  "#4da3ff",
-  "#6fc17b",
-  "#ff6f91",
-];
+export function completeManaCurve(buckets: readonly Bucket[]): Bucket[] {
+  const numericBuckets = buckets
+    .map((bucket) => ({ bucket, value: Number(bucket.key) }))
+    .filter((entry) => Number.isFinite(entry.value));
+  if (numericBuckets.length === 0) return [...buckets];
+  const byValue = new Map(
+    numericBuckets.map((entry) => [entry.value, entry.bucket]),
+  );
+  const minimum = Math.min(...numericBuckets.map((entry) => entry.value));
+  const maximum = Math.max(...numericBuckets.map((entry) => entry.value));
+  for (let value = Math.ceil(minimum); value <= Math.floor(maximum); value += 1)
+    if (!byValue.has(value))
+      byValue.set(value, {
+        key: String(value),
+        label: String(value),
+        percentage: 0,
+        quantity: 0,
+      });
+  return [...byValue.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, bucket]) => bucket);
+}
 
-function tagSwatch(key: string): string {
-  if (key === "untagged") return "#8f95b2";
-  let hash = 0;
-  for (let index = 0; index < key.length; index += 1) {
-    hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
-  }
-  return TAG_SWATCHES[hash % TAG_SWATCHES.length] ?? "#8f95b2";
+function channel(hex: string, offset: number): number {
+  return Number.parseInt(hex.slice(offset, offset + 2), 16);
+}
+
+function gradientColor(start: string, end: string, ratio: number): string {
+  const component = (offset: number) =>
+    Math.round(
+      channel(start, offset) +
+        (channel(end, offset) - channel(start, offset)) * ratio,
+    )
+      .toString(16)
+      .padStart(2, "0");
+  return `#${component(1)}${component(3)}${component(5)}`;
+}
+
+export function manaValueSwatches(
+  buckets: readonly Bucket[],
+): ReadonlyMap<string, string> {
+  const values = buckets.map((bucket) => Number(bucket.key));
+  const minimum = Math.min(...values);
+  const maximum = Math.max(...values);
+  const span = maximum - minimum;
+  return new Map(
+    buckets.map((bucket) => {
+      const value = Number(bucket.key);
+      const ratio = span === 0 ? 0.5 : (value - minimum) / span;
+      return [bucket.key, gradientColor("#4da3ff", "#ff6f91", ratio)];
+    }),
+  );
 }
 
 function DistributionChart({
@@ -275,6 +315,7 @@ function DistributionChart({
           <Tooltip />
           <Bar
             dataKey="quantity"
+            minPointSize={2}
             radius={[2, 2, 0, 0]}
             shape={
               <InteractiveBar
@@ -309,6 +350,7 @@ export function DeckChartsView({
   refresh,
   scores,
   scoringEnabled,
+  tags,
 }: {
   analytics: DeckAnalytics | null;
   cards: readonly CardSet[];
@@ -317,6 +359,7 @@ export function DeckChartsView({
   refresh: () => void;
   scores: ReadonlyMap<string, CardRoleEvaluation>;
   scoringEnabled: boolean;
+  tags: readonly DeckTag[];
 }) {
   const [selection, setSelection] = useState<{
     cards: CardSet[];
@@ -355,6 +398,12 @@ export function DeckChartsView({
         label,
       });
     };
+  const manaCurve = completeManaCurve(analytics.mana_curve);
+  const manaColors = manaValueSwatches(manaCurve);
+  const tagColors = tagSwatches([
+    ...tags.map((tag) => tag.id),
+    ...analytics.tag_distribution.map((bucket) => bucket.key),
+  ]);
   const closeSelection = (): void => {
     const triggerLabel =
       selection === null ? null : `Show cards for ${selection.label}`;
@@ -425,15 +474,15 @@ export function DeckChartsView({
             title="Color"
           />
           <DistributionChart
-            buckets={analytics.mana_curve}
-            colorFor={() => "#ff8a5b"}
+            buckets={manaCurve}
+            colorFor={(bucket) => manaColors.get(bucket.key) ?? "#8ca1b3"}
             displayLabel={(bucket) => `Mana value ${bucket.label}`}
             onSelect={selectBucket("Mana value")}
             title="Mana value"
           />
           <DistributionChart
             buckets={analytics.tag_distribution}
-            colorFor={(bucket) => tagSwatch(bucket.key)}
+            colorFor={(bucket) => tagColors.get(bucket.key) ?? "#8f95b2"}
             onSelect={selectBucket("Tag")}
             title="Tag"
           />

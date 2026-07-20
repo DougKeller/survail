@@ -45,6 +45,9 @@ describe("tag display preference", () => {
     );
 
     expect(preferences.groupBy).toBe("tags");
+    expect(editorViewFromSearchParams(new URLSearchParams("tab=tags"))).toBe(
+      "tags",
+    );
   });
 });
 

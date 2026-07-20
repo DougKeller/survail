@@ -12,6 +12,7 @@ import { CurveBars } from "../../designsystem/patterns/curve";
 import { ColorIdentityRow } from "../../designsystem/patterns/identity";
 import { MeterPanel } from "../../designsystem/patterns/statPanel";
 import { zoneLabel, zonesFor } from "../deckPrimitives";
+import { CardTagPicker } from "./cardTagPicker";
 import { useDeckEditorContext } from "./deckEditorContext";
 
 const CURVE_LABELS = ["0", "1", "2", "3", "4", "5+"];
@@ -79,9 +80,13 @@ export function DeckRail({
     >
       {specialCards.map((card) => (
         <Stack gap={1} key={card.id}>
-          <Kicker>
-            {card.zone === "commander" ? "Commander" : "Companion"}
-          </Kicker>
+          <Inline align="center" gap={1}>
+            <Kicker>
+              {card.zone === "commander" ? "Commander" : "Companion"}
+            </Kicker>
+            <FlexSpacer />
+            <CardTagPicker card={card} />
+          </Inline>
           <ClickableCardImage card={card} size="preview" />
         </Stack>
       ))}
