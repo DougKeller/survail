@@ -1,7 +1,10 @@
+import { Fragment } from "react";
+
 import type { CardSet } from "../../modules/decks/contracts";
 import {
   CardZoneColumn,
   CardZoneColumnContent,
+  CardZoneReorderGhost,
 } from "../../designsystem/layout/cardZoneWorkspace";
 import { ColumnHeader } from "../../designsystem/patterns/columnHeader";
 import { VisualCardColumn } from "../deckPrimitives";
@@ -16,6 +19,7 @@ import { TextCardColumn } from "./boardView";
 import { useDeckCardsContext } from "./deckEditorContext";
 import { RoleTargetForColumn } from "./roleTargetColumn";
 import { useCardZoneDrag } from "./cardZoneDrag";
+import { CREATE_TAG_DROP_ID } from "./cardZoneDragTypes";
 import { TagColumnActions, TagTargetProgress } from "./tagControls";
 import { CardTagPicker } from "./cardTagPicker";
 import { useTagColumnOrder } from "./tagColumnOrder";
@@ -62,20 +66,36 @@ export function CardsZoneColumn({
   const tag = deck.tags?.find((item) => item.id === tagId) ?? null;
   const tagOrder = useTagColumnOrder(tag);
   const tagDropProps =
-    tagId === null || tagId === undefined ? {} : drag.tagColumnProps(tagId);
-  return (
+    tagId === null || tagId === undefined
+      ? {}
+      : drag.tagColumnProps(tagId, zone);
+  const column = (
     <CardZoneColumn
       {...tagDropProps}
-      active={tagId !== null && tagId === drag.activeTagTarget}
+      active={
+        tagId !== null &&
+        tagId === drag.activeTagTarget &&
+        zone === drag.activeTagZone
+      }
       aria-label={`${label}, ${String(quantity)} cards`}
+      className={
+        tagOrder.dragging ? "ds-cards-zone-column-reorder-source" : undefined
+      }
       data-reorder-tag-id={tag?.id}
+      hint={
+        tag !== null &&
+        tag.id === drag.activeTagTarget &&
+        zone === drag.activeTagZone
+          ? `Add to ${tag.name}`
+          : undefined
+      }
     >
       <ColumnHeader
         {...tagOrder.dropProps}
         count={quantity}
         leading={tagOrder.handle}
         level={3}
-        tone={tagOrder.active ? "accent" : "default"}
+        tone="default"
         title={label}
       >
         {tag !== null && (
@@ -148,6 +168,35 @@ export function CardsZoneColumn({
             view={displayPreferences.view}
           />
         )}
+      </CardZoneColumnContent>
+    </CardZoneColumn>
+  );
+  if (tagOrder.ghostSide === null) return column;
+  const ghost = <CardZoneReorderGhost />;
+  return (
+    <Fragment>
+      {tagOrder.ghostSide === "before" && ghost}
+      {column}
+      {tagOrder.ghostSide === "after" && ghost}
+    </Fragment>
+  );
+}
+
+export function NewTagZoneColumn({ zone }: { zone: CardZoneMatrixRowZone }) {
+  const drag = useCardZoneDrag();
+  const active =
+    drag.activeTagTarget === CREATE_TAG_DROP_ID && zone === drag.activeTagZone;
+  return (
+    <CardZoneColumn
+      {...drag.tagColumnProps(CREATE_TAG_DROP_ID, zone)}
+      active={active}
+      aria-label="New tag drop target"
+      className="ds-cards-zone-column-new-tag"
+      hint={active ? "Create a tag" : undefined}
+    >
+      <ColumnHeader count={0} level={3} title="New tag" />
+      <CardZoneColumnContent>
+        Drop a card here to create a tag
       </CardZoneColumnContent>
     </CardZoneColumn>
   );

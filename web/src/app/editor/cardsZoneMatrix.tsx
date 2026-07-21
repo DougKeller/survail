@@ -28,7 +28,7 @@ import { MoveAllConfirmationDialog } from "./moveAllConfirmationDialog";
 import { bulkMoveSummary, type BulkMoveSource } from "./zoneMovement";
 import { useDeckCardsContext } from "./deckEditorContext";
 import { calculateRoleTargetProgress } from "../deck/roleTargets";
-import { CardsZoneColumn } from "./cardsZoneColumn";
+import { CardsZoneColumn, NewTagZoneColumn } from "./cardsZoneColumn";
 import { RoleQualityPicker } from "./roleTargetColumn";
 import { useRoleTargets } from "./useRoleTargets";
 
@@ -147,6 +147,12 @@ function MatrixRows({ onPreview }: { onPreview: (card: CardSet) => void }) {
               active={drag.activeTarget === row.zone}
               aria-labelledby={headingId}
               collapsed={rowCollapsed}
+              hint={
+                drag.activeTarget === row.zone &&
+                drag.dragged?.card.zone !== row.zone
+                  ? `Move to ${zoneLabel(row.zone)}`
+                  : undefined
+              }
               key={row.zone}
             >
               <CardZoneRowHeader>
@@ -217,7 +223,8 @@ function MatrixRows({ onPreview }: { onPreview: (card: CardSet) => void }) {
                 role="region"
                 zone={row.zone}
               >
-                {matrix.columns.length === 0 ? (
+                {matrix.columns.length === 0 &&
+                displayPreferences.groupBy !== "tags" ? (
                   <CardZoneEmpty>
                     <Text muted>No cards in this workspace.</Text>
                   </CardZoneEmpty>
@@ -241,6 +248,9 @@ function MatrixRows({ onPreview }: { onPreview: (card: CardSet) => void }) {
                         zone={row.zone}
                       />
                     ))}
+                    {displayPreferences.groupBy === "tags" && (
+                      <NewTagZoneColumn zone={row.zone} />
+                    )}
                   </CardZoneColumns>
                 )}
               </CardZoneRowScroll>

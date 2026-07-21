@@ -10,11 +10,13 @@ import type {
 export function importMoxfield(
   decklist: string,
   preferences: ImportPreferences,
+  options: { allowAiFallback?: boolean } = {},
 ): Promise<MoxfieldImportPreview> {
   return request<MoxfieldImportPreview>("/imports/moxfield", {
     method: "POST",
     body: JSON.stringify({
       decklist,
+      allow_ai_fallback: options.allowAiFallback ?? true,
       preserve_tags: preferences.preserveTags,
     }),
   });

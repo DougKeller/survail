@@ -68,7 +68,7 @@ class ImportService:
             printing_preferences=payload.printing_preferences,
             default_zone=payload.default_zone,
         )
-        if not preview.errors:
+        if not preview.errors or not payload.allow_ai_fallback:
             return preview
         settings = get_settings()
         if not settings.openai_api_key:

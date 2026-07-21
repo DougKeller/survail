@@ -8,6 +8,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 import sonarjs from "eslint-plugin-sonarjs";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
+import performancePlugin from "./eslint-rules/performance.mjs";
 
 const typedFiles = ["**/*.{ts,tsx}"];
 const testFiles = [
@@ -185,6 +186,16 @@ export default tseslint.config(
       "sonarjs/no-duplicated-branches": "error",
       "sonarjs/no-identical-functions": "error",
       "unused-imports/no-unused-imports": "error",
+    },
+  },
+  {
+    files: ["src/**/*.tsx"],
+    plugins: {
+      "survail-performance": performancePlugin,
+    },
+    rules: {
+      "survail-performance/no-layout-read-in-continuous-jsx-handler": "error",
+      "survail-performance/no-unthrottled-global-continuous-listener": "error",
     },
   },
   {

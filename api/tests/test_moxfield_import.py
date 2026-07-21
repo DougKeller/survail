@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+import pytest
+
 from survail.core.models import CardFinish, CardFrame, CardZone
 from survail.core.schemas import (
     CheapestPreference,
@@ -13,6 +15,9 @@ from survail.core.schemas import (
 )
 from survail.modules.cards.service.printings import PrintingSelection
 from survail.modules.imports.api.router import _operation_payload
+from survail.modules.imports.api.schemas import MoxfieldImportRequest
+from survail.modules.imports.service import create as import_service_module
+from survail.modules.imports.service.create import ImportService
 from survail.modules.imports.service.preview import (
     ExtractedImportCard,
     import_extracted_decklist,
@@ -392,3 +397,26 @@ def test_empty_decklist_returns_structured_error() -> None:
     assert not preview.cardsets
     assert preview.errors[0].code == "empty_decklist"
     assert preview.errors[0].line_number == 0
+
+
+def test_preview_can_return_validation_errors_without_ai_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = ImportService.__new__(ImportService)
+    service._catalog = FakeCatalog(cards={})
+    monkeypatch.setattr(
+        import_service_module,
+        "get_settings",
+        lambda: (_ for _ in ()).throw(AssertionError("AI settings should not be read")),
+    )
+
+    preview = service.preview(
+        MoxfieldImportRequest(
+            decklist="not a deck entry",
+            allow_ai_fallback=False,
+        )
+    )
+
+    assert not preview.used_ai_fallback
+    assert [error.code for error in preview.errors] == ["invalid_line"]
+    assert preview.errors[0].line_number == 1

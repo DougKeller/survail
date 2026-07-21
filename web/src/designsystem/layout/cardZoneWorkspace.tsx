@@ -2,7 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 import "./cardZoneWorkspace.css";
 
-function classes(parts: (string | false)[]): string {
+function classes(parts: (string | false | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
@@ -30,8 +30,13 @@ export function CardZoneRow({
   active = false,
   children,
   collapsed = false,
+  hint,
   ...rest
-}: ComponentProps<"section"> & { active?: boolean; collapsed?: boolean }) {
+}: ComponentProps<"section"> & {
+  active?: boolean;
+  collapsed?: boolean;
+  hint?: string | undefined;
+}) {
   return (
     <section
       className={classes([
@@ -42,6 +47,11 @@ export function CardZoneRow({
       {...rest}
     >
       {children}
+      {hint !== undefined && (
+        <div aria-hidden="true" className="ds-cards-zone-action-hint">
+          {hint}
+        </div>
+      )}
     </section>
   );
 }
@@ -104,17 +114,28 @@ export function CardZoneColumns({
 export function CardZoneColumn({
   active = false,
   children,
+  className,
+  hint,
   ...rest
-}: ComponentProps<"section"> & { active?: boolean }) {
+}: ComponentProps<"section"> & {
+  active?: boolean;
+  hint?: string | undefined;
+}) {
   return (
     <section
       className={classes([
         "ds-cards-zone-column",
         active && "ds-cards-zone-column-target",
+        className,
       ])}
       {...rest}
     >
       {children}
+      {hint !== undefined && (
+        <div aria-hidden="true" className="ds-cards-zone-action-hint">
+          {hint}
+        </div>
+      )}
     </section>
   );
 }
@@ -125,4 +146,12 @@ export function CardZoneColumnContent({ children }: { children: ReactNode }) {
 
 export function CardZoneEmpty({ children }: { children: ReactNode }) {
   return <div className="ds-cards-zone-empty">{children}</div>;
+}
+
+export function CardZoneReorderGhost() {
+  return (
+    <section aria-hidden="true" className="ds-cards-zone-column-reorder-ghost">
+      <span>Move here</span>
+    </section>
+  );
 }

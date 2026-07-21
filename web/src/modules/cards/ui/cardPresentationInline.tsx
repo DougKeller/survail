@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { listenForViewportChanges } from "../../../core/continuousEventFrame";
 import {
   ImageButton,
   ImageFallback,
@@ -120,7 +121,9 @@ function InlineCardReference({
         ? preferredLeft
         : Math.max(16, rect.left - previewWidth - gap);
     const top = Math.max(16, Math.min(rect.top, window.innerHeight - 352));
-    setPreviewStyle({ left, top });
+    setPreviewStyle((current) =>
+      current?.left === left && current.top === top ? current : { left, top },
+    );
   }, []);
 
   const showPreview = useCallback((): void => {
@@ -134,15 +137,7 @@ function InlineCardReference({
 
   useEffect(() => {
     if (!previewVisible) return undefined;
-    function handleViewportChange(): void {
-      updatePreviewPosition();
-    }
-    window.addEventListener("scroll", handleViewportChange, true);
-    window.addEventListener("resize", handleViewportChange);
-    return () => {
-      window.removeEventListener("scroll", handleViewportChange, true);
-      window.removeEventListener("resize", handleViewportChange);
-    };
+    return listenForViewportChanges(updatePreviewPosition, true);
   }, [previewVisible, updatePreviewPosition]);
 
   function onKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>): void {

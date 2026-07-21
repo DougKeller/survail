@@ -37,6 +37,9 @@ export function autoScrollCardRow(
   const row = target?.closest<HTMLElement>("[data-zone-scroll]");
   if (row === null || row === undefined) return false;
   const delta = dragScrollDelta(row.getBoundingClientRect(), x, y);
-  if (delta.x !== 0 || delta.y !== 0) row.scrollBy(delta.x, delta.y);
-  return delta.x !== 0 || delta.y !== 0;
+  if (delta.x === 0 && delta.y === 0) return false;
+  const previousLeft = row.scrollLeft;
+  const previousTop = row.scrollTop;
+  row.scrollBy(delta.x, delta.y);
+  return row.scrollLeft !== previousLeft || row.scrollTop !== previousTop;
 }

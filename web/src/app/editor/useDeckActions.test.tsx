@@ -9,6 +9,7 @@ const apiMocks = vi.hoisted(() => ({
   applyOperation: vi.fn(),
   createDeckTag: vi.fn(),
   deleteDeckTag: vi.fn(),
+  importMoxfield: vi.fn(),
   operations: vi.fn(),
   reorderDeckTags: vi.fn(),
   removeCardsetTag: vi.fn(),

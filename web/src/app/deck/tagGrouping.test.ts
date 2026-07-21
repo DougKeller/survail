@@ -58,6 +58,29 @@ function matrix(cards: CardSet[], tags: DeckTag[] = TAGS) {
 }
 
 describe("tag grouping", () => {
+  it("does not rescan every card once per tag", () => {
+    let membershipChecks = 0;
+    const manyTags = Array.from({ length: 20 }, (_, index) => ({
+      id: `tag-${String(index)}`,
+      name: `Tag ${String(index)}`,
+      position: index,
+      target: 0,
+    }));
+    const cards = Array.from({ length: 40 }, (_, index) => {
+      const tagIds = [`tag-${String(index % manyTags.length)}`];
+      const includes = tagIds.includes.bind(tagIds);
+      tagIds.includes = (value: string, fromIndex?: number) => {
+        membershipChecks += 1;
+        return includes(value, fromIndex);
+      };
+      return card(`Card ${String(index)}`, tagIds);
+    });
+
+    matrix(cards, manyTags);
+
+    expect(membershipChecks).toBeLessThanOrEqual(cards.length);
+  });
+
   it("omits Untagged when there are no cards without tags", () => {
     const result = matrix([]);
 

@@ -1,15 +1,67 @@
 import { GripVertical } from "lucide-react";
 import {
+  createContext,
+  useContext,
   useEffect,
   useRef,
   useState,
+  type Dispatch,
   type KeyboardEvent,
   type PointerEvent,
+  type ReactNode,
+  type SetStateAction,
 } from "react";
 
 import type { DeckTag } from "../../modules/decks/contracts";
 import { IconButton } from "../../designsystem/primitives/button";
+import { listenForPointerDrag } from "../../core/continuousEventFrame";
 import { useDeckCardsContext } from "./deckEditorContext";
+
+export interface TagColumnReorderPreview {
+  side: "after" | "before";
+  sourceId: string;
+  targetId: string;
+}
+
+export function nextTagColumnReorderPreview(
+  current: TagColumnReorderPreview | null,
+  next: TagColumnReorderPreview,
+): TagColumnReorderPreview {
+  return current !== null &&
+    current.side === next.side &&
+    current.sourceId === next.sourceId &&
+    current.targetId === next.targetId
+    ? current
+    : next;
+}
+
+interface TagColumnOrderContextValue {
+  preview: TagColumnReorderPreview | null;
+  setPreview: Dispatch<SetStateAction<TagColumnReorderPreview | null>>;
+}
+
+const TagColumnOrderContext = createContext<TagColumnOrderContextValue | null>(
+  null,
+);
+
+export function TagColumnOrderProvider({ children }: { children: ReactNode }) {
+  const [preview, setPreview] = useState<TagColumnReorderPreview | null>(null);
+  return (
+    <TagColumnOrderContext.Provider value={{ preview, setPreview }}>
+      {children}
+    </TagColumnOrderContext.Provider>
+  );
+}
+
+export function tagColumnReorderAppearance(
+  preview: TagColumnReorderPreview | null,
+  tagId: string,
+): { dragging: boolean; ghostSide: "after" | "before" | null } {
+  return {
+    dragging: preview?.sourceId === tagId,
+    ghostSide: preview?.targetId === tagId ? preview.side : null,
+  };
+}
 
 function orderedTags(tags: readonly DeckTag[]): DeckTag[] {
   return [...tags].sort(
@@ -34,6 +86,7 @@ export function reorderedTagIds(
 }
 
 interface PointerDrag {
+  active: boolean;
   originX: number;
   scroll: HTMLElement | null;
   side: "after" | "before";
@@ -71,7 +124,10 @@ export function useTagColumnOrder(tag: DeckTag | null) {
     data: { busy },
     deck,
   } = useDeckCardsContext();
-  const [active, setActive] = useState(false);
+  const orderContext = useContext(TagColumnOrderContext);
+  if (orderContext === null)
+    throw new Error("useTagColumnOrder requires TagColumnOrderProvider");
+  const { preview, setPreview } = orderContext;
   const pointerDrag = useRef<PointerDrag | null>(null);
   const removePointerListeners = useRef<(() => void) | null>(null);
   const tags = deck.tags ?? [];
@@ -102,7 +158,7 @@ export function useTagColumnOrder(tag: DeckTag | null) {
     const drag = pointerDrag.current;
     pointerDrag.current = null;
     removePointerListeners.current?.();
-    setActive(false);
+    setPreview(null);
     return drag;
   };
 
@@ -113,11 +169,19 @@ export function useTagColumnOrder(tag: DeckTag | null) {
   const movePointerDrag = (x: number, y: number): void => {
     const drag = pointerDrag.current;
     if (drag === null) return;
-    if (!active && Math.abs(x - drag.originX) < 5) return;
-    setActive(true);
+    if (!drag.active && Math.abs(x - drag.originX) < 5) return;
+    drag.active = true;
     autoScroll(drag.scroll, x);
     const target = targetAtPoint(x, y);
     if (target !== null) Object.assign(drag, target);
+    if (tag !== null) {
+      const next = {
+        side: drag.side,
+        sourceId: tag.id,
+        targetId: drag.targetId,
+      };
+      setPreview((current) => nextTagColumnReorderPreview(current, next));
+    }
   };
 
   const finishPointerDrag = (x: number, y: number): void => {
@@ -136,6 +200,7 @@ export function useTagColumnOrder(tag: DeckTag | null) {
       return;
     const pointerId = event.pointerId;
     pointerDrag.current = {
+      active: false,
       originX: event.clientX,
       scroll: event.currentTarget.closest<HTMLElement>(
         ".ds-cards-zone-row-scroll",
@@ -143,25 +208,17 @@ export function useTagColumnOrder(tag: DeckTag | null) {
       side: "before",
       targetId: tag.id,
     };
-    const handleMove = (pointerEvent: globalThis.PointerEvent): void => {
-      if (pointerEvent.pointerId !== pointerId) return;
-      pointerEvent.preventDefault();
-      movePointerDrag(pointerEvent.clientX, pointerEvent.clientY);
-    };
-    const handleUp = (pointerEvent: globalThis.PointerEvent): void => {
-      if (pointerEvent.pointerId === pointerId)
-        finishPointerDrag(pointerEvent.clientX, pointerEvent.clientY);
-    };
-    const handleCancel = (pointerEvent: globalThis.PointerEvent): void => {
-      if (pointerEvent.pointerId === pointerId) cancelPointerDrag();
-    };
-    window.addEventListener("pointermove", handleMove, { passive: false });
-    window.addEventListener("pointerup", handleUp);
-    window.addEventListener("pointercancel", handleCancel);
+    const remove = listenForPointerDrag(pointerId, {
+      cancel: cancelPointerDrag,
+      move: ({ x, y }) => {
+        movePointerDrag(x, y);
+      },
+      up: ({ x, y }) => {
+        finishPointerDrag(x, y);
+      },
+    });
     removePointerListeners.current = () => {
-      window.removeEventListener("pointermove", handleMove);
-      window.removeEventListener("pointerup", handleUp);
-      window.removeEventListener("pointercancel", handleCancel);
+      remove();
       removePointerListeners.current = null;
     };
   };
@@ -173,14 +230,15 @@ export function useTagColumnOrder(tag: DeckTag | null) {
     [],
   );
 
+  const appearance = tagColumnReorderAppearance(preview, tag?.id ?? "");
   return {
-    active,
+    ...appearance,
     dropProps: tag === null ? {} : { "data-reorder-tag-id": tag.id },
     handle:
       tag === null ? null : (
         <IconButton
           aria-disabled={busy}
-          aria-pressed={active}
+          aria-pressed={appearance.dragging}
           dragHandle
           label={`Move ${tag.name} tag column`}
           onKeyDown={moveWithKeyboard}

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Ellipsis, MoveRight } from "lucide-react";
 
+import { listenForViewportChanges } from "../../core/continuousEventFrame";
 import type {
   CardSet,
   CardZone,
@@ -36,10 +37,7 @@ export function CardTagPickerProvider({ children }: { children: ReactNode }) {
   return children;
 }
 
-export function moveZoneOptions(
-  card: CardSet,
-  format: DeckFormat,
-): CardZone[] {
+function moveZoneOptions(card: CardSet, format: DeckFormat): CardZone[] {
   return searchAddZonesFor(format).filter(
     (zone) =>
       zone !== card.zone &&
@@ -49,12 +47,7 @@ export function moveZoneOptions(
 
 export function CardTagPicker({ card }: { card: CardSet }) {
   const {
-    actions: {
-      addTagToCard,
-      moveCardToZone,
-      removeTagFromCard,
-      setTagWeight,
-    },
+    actions: { addTagToCard, moveCardToZone, removeTagFromCard, setTagWeight },
     data: { busy },
     deck,
   } = useDeckCardsContext();
@@ -78,7 +71,11 @@ export function CardTagPicker({ card }: { card: CardSet }) {
       margin,
       Math.min(preferredTop, window.innerHeight - 360),
     );
-    setPosition({ left, top, width });
+    setPosition((current) =>
+      current.left === left && current.top === top && current.width === width
+        ? current
+        : { left, top, width },
+    );
   }, []);
   const surfaceRef = useDismissibleSurface<HTMLDivElement>(
     open,
@@ -95,12 +92,7 @@ export function CardTagPicker({ card }: { card: CardSet }) {
   useEffect(() => {
     if (!open) return undefined;
     updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
+    return listenForViewportChanges(updatePosition, true);
   }, [open, updatePosition]);
   return (
     <>
@@ -131,95 +123,95 @@ export function CardTagPicker({ card }: { card: CardSet }) {
             ref={surfaceRef}
             style={position}
           >
-          <Stack gap={4}>
-            <Stack gap={1}>
-              <Kicker as="span">Card options</Kicker>
-              <Text muted size="sm">
-                {card.card_name}
-              </Text>
-            </Stack>
-            <Stack as="section" gap={2} aria-label="Assigned tags">
-              <Kicker as="span">Tags</Kicker>
-              <Inline gap={2} wrap>
-                {tags.map((tag) => {
-                  const assigned = card.tag_ids?.includes(tag.id) === true;
-                  return (
-                    <ToggleChip
-                      aria-label={`${assigned ? "Remove" : "Add"} ${tag.name} tag ${assigned ? "from" : "to"} ${card.card_name}`}
-                      disabled={busy || pending}
-                      key={tag.id}
-                      onClick={() => {
-                        if (assigned) {
-                          removeTagFromCard(card, tag.id, tag.name);
-                        } else {
-                          addTagToCard(card, tag.id, tag.name);
-                        }
-                      }}
-                      pressed={assigned}
-                    >
-                      {tag.name}
-                    </ToggleChip>
-                  );
-                })}
-              </Inline>
-            </Stack>
-            {assignedTags.length > 0 && (
-              <Stack as="section" gap={2} aria-label="Tag weights">
-                <Kicker as="span">Weight per copy</Kicker>
-                {assignedTags.map((tag) => {
-                  const weight = cardTagWeight(card, tag.id);
-                  return (
-                    <Inline align="center" gap={2} key={tag.id} wrap>
-                      <span>{tag.name}</span>
-                      <Segmented
-                        disabled={busy || pending}
-                        label={`Weight for ${card.card_name} in ${tag.name}`}
-                        name={`tag-weight-${card.id}-${tag.id}`}
-                        onChange={(value) => {
-                          setPending(true);
-                          void setTagWeight(
-                            card,
-                            tag.id,
-                            tag.name,
-                            Number(value),
-                          ).finally(() => {
-                            setPending(false);
-                          });
-                        }}
-                        options={TAG_WEIGHT_OPTIONS.map((option) => ({
-                          label: formattedTagWeight(option),
-                          value: String(option),
-                        }))}
-                        value={String(weight)}
-                      />
-                    </Inline>
-                  );
-                })}
+            <Stack gap={4}>
+              <Stack gap={1}>
+                <Kicker as="span">Card options</Kicker>
+                <Text muted size="sm">
+                  {card.card_name}
+                </Text>
               </Stack>
-            )}
-            {destinationZones.length > 0 && (
-              <Stack as="section" gap={2} aria-label="Move card">
-                <Kicker as="span">Move one card</Kicker>
+              <Stack as="section" gap={2} aria-label="Assigned tags">
+                <Kicker as="span">Tags</Kicker>
                 <Inline gap={2} wrap>
-                  {destinationZones.map((zone) => (
-                    <Button
-                      aria-label={`Move ${card.card_name} to ${zoneLabel(zone)}`}
-                      disabled={busy || pending}
-                      icon={<MoveRight size={14} strokeWidth={2.75} />}
-                      key={zone}
-                      onClick={() => {
-                        setOpen(false);
-                        moveCardToZone(card, zone);
-                      }}
-                      variant="secondary"
-                    >
-                      {zoneLabel(zone)}
-                    </Button>
-                  ))}
+                  {tags.map((tag) => {
+                    const assigned = card.tag_ids?.includes(tag.id) === true;
+                    return (
+                      <ToggleChip
+                        aria-label={`${assigned ? "Remove" : "Add"} ${tag.name} tag ${assigned ? "from" : "to"} ${card.card_name}`}
+                        disabled={busy || pending}
+                        key={tag.id}
+                        onClick={() => {
+                          if (assigned) {
+                            removeTagFromCard(card, tag.id, tag.name);
+                          } else {
+                            addTagToCard(card, tag.id, tag.name);
+                          }
+                        }}
+                        pressed={assigned}
+                      >
+                        {tag.name}
+                      </ToggleChip>
+                    );
+                  })}
                 </Inline>
               </Stack>
-            )}
-          </Stack>
+              {assignedTags.length > 0 && (
+                <Stack as="section" gap={2} aria-label="Tag weights">
+                  <Kicker as="span">Weight per copy</Kicker>
+                  {assignedTags.map((tag) => {
+                    const weight = cardTagWeight(card, tag.id);
+                    return (
+                      <Inline align="center" gap={2} key={tag.id} wrap>
+                        <span>{tag.name}</span>
+                        <Segmented
+                          disabled={busy || pending}
+                          label={`Weight for ${card.card_name} in ${tag.name}`}
+                          name={`tag-weight-${card.id}-${tag.id}`}
+                          onChange={(value) => {
+                            setPending(true);
+                            void setTagWeight(
+                              card,
+                              tag.id,
+                              tag.name,
+                              Number(value),
+                            ).finally(() => {
+                              setPending(false);
+                            });
+                          }}
+                          options={TAG_WEIGHT_OPTIONS.map((option) => ({
+                            label: formattedTagWeight(option),
+                            value: String(option),
+                          }))}
+                          value={String(weight)}
+                        />
+                      </Inline>
+                    );
+                  })}
+                </Stack>
+              )}
+              {destinationZones.length > 0 && (
+                <Stack as="section" gap={2} aria-label="Move card">
+                  <Kicker as="span">Move one card</Kicker>
+                  <Inline gap={2} wrap>
+                    {destinationZones.map((zone) => (
+                      <Button
+                        aria-label={`Move ${card.card_name} to ${zoneLabel(zone)}`}
+                        disabled={busy || pending}
+                        icon={<MoveRight size={14} strokeWidth={2.75} />}
+                        key={zone}
+                        onClick={() => {
+                          setOpen(false);
+                          moveCardToZone(card, zone);
+                        }}
+                        variant="secondary"
+                      >
+                        {zoneLabel(zone)}
+                      </Button>
+                    ))}
+                  </Inline>
+                </Stack>
+              )}
+            </Stack>
           </Popover>,
           document.body,
         )}

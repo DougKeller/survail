@@ -14,25 +14,22 @@ export function nextDropZone(
   return zones[nextIndex] ?? null;
 }
 
-export function zoneAtPoint(
+export function dropTargetAtPoint(
   x: number,
   y: number,
-): CardZoneMatrixRowZone | null {
-  const target = document
-    .elementFromPoint(x, y)
-    ?.closest<HTMLElement>("[data-drop-zone]");
-  const zone = target?.dataset["dropZone"];
-  return zone === "mainboard" || zone === "sideboard" || zone === "considering"
-    ? zone
-    : null;
-}
-
-export function tagAtPoint(x: number, y: number): string | null {
-  return (
-    document
-      .elementFromPoint(x, y)
-      ?.closest<HTMLElement>(CARD_ZONE_DROP_TAG_SELECTOR)?.dataset[
+): { tagId: string | null; zone: CardZoneMatrixRowZone | null } {
+  const element = document.elementFromPoint(x, y);
+  const zoneValue =
+    element?.closest<HTMLElement>("[data-drop-zone]")?.dataset["dropZone"];
+  const zone =
+    zoneValue === "mainboard" ||
+    zoneValue === "sideboard" ||
+    zoneValue === "considering"
+      ? zoneValue
+      : null;
+  const tagId =
+    element?.closest<HTMLElement>(CARD_ZONE_DROP_TAG_SELECTOR)?.dataset[
       "dropTagId"
-    ] ?? null
-  );
+    ] ?? null;
+  return { tagId, zone };
 }

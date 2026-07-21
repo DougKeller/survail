@@ -131,12 +131,6 @@ function groupLabels(
   return typeLabels(card.scryfall);
 }
 
-function cardHasTag(card: CardSet, tag: DeckTag): boolean {
-  return card.tag_ids === undefined
-    ? card.tags.includes(tag.name)
-    : card.tag_ids.includes(tag.id);
-}
-
 function cardHasNoTags(card: CardSet): boolean {
   return card.tag_ids === undefined
     ? card.tags.length === 0
@@ -156,11 +150,30 @@ export function groupedCards(
       (left, right) =>
         left.position - right.position || left.name.localeCompare(right.name),
     );
+    const cardsByTagId = new Map(
+      orderedTags.map((tag) => [tag.id, [] as CardSet[]]),
+    );
+    const tagIdsByLegacyName = new Map<string, string[]>();
+    for (const tag of orderedTags) {
+      const ids = tagIdsByLegacyName.get(tag.name);
+      if (ids === undefined) tagIdsByLegacyName.set(tag.name, [tag.id]);
+      else ids.push(tag.id);
+    }
+    const untaggedCards: CardSet[] = [];
+    for (const card of cards) {
+      if (cardHasNoTags(card)) untaggedCards.push(card);
+      const tagIds =
+        card.tag_ids === undefined
+          ? new Set(
+              card.tags.flatMap((name) => tagIdsByLegacyName.get(name) ?? []),
+            )
+          : new Set(card.tag_ids);
+      for (const tagId of tagIds) cardsByTagId.get(tagId)?.push(card);
+    }
     const taggedGroups = orderedTags.map((tag) => ({
       tag,
-      cards: cards.filter((card) => cardHasTag(card, tag)),
+      cards: cardsByTagId.get(tag.id) ?? [],
     }));
-    const untaggedCards = cards.filter(cardHasNoTags);
     return [
       ...(untaggedCards.length > 0
         ? [

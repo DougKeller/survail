@@ -2,6 +2,7 @@ import { useContext, useEffect, useState, type ReactNode } from "react";
 import { ArrowRight, ArrowUp } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
+import { listenForViewportChanges } from "../../core/continuousEventFrame";
 import { ApiError } from "../../core/http/client";
 import { InlineCardText } from "../../modules/cards/ui/cardPresentation";
 import type { ScryfallCard } from "../../modules/cards/contracts";
@@ -187,10 +188,7 @@ export function BackToTop() {
     };
 
     syncVisible();
-    window.addEventListener("scroll", syncVisible, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", syncVisible);
-    };
+    return listenForViewportChanges(syncVisible);
   }, []);
 
   return (

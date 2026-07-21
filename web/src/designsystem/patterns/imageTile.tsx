@@ -32,7 +32,7 @@ interface ImageTileActionsProps {
   children?: ReactNode;
 }
 
-/** Action cluster pinned to the tile's top edge; revealed on hover and
+/** Action cluster pinned to the tile's bottom edge; revealed on hover and
     whenever a control inside holds focus. */
 export function ImageTileActions({
   children,

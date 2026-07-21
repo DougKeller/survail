@@ -9,6 +9,7 @@ from survail.core.schemas import ImportPrintingPreference, ScryfallCardSnapshot,
 
 class MoxfieldImportRequest(StrictModel):
     decklist: str = Field(min_length=1, max_length=100_000)
+    allow_ai_fallback: bool = True
     preserve_tags: bool = False
     preserve_printings: bool = False
     printing_preferences: list[ImportPrintingPreference] = Field(default_factory=list, max_length=6)

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { ChevronDown, ChevronUp, GripVertical, TagX } from "lucide-react";
 
+import { listenForViewportChanges } from "../../core/continuousEventFrame";
 import {
   ClickableCardImage,
   InlineCardText,
@@ -54,10 +55,10 @@ function CardQuickActions({
     );
     const spaceBelow = window.innerHeight - rect.bottom;
     const top =
-      spaceBelow >= 72
-        ? rect.bottom + 4
-        : Math.max(margin, rect.top - 56);
-    setPosition({ left, top });
+      spaceBelow >= 72 ? rect.bottom + 4 : Math.max(margin, rect.top - 56);
+    setPosition((current) =>
+      current.left === left && current.top === top ? current : { left, top },
+    );
   }, []);
   const surfaceRef = useDismissibleSurface<HTMLDivElement>(
     open,
@@ -74,12 +75,7 @@ function CardQuickActions({
   useEffect(() => {
     if (!open) return undefined;
     updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
+    return listenForViewportChanges(updatePosition, true);
   }, [open, updatePosition]);
 
   return (

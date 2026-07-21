@@ -4,6 +4,7 @@ import type { CardSet } from "../../modules/decks/contracts";
 import type { CardZoneMatrixRowZone } from "../deck/cardZoneMatrix";
 
 export const CARD_ZONE_DROP_TAG_SELECTOR = "[data-drop-tag-id]";
+export const CREATE_TAG_DROP_ID = "__create_tag__";
 
 export interface DraggedCard {
   card: CardSet;
@@ -13,6 +14,7 @@ export interface DraggedCard {
 export interface CardZoneDragProviderProps {
   busy: boolean;
   children?: ReactNode;
+  createTagForCard?: (card: CardSet) => void;
   moveCard: (card: CardSet, zone: CardZoneMatrixRowZone) => void;
   tagCard?: (card: CardSet, tagId: string) => void;
   zones: readonly CardZoneMatrixRowZone[];
@@ -20,6 +22,7 @@ export interface CardZoneDragProviderProps {
 
 export interface CardZoneDragValue {
   activeTagTarget: string | null;
+  activeTagZone: CardZoneMatrixRowZone | null;
   activeTarget: CardZoneMatrixRowZone | null;
   cancel: () => void;
   dragged: DraggedCard | null;
@@ -46,7 +49,10 @@ export interface CardZoneDragValue {
     onPointerUp: (event: PointerEvent<HTMLButtonElement>) => void;
   };
   instruction: string;
-  tagColumnProps: (tagId: string) => {
+  tagColumnProps: (
+    tagId: string,
+    zone: CardZoneMatrixRowZone,
+  ) => {
     "data-drop-tag-id": string;
     onDragEnter: (event: DragEvent<HTMLElement>) => void;
     onDragOver: (event: DragEvent<HTMLElement>) => void;

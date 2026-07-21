@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render, within } from "@testing-library/react";
 import { createElement, Fragment } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,7 @@ import {
   useOptionalCardZoneDragStatic,
 } from "./cardZoneDrag";
 import { nextDropZone } from "./cardZoneDropTargets";
+import { CREATE_TAG_DROP_ID } from "./cardZoneDragTypes";
 
 describe("nextDropZone", () => {
   const zones = ["mainboard", "sideboard", "considering"] as const;
@@ -38,15 +39,23 @@ function TagDragHarness({ card }: { card: CardSet }) {
       "div",
       { "data-testid": "row", ...drag.rowProps("considering") },
       createElement("div", {
-        "data-testid": "tag-column",
-        ...drag.tagColumnProps("tag-2"),
+        "data-testid": "destination-tag-column",
+        ...drag.tagColumnProps("tag-2", "considering"),
       }),
     ),
+    createElement("div", {
+      "data-testid": "same-zone-tag-column",
+      ...drag.tagColumnProps("tag-2", "mainboard"),
+    }),
+    createElement("div", {
+      "data-testid": "new-tag-column",
+      ...drag.tagColumnProps(CREATE_TAG_DROP_ID, "mainboard"),
+    }),
   );
 }
 
 describe("tag column drop targets", () => {
-  it("adds the target tag without committing a row movement", () => {
+  it("moves zones instead of adding a destination-row tag", () => {
     const moveCard = vi.fn();
     const tagCard = vi.fn();
     const card = {
@@ -76,18 +85,20 @@ describe("tag column drop targets", () => {
       setData: vi.fn(),
       setDragImage: vi.fn(),
     };
+    const ui = within(view.container);
 
-    fireEvent.dragStart(view.getByTestId("card"), { dataTransfer: transfer });
+    fireEvent.dragStart(ui.getByTestId("card"), { dataTransfer: transfer });
     expect(transfer.effectAllowed).toBe("copyMove");
-    fireEvent.dragOver(view.getByTestId("tag-column"), {
+    fireEvent.dragOver(ui.getByTestId("destination-tag-column"), {
       dataTransfer: transfer,
     });
-    fireEvent.drop(view.getByTestId("tag-column"), {
+    expect(transfer.dropEffect).toBe("move");
+    fireEvent.drop(ui.getByTestId("destination-tag-column"), {
       dataTransfer: transfer,
     });
 
-    expect(tagCard).toHaveBeenCalledWith(card, "tag-2");
-    expect(moveCard).not.toHaveBeenCalled();
+    expect(moveCard).toHaveBeenCalledWith(card, "considering");
+    expect(tagCard).not.toHaveBeenCalled();
     expect(card).toMatchObject({
       quantity: 4,
       tag_ids: ["tag-1"],
@@ -96,7 +107,7 @@ describe("tag column drop targets", () => {
     });
   });
 
-  it("commits a fast destination drop before drag state rerenders", () => {
+  it("adds a tag for a same-zone column drop", () => {
     const moveCard = vi.fn();
     const tagCard = vi.fn();
     const card = {
@@ -130,7 +141,7 @@ describe("tag column drop targets", () => {
       '[data-testid="card"]',
     );
     const tagColumn = view.container.querySelector<HTMLElement>(
-      '[data-testid="tag-column"]',
+      '[data-testid="same-zone-tag-column"]',
     );
     expect(cardElement).not.toBeNull();
     expect(tagColumn).not.toBeNull();
@@ -153,6 +164,47 @@ describe("tag column drop targets", () => {
       tags: ["Ramp"],
       zone: "mainboard",
     });
+  });
+
+  it("opens tag creation for the permanent same-zone extra column", () => {
+    const createTagForCard = vi.fn();
+    const card = {
+      id: "cardset-1",
+      card_name: "Sol Ring",
+      quantity: 1,
+      scryfall: { card_faces: [], image_uris: null },
+      zone: "mainboard",
+    } as unknown as CardSet;
+    const view = render(
+      createElement(
+        CardZoneDragProvider,
+        {
+          busy: false,
+          createTagForCard,
+          moveCard: vi.fn(),
+          tagCard: vi.fn(),
+          zones: ["mainboard", "considering"],
+        },
+        createElement(TagDragHarness, { card }),
+      ),
+    );
+    const transfer = {
+      dropEffect: "none",
+      effectAllowed: "none",
+      setData: vi.fn(),
+      setDragImage: vi.fn(),
+    };
+    const ui = within(view.container);
+
+    fireEvent.dragStart(ui.getByTestId("card"), { dataTransfer: transfer });
+    fireEvent.dragOver(ui.getByTestId("new-tag-column"), {
+      dataTransfer: transfer,
+    });
+    fireEvent.drop(ui.getByTestId("new-tag-column"), {
+      dataTransfer: transfer,
+    });
+
+    expect(createTagForCard).toHaveBeenCalledWith(card);
   });
 });
 

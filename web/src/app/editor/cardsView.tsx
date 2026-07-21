@@ -29,8 +29,8 @@ import {
 import { DECK_SUMMARY_ID, DeckRail } from "./deckRail";
 import { CardsZoneMatrix } from "./cardsZoneMatrixProvider";
 import { SearchDrawer } from "./searchDrawer";
-import { TagNameDialog } from "./tagControls";
 import { useDeckEditorContext } from "./deckEditorContext";
+import { CreateTagDialog } from "./createTagDialog";
 
 const GROUP_OPTIONS: { label: string; value: GroupBy }[] = [
   { label: "Type", value: "type" },
@@ -84,6 +84,7 @@ export function DeckCardsView() {
       window.matchMedia("(width <= 1100px)").matches,
   );
   const [creatingTag, setCreatingTag] = useState(false);
+  const [cardForNewTag, setCardForNewTag] = useState<CardSet | null>(null);
   const [showDeckSummary, setShowDeckSummary] = useState(() => {
     const defaultsOpen =
       typeof window.matchMedia !== "function" ||
@@ -168,6 +169,7 @@ export function DeckCardsView() {
           <Button
             disabled={busy}
             onClick={() => {
+              setCardForNewTag(null);
               setCreatingTag(true);
             }}
             variant="secondary"
@@ -267,7 +269,13 @@ export function DeckCardsView() {
         </Button>
       </NavBar>
       <CardsViewBody>
-        <CardsZoneMatrix onPreview={setPreviewCard} />
+        <CardsZoneMatrix
+          onCreateTagForCard={(card) => {
+            setCardForNewTag(card);
+            setCreatingTag(true);
+          }}
+          onPreview={setPreviewCard}
+        />
         {showDeckSummary && !compactSummary && (
           <DeckRail previewCard={defaultPreview} />
         )}
@@ -284,20 +292,15 @@ export function DeckCardsView() {
       >
         <DeckRail contained previewCard={defaultPreview} />
       </Dialog>
-      <TagNameDialog
+      <CreateTagDialog
         busy={busy}
-        initialName=""
-        onCancel={() => {
-          if (!busy) setCreatingTag(false);
-        }}
-        onSubmit={(name) => {
-          void createTag(name).then((created) => {
-            if (created) setCreatingTag(false);
-            return undefined;
-          });
+        card={cardForNewTag}
+        createTag={createTag}
+        onClose={() => {
+          setCreatingTag(false);
+          setCardForNewTag(null);
         }}
         open={creatingTag}
-        title="New tag"
       />
     </CardsViewShell>
   );

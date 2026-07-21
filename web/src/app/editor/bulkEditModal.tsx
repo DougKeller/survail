@@ -46,6 +46,9 @@ export function BulkEditModal() {
         </Text>
         {bulkEditErrors.length > 0 && (
           <Notice role="alert" tone="error">
+            <Text size="md">
+              Fix these decklist errors before applying changes:
+            </Text>
             {bulkEditErrors.map((message) => (
               <Text key={message} size="md">
                 {message}

@@ -4,10 +4,13 @@ import { CardZoneDragProvider } from "./cardZoneDrag";
 import { MatrixRows } from "./cardsZoneMatrix";
 import { useDeckCardsContext } from "./deckEditorContext";
 import { CardTagPickerProvider } from "./cardTagPicker";
+import { TagColumnOrderProvider } from "./tagColumnOrder";
 
 export const CardsZoneMatrix = memo(function CardsZoneMatrix({
+  onCreateTagForCard,
   onPreview,
 }: {
+  onCreateTagForCard: (card: CardSet) => void;
   onPreview: (card: CardSet) => void;
 }) {
   const {
@@ -22,6 +25,7 @@ export const CardsZoneMatrix = memo(function CardsZoneMatrix({
   return (
     <CardZoneDragProvider
       busy={busy}
+      createTagForCard={onCreateTagForCard}
       moveCard={moveCardToZone}
       tagCard={(card, tagId) => {
         const tag = deck.tags?.find((item) => item.id === tagId);
@@ -29,9 +33,11 @@ export const CardsZoneMatrix = memo(function CardsZoneMatrix({
       }}
       zones={zones}
     >
-      <CardTagPickerProvider>
-        <MatrixRows onPreview={onPreview} />
-      </CardTagPickerProvider>
+      <TagColumnOrderProvider>
+        <CardTagPickerProvider>
+          <MatrixRows onPreview={onPreview} />
+        </CardTagPickerProvider>
+      </TagColumnOrderProvider>
     </CardZoneDragProvider>
   );
 });

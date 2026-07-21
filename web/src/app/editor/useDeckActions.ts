@@ -231,11 +231,27 @@ export function useDeckActions({
     });
   };
 
-  const createTag = (name: string): Promise<boolean> => {
+  const createTag = (name: string, card?: CardSet): Promise<boolean> => {
     const trimmedName = name.trim();
     if (trimmedName === "") return Promise.resolve(false);
     return runMutationAsync(async (currentDeck) => {
-      setDeck(await api.createDeckTag(currentDeck.id, trimmedName));
+      const createdDeck = await api.createDeckTag(currentDeck.id, trimmedName);
+      setDeck(createdDeck);
+      const previousTagIds = new Set(
+        (currentDeck.tags ?? []).map((tag) => tag.id),
+      );
+      const createdTag = createdDeck.tags?.find(
+        (tag) => !previousTagIds.has(tag.id),
+      );
+      if (card !== undefined && createdTag !== undefined) {
+        setDeck(
+          await api.addCardsetTag(createdDeck.id, card.id, createdTag.id),
+        );
+        setAnnouncement(
+          `Created tag ${trimmedName} and added ${card.card_name}`,
+        );
+        return;
+      }
       setAnnouncement(`Created tag ${trimmedName}`);
     });
   };
@@ -344,11 +360,14 @@ export function useDeckActions({
       const preview = await api.importMoxfield(
         bulkDecklist,
         printingPreferences,
+        { allowAiFallback: false },
       );
       if (preview.errors.length > 0) {
         setBulkEditErrors(
-          preview.errors.map(
-            (issue) => `Line ${String(issue.line_number)}: ${issue.message}`,
+          preview.errors.map((issue) =>
+            issue.line_number > 0
+              ? `Line ${String(issue.line_number)}: ${issue.message}`
+              : issue.message,
           ),
         );
         return;
